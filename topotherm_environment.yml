@@ -1,0 +1,26 @@
+name: base
+channels:
+  - defaults
+dependencies:
+  - python=3.11
+  - conda==23.5.2
+  - setuptools
+  - pip
+  - wheel
+  - conda-content-trust
+  - conda-libmamba-solver
+  - menuinst
+  - console_shortcut_miniconda
+  - powershell_shortcut_miniconda
+  - numpy
+  - pandas
+  - scipy
+  - networkx
+  - matplotlib
+  - pyomo
+  - openpyxl
+  - pillow
+  - pyarrow
+  - python-louvain
+  - seaborn
+prefix: C:\ProgramData\miniconda3
