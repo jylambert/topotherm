@@ -1,15 +1,18 @@
 # -*- coding: utf-8 -*-
+import pickle
+from collections import defaultdict
+import os.path
+
 import numpy as np
 import pandas as pd
+from scipy.optimize import fsolve
+import pyomo.environ as pyo
+
+from topotherm.plotting import plot_district
 import topotherm.import_files as imp
 import topotherm.settings as settings
 import topotherm.precalculation_hydraulic as precalc
-from scipy.optimize import fsolve
-from collections import defaultdict
-import pyomo.environ as pyo
 import topotherm.utils as utils
-import pickle
-from topotherm.plotting import plot_district
 
 
 def annuity(c_i, n):
@@ -47,7 +50,7 @@ def topotherm_sts_vertices(name, time_steps, file_path, result_path, variant, mo
     plot_district(a_i, a_p, a_c, dir_res + name + "_plot_district_initial", l_i, 0, pos, 0) # Save initial District
 
     flh = 2500
-    #heat_price = 110 * 10**-3       # Selling Price for heat in €/kW
+    # heat_price = 110 * 10**-3       # Selling Price for heat in €/kW
     source_price = 80 * 10**-3      # Price for heat in €/kW
     c_inv_source = np.array([0])      # Investment costs
     life_time = 40                       # Number of years for deprecation

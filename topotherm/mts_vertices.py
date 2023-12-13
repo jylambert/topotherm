@@ -1,15 +1,18 @@
 # -*- coding: utf-8 -*-
+import pickle
+from collections import defaultdict
+import os.path
+
 import numpy as np
 import pandas as pd
+from scipy.optimize import fsolve
+import pyomo.environ as pyo
+
+from topotherm.plotting import plot_district
 import topotherm.import_files as imp
 import topotherm.settings as settings
 import topotherm.precalculation_hydraulic as precalc
-from scipy.optimize import fsolve
-from collections import defaultdict
-import pyomo.environ as pyo
 import topotherm.utils as utils
-import pickle
-from topotherm.plotting import plot_district
 
 
 def annuity(c_i, n):
@@ -39,8 +42,9 @@ def topotherm_mts_vertices(name, time_steps, file_path, result_path, variant, mo
     p_max_part_load = p_max_kw[0, :] / p_max_kw[0, :].max()       # Part load according to outdoor temperature and feed line temperature
 
     # -------------------------------- Load time series for buildings  --------------------------------
-    heat_demand_time_series = pd.read_excel('timeseries/Heat_Demand_Buildings_Time_series.xlsx')['Heat Demand'].to_numpy().transpose()
-
+    heat_demand_time_series = pd.read_csv(
+        os.path.join(file_path, name, 'timeseries.csv'), sep=";", header=0, index_col=0
+        ).loc[:, 'Heat Demand'].to_numpy().transpose()
     # -------------------------------- Prepare Optimization  --------------------------------
     a_i, a_p, a_c, q_c, l_i, pos = imp.load_district(name, file_path)      # Load the district
     #a_i, a_p, a_c, q_c, l_i, pos = imp.load_district_benchmark(name, file_path)
@@ -58,7 +62,7 @@ def topotherm_mts_vertices(name, time_steps, file_path, result_path, variant, mo
         flh = 0
         print("Warning: Entered wrong Mode")
 
-    heat_price = 110 * 10**-3       # Selling Price for heat in €/kW
+    # heat_price = 110 * 10**-3       # Selling Price for heat in €/kW
     source_price = 80 * 10**-3      # Price for heat in €/kW
     c_inv_source = np.array([0])      # Investment costs
     life_time = 40                       # Number of years for deprecation
