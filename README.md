@@ -1,21 +1,26 @@
 # DHN Benchmark Paper
 
-Code accompaning district heating MILP formulations benchmark pubblication. Please cite the published paper:
-
-> Insert citation here
+Topotherm is a pyomo-based open-source optimization model for
+district heating network design.
 
 ## Intro
 
-This repository contains the code and analysis of the district heating network benchmarks.
+Topotherm is a pyomo-based mixed-integer linear programming district heating 
+network design model which scales well into larger districts for single
+and mulitple time steps. 
+It has been benchmarked against multiple other open-source models in this
+pubblication:
+
+> Insert citation here
 
 ## Feature overview
 
-* Runs shapefiles and formulates the MILP problem for:
-  * DHNx (<https://github.com/oemof/DHNx>)
-  * dhmin (<https://github.com/tum-ens/dhmin>)
-  * Resimont (<https://doi.org/10.3390/en14175575>)
-  * Our paper
-* Currently supports peak demand formulation, time series for all consumers.
+* Single time step topology and piping optimization.
+  * Greenfield optimization only for now, existing network in development.
+* Forced expansion of the distric theating network to consumers.
+  * Economic expansion in development.
+* Multiple time steps version additionally includes operation with variable
+heating demands.
 * Supports all solvers of pyomo, but the output might have to be rewritten (utils.py)
 * Plotting functions included
 
@@ -35,14 +40,12 @@ This repository contains the code and analysis of the district heating network b
 
 ## Description
 
-This project is an exhaustive README template that you can customize to your needs.
-You can either add sections you like or remove sections you don't like. But you have
-every time an example in front of you, from which you can derive from.
+To run the model, several incidence matrices have to be formulated
 
 ## Why should I use this?
 
-There are many README templates out there so why this one? The two main reasons for this are
-that they contain often too little content or they are not easy to read or navigate through.
+Topotherm has the best scaling of multiple open-source models and has
+been benchmarked and validated.
 
 ## How to cite
 
@@ -62,19 +65,53 @@ So how do you get this template to work for your project? It is easier than you 
 Use git to clone this repository into your computer.
 
 ```git
-git clone https://gitlab.com/kopino4-templates/readme-template
+git clone https://github.com/jylambert/topotherm.git
+```
+
+#### Anaconda
+
+We recommend to install the dependencies with anaconda or mamba:
+
+```conda
+conda env create -f environment.yml
+conda activate topotherm
+```
+
+#### pip
+
+Alternatively, the packages can be installed manually via pip and/or in a venv with the `requirements.txt` file.
+
+```Python
+python3 -m venv env
+source env/bin/activate
+pip install -r requirements.txt
+```
+
+### Solver
+
+#### Gurobi
+
+The results in the paper were obtained with the commercial solver gurobi.
+A free academic license is available and can be installed by following
+the documentation [here](https://support.gurobi.com/hc/en-us/articles/360044290292-How-do-I-install-Gurobi-for-Python-).
+
+#### Open-source Alternatives
+
+You can try the code on smaller benchmarks with several open source solvers,
+such as GLPK. Other popular open-source options are COIN-OR's cbc, HiGHS or SCIP.
+
+```conda
+conda activate topotherm
+conda install -c conda-forge glpk
 ```
 
 ### Usage
 
-Use the well known command to copy the template
+Generate the input incidence matrices for the district with .parquet format (see Example).
+Then, modify and run the main.py script.
 
 ```bash
-# Copy the content
-CTRL + C
-
-# Pase into your project
-CTRL + V
+python main.py
 ```
 
 ## Contribute
@@ -86,26 +123,3 @@ Please make sure to update tests as appropriate.
 ## License
 
 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
-
-## Sources
-
-[react-markdown][react-markdown] - Project which served as an inspiration for this README
-
-[Blog post templates][blog-post-templates] - Used to structure this template as an easy to read blog post
-
-[About markdown][about-markdown] - Why should you use markdown?
-
-[Markdown Cheat Sheet][markdown-cheatsheet] - Get a fast overview of the syntax
-
-[//]: # "Source definitions"
-[react-markdown]: https://github.com/remarkjs/react-markdown "React-markdown project"
-[blog-post-templates]: https://backlinko.com/hub/content/blog-post-templates "Backlinko blog post templates"
-[about-markdown]: https://www.markdownguide.org/getting-started/ "Introduction to markdown"
-[markdown-cheatsheet]: https://www.markdownguide.org/cheat-sheet/ "Markdown Cheat Sheet"
-
-## Conclusion
-
-To summarize..
-
-We have an exhaustive README template with many features. The README is easy to read and navigate like an article.
-In our future projects we can use this template to get a great head start in creating a custom README.
