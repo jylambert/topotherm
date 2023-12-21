@@ -13,6 +13,12 @@ class Ground:
     thermal_conductivity = 2.4      # in W/(m*K), for saturated soil, INSERT VALUE HERE
 
 
+class Temperatures:
+    ambient = -20        # in °C
+    supply = 90          # in °C
+    _return = 55          # in °C
+
+
 class Piping:
     diameter = np.array([0.0216, 0.0285, 0.0372, 0.0431, 0.0545, 0.0703, 0.0825, 0.1071, 0.1325, 0.1603, 0.2101, 0.263, 0.3127, 0.3444, 0.3938])   # Considered Inner diameter in m
     outer_diameter = np.array([0.09, 0.09, 0.11, 0.11, 0.125, 0.14, 0.16, 0.2, 0.225, 0.25, 0.315, 0.4, 0.45, 0.5, 0.56])     # Considered Outer diameter in m (with insulation)
@@ -27,3 +33,11 @@ class Piping:
 class OptSettings:
     mip_gap = 1e-2
     time_limit = 10000
+
+class Economics:
+    flh = 2500
+    #heat_price = 110 * 10**-3  # Selling Price for heat in €/kW
+    source_price = 80 * 10**-3  # Price for heat in €/kW
+    c_inv_source = np.array([0])  # Investment costs
+    life_time = 40  # Number of years for deprecation
+    c_irr = 0.08  # Interest rate

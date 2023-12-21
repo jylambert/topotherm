@@ -29,8 +29,8 @@ def topotherm_sts_vertices(name, time_steps, file_path, result_path, variant, mo
     return_temp = np.ones([settings.Piping.number_diameter, 1]) * 55    # Set return temperature to 55 °C
 
     # ------------ Perform nonlinear Calculation for thermal losses and thermal transport capacity ------------
-    m_max, p_max, regression_capacity = precalc.calc_regression_thermal_capacity(v_init, settings.Piping.diameter, settings.Piping.roughness, settings.Piping.max_pr_loss, supply_temp, return_temp, temp_ambient)
-    heat_loss_power_flow, regression_heat_loss = precalc.calc_regression_heat_losses(m_max, supply_temp, np.ones(settings.Piping.number_diameter), 100*np.ones(settings.Piping.number_diameter), temp_ambient, p_max)
+    m_max, p_max, regression_capacity = precalc.regression_thermal_capacity(v_init, settings.Piping.diameter, settings.Piping.roughness, settings.Piping.max_pr_loss, supply_temp, return_temp, temp_ambient)
+    heat_loss_power_flow, regression_heat_loss = precalc.regression_heat_losses(m_max, supply_temp, np.ones(settings.Piping.number_diameter), 100*np.ones(settings.Piping.number_diameter), temp_ambient, p_max)
 
     regression_heat_loss_a = np.round(regression_heat_loss[0][1], 10)        # Round regression parameter for heat losses
     regression_heat_loss_b = np.round(regression_heat_loss[0][0], 6)       # Round regression parameter for heat losses

@@ -2,25 +2,36 @@
 import numpy as np
 from scipy import stats
 from scipy.optimize import fsolve
-from topotherm.settings import Water, Ground, Piping
+
+from topotherm.settings import Water, Ground, Piping, Temperatures
 
 
 def determine_feed_line_temp(ambient_temperature, temp_sup_high, temp_sup_low, temp_turn_high, temp_turn_low):
     """Input: Ambient temperature (°C), supply temperature high (°C), supply temperature low (°C),
     turing point high (°c), turining point low (°C)
     Returns: supply temperature of grid (°C)"""
-    temp_supply = np.zeros(ambient_temperature.shape[0])
-    for row in range(ambient_temperature.shape[0]):
-        if ambient_temperature[row] < temp_turn_high:
-            temp_supply[row] = temp_sup_high
-        elif (ambient_temperature[row] >= temp_turn_high) & (ambient_temperature[row] <= temp_turn_low):
-            temp_supply[row] = temp_sup_high - ((ambient_temperature[row]-temp_turn_high)/(temp_turn_low-temp_turn_high))*(temp_sup_high-temp_sup_low)
-        else:
-            temp_supply[row] = temp_sup_low
+    if ambient_temperature < temp_turn_high:
+        temp_supply = temp_sup_high
+    elif (ambient_temperature >= temp_turn_high) & (ambient_temperature <= temp_turn_low):
+        temp_supply = temp_sup_high - ((ambient_temperature-temp_turn_high)/(temp_turn_low-temp_turn_high))*(temp_sup_high-temp_sup_low)
+    else:
+        temp_supply = temp_sup_low
     return temp_supply
 
 
-def calc_max_flow_velocity(vel_init, diameter, roughness, max_spec_pressure_loss):
+def init_temperatures():
+    ts = {}
+    # Set outdoor temperature
+    ts['ambient'] = np.zeros([Piping.number_diameter]) + Temperatures.ambient
+    # Determine feed line temperature according to outdoor temperature
+    variable_feed_temp = determine_feed_line_temp(ts['ambient'][0], 90, 80, -14, 6)
+    ts['supply'] =  variable_feed_temp * np.ones([Piping.number_diameter])
+    # Set return temperature to 55 °C
+    ts['return'] = np.ones([Piping.number_diameter]) * Temperatures._return
+    return ts
+
+
+def max_flow_velocity(vel_init, diameter, roughness, max_spec_pressure_loss):
     """Input: initial_velocity (m/s), diameter (m), roughness(m), max_spec_pressure_loss (Pa/m)
     Returns: velocity_max (m/s)
     Inputs must be non-negative reals"""
@@ -35,14 +46,14 @@ def calc_max_flow_velocity(vel_init, diameter, roughness, max_spec_pressure_loss
     return vel_max
 
 
-def calc_mass_flow(velocity, diameter):
+def mass_flow(velocity, diameter):
     """Input: velocity (m/s), diameter(m)
     Returns: mass_flow (kg/s)"""
     mass_flow = Water.density * velocity * (np.pi / 4) * diameter ** 2  # maximal mass flow in kg/s
     return mass_flow
 
 
-def calc_pipe_capacity(mass_flow, temperature_supply, temperature_return):
+def pipe_capacity(mass_flow, temperature_supply, temperature_return):
     """Input: mass_flow (kg/s), temperature_supply (°C or K) at a specific time step, temperature_return (°C or K)
     at a specific time step
     Returns: heat_flow_max (W)"""
@@ -55,7 +66,7 @@ def capacity_to_diameter(pipe_capacity, temperature_supply, temperature_return):
     return mass_flow
 
 
-def calc_thermal_resistance(diameter, diameter_ratio, depth):
+def thermal_resistance(diameter, diameter_ratio, depth):
     """Input: diameter (m), diameter_ratio = outer diameter / diameter (-), depth (below ground level) (m)
     Returns: thermal_resistance_pipe (m*K/W)
     Formula: see Blommaert 2020 --> D'Eustachio 1957"""
@@ -66,10 +77,11 @@ def calc_thermal_resistance(diameter, diameter_ratio, depth):
     return thermal_resistance_pipe
 
 
-def calc_heat_loss_pipe(mass_flow, length, temperature_in, thermal_resistance_pipe, ambient_temperature):
+def heat_loss_pipe(mass_flow, length, temperature_in, thermal_resistance_pipe, ambient_temperature):
     """Input: mass_flow (kg/s), length (m), temperature_in (K or °C) at a specific time step, thermal_resistance_pipe (m*K/W),
     ambient_temperature (K or C°) at a specific time step
-    Returns: Heat_loss_pipe (in W)"""
+
+    Returns: Heat_loss_pipe (in W)"""    
     temp_diff_in = temperature_in - ambient_temperature
     temp_diff_out = temp_diff_in * np.exp(-length / (mass_flow * Water.heat_capacity_cp * thermal_resistance_pipe))
     temperature_out = temp_diff_out + ambient_temperature
@@ -77,73 +89,88 @@ def calc_heat_loss_pipe(mass_flow, length, temperature_in, thermal_resistance_pi
     return heat_loss_pipe
 
 
-def calc_regression_thermal_capacity(velocity_init, diameter, pipe_roughness, max_pr_loss, temp_supply, temp_return, ambient_temp):
-    """Input: initial velocity (m/s), inner diameter (m), roughness pipe (m), max specific pressure loss (Pa/m),
+def regression_thermal_capacity(temperatures):
+    """
+    Calculates the regression factors for the linearization of the thermal capacity of the pipes
+
+    
+    Input: initial velocity (m/s), inner diameter (m), roughness pipe (m), max specific pressure loss (Pa/m),
     supply temperature (°C), return temperature (°C)
-    Returns: Regression factors for linearization (in €/m)"""
-    np.zeros([Piping.number_diameter, ambient_temp.shape[1]])
-    velocity_max = np.zeros(Piping.number_diameter)
-    for i in range(Piping.number_diameter):
-        velocity_max[i] = calc_max_flow_velocity(velocity_init, diameter[i], pipe_roughness, max_pr_loss)
-    mass_flow_max = calc_mass_flow(velocity_max, Piping.diameter)
-    power_flow_max = np.zeros([Piping.number_diameter, ambient_temp.shape[1]])
-    power_flow_max_regression = np.zeros([ambient_temp.shape[1], 3])
-    for col in range(ambient_temp.shape[1]):
-        power_flow_max[:, col] = calc_pipe_capacity(mass_flow_max, temp_supply[:, col], temp_return[:, col])
-        regression = stats.linregress(power_flow_max[:, col]/1000, Piping.cost)
-        power_flow_max_regression[col, 0] = regression.intercept
-        power_flow_max_regression[col, 1] = regression.slope
-        power_flow_max_regression[col, 2] = regression.rvalue**2
-    return mass_flow_max, power_flow_max, power_flow_max_regression
+    Returns: Regression factors for linearization (in €/m)
+
+    Args:
+        temperatures (dict): dict containing the defined temperatures (°C) for supply, return and
+        ambient
+
+    Returns:
+        _type_: Regression factors for linearization (in €/m)
+    """
+    V_INIT = 0.5  # initial velocity for hydraulic calculations
+
+    temp_supply = temperatures['supply']
+    temp_return = temperatures['return']
+    # ambient_temp = temperatures['ambient']
+
+    r = dict()  # results of the regression
+
+    # np.zeros([Piping.number_diameter, ambient_temp.shape[1]])
+    velocity_max = np.zeros(Piping.number_diameter)  # initialize array
+    # itarate over all diameters
+    for i, diam in enumerate(Piping.diameter):
+        velocity_max[i] = max_flow_velocity(V_INIT, diam, Piping.roughness, Piping.max_pr_loss)
+
+    r['mass_flow_max'] = mass_flow(velocity_max, Piping.diameter)
+
+    r['power_flow_max'] = np.zeros([Piping.number_diameter])  # init
+
+    # do the regression for each diameter
+    r['power_flow_max'] = pipe_capacity(
+        r['mass_flow_max'], temp_supply[0], temp_return[0])
+    regression = stats.linregress(r['power_flow_max']/1000, Piping.cost)
+
+    r['params'] = dict()
+    r['params']['a'] = np.round(regression.slope, 6) 
+    r['params']['b'] = np.round(regression.intercept, 3)
+    r['params']['r2'] = regression.rvalue**2
+
+    # Determine maximal power flow  in kw
+    r['power_flow_max_kW'] = np.round(r['power_flow_max']/1000, 3)
+
+    # Part load according to outdoor temperature and feed line temperature
+    # @TODO: refactor this
+    # r['power_flow_max_partload'] = r['power_flow_max_kW'][0, :] / r['power_flow_max_kW'][0, :].max()
+    r['power_flow_max_partload'] = 1
+    return r
 
 
-def calc_regression_heat_losses(mass_flow, temperature_supply, pipe_depth, pipe_length, ambient_temp, maximal_power):
+def regression_heat_losses(temperatures, thermal_capacity):
     """Input: mass_flow (kg/s), temperature_supply (K or °C), pipe_depth (m), pipe_length (m)
     ambient_temperature (K or °C) at a specific time step
     Returns: Heat_loss_pipe (in W/m) and regression factors for linearization (in kW/m)"""
-    res_pipe = calc_thermal_resistance(Piping.diameter, Piping.ratio, pipe_depth)
-    heat_loss = np.zeros([Piping.number_diameter, ambient_temp.shape[1]])
-    reg_factor = np.zeros([ambient_temp.shape[1], 3])
-    for col in range(ambient_temp.shape[1]):
-        heat_loss[:, col] = calc_heat_loss_pipe(mass_flow, pipe_length, temperature_supply[:, col], res_pipe, ambient_temp[:, col])
-        regression = stats.linregress(maximal_power[:, col]/1000, heat_loss[:, col]/1000)
-        reg_factor[col, 0] = regression.intercept
-        reg_factor[col, 1] = regression.slope
-        reg_factor[col, 2] = regression.rvalue**2
-    return heat_loss, reg_factor
+    pipe_depth = np.ones(Piping.number_diameter)
+    pipe_length = 100*np.ones(Piping.number_diameter)
+    res_pipe = thermal_resistance(Piping.diameter, Piping.ratio, pipe_depth)
 
+    mass_flow = thermal_capacity['mass_flow_max']
+    maximal_power = thermal_capacity['power_flow_max']
 
-"""
-cmap = ListedColormap(sns.color_palette("deep").as_hex())
-color_list = [*cmap(np.linspace(0, 1, 10))]
-global_tech_colors = [color_list[8], color_list[9], color_list[0], color_list[1], color_list[7], color_list[3]]
+    temp_supply = temperatures['supply']
+    ambient_temp = temperatures['ambient']
 
-num_points = 100
-x2 = np.linspace(0, p_max_kw[-1], num_points)
-fig6, ax6 = plt.subplots()
+    heat_loss = np.zeros([Piping.number_diameter])
+    # reg_factor = np.zeros([ambient_temp.shape[1], 3])
+    factors = dict()
 
-ax6.set_xlabel('Thermal capacity in MW')
-ax6.set_ylabel('Heat Losses in W/m')
-ax6.set_xlim([-0.9, 70])
-ax6.set_ylim([0, 55])
-ax6.scatter(p_max_kw/1000, heat_loss_power_flow, marker=".", label="Real inner diameters", color =global_tech_colors[5])
-ax6.plot(x2/1000, (regression_heat_loss[0][0] + regression_heat_loss[0][1]*x2)*1000, label="Fitted inner diameters", color=global_tech_colors[4])
-ax6.legend(ncol=1, loc='lower right', fancybox=False, shadow=False, borderpad=1, fontsize=10, frameon=False)
-fig6.set_size_inches(8.5/2, 3.5)
-plt.rcParams.update({'figure.autolayout': True})
-plt.savefig('linearization_paper_heat_loss.svg')
-plt.close()
+    # for col in range(ambient_temp.shape[1]):
+    heat_loss = heat_loss_pipe(mass_flow, pipe_length, temp_supply, res_pipe,
+                                ambient_temp)
+    regression = stats.linregress(maximal_power/1000, heat_loss/1000)
 
-fig7, ax7 = plt.subplots()
-ax7.set_xlabel('Thermal capacity in MW')
-ax7.set_ylabel('Investment Costs in €/m ')
-ax7.set_xlim([-0.9, 70])
-ax7.set_ylim([0, 1850])
-ax7.scatter(p_max_kw/1000, Piping.cost, marker=".", label="Real inner diameters", color= global_tech_colors[5])
-ax7.plot(x2/1000, regression_capacity[0][0] + regression_capacity[0][1]*x2, label="Fitted inner diameters", color=global_tech_colors[4])
-ax7.legend(ncol=1, loc='lower right', fancybox=False, shadow=False, borderpad=1, fontsize=10, frameon=False)
-fig7.set_size_inches(8.5/2, 3.5)
-plt.rcParams.update({'figure.autolayout': True})
-plt.savefig('linearization_paper_invest.svg')
-plt.close()
-"""
+    factors['b'] = np.round(regression.intercept, 6)
+    factors['a'] = np.round(regression.slope, 10)
+    factors['r2'] = regression.rvalue**2
+
+    r = {}
+    r['heat_loss'] = heat_loss
+    r['params'] = factors
+    return r

@@ -25,8 +25,11 @@ def topotherm_mts_vertices(name, time_steps, file_path, result_path, variant, mo
     # -------------------------------- Initialization of the optimization --------------------------------
     v_init = 0.5        # Set an initial velocity for hydraulic calculations
     temp_ambient = np.zeros([settings.Piping.number_diameter, 1]) - 20  # Setting outdoor temperature to -20 °C
-    supply_temp = precalc.determine_feed_line_temp(temp_ambient[0, :], 90, 80, -14, 6) * np.ones([settings.Piping.number_diameter, 1])  # Determine supply temperature to 90 °C
-    return_temp = np.ones([settings.Piping.number_diameter, 1]) * 55    # Set return temperature to 55 °C
+    # Determine feed line temperature according to outdoor temperature
+    variable_feed_temp = precalc.determine_feed_line_temp(temp_ambient[0, :], 90, 80, -14, 6)  
+    supply_temp =  variable_feed_temp * np.ones([settings.Piping.number_diameter, 1])
+    # Set return temperature to 55 °C
+    return_temp = np.ones([settings.Piping.number_diameter, 1]) * 55    
 
     # ------------ Perform nonlinear Calculation for thermal losses and thermal transport capacity ------------
     m_max, p_max, regression_capacity = precalc.calc_regression_thermal_capacity(v_init, settings.Piping.diameter, settings.Piping.roughness, settings.Piping.max_pr_loss, supply_temp, return_temp, temp_ambient)
