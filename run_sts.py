@@ -20,9 +20,11 @@ RUNID = ['Example']
 DATAPATH = 'data/'
 OUTPUTPATH = 'new_results/'
 PLOTS = True
+SOLVER = 'gurobi' # 'gurobi' or 'cbc'
 
 
 def regressions(temperatures):
+    """Calculate the regression coefficients for the thermal capacity and heat losses"""
     # thermal capacity regression and max power as well as part loads
     r_thermal_cap = precalc.regression_thermal_capacity(temperatures)
     # heat loss regression
@@ -31,6 +33,7 @@ def regressions(temperatures):
 
 
 def main(runid):
+    """Main function to run the optimization"""
     # Create output directory if it does not exist
     resultspath = os.path.join(OUTPUTPATH, runid)
     filepath = os.path.join(DATAPATH, runid)
@@ -58,7 +61,7 @@ def main(runid):
 
     # -------------------------------- Initialize Optimization --------------------------------
     # Optimization initialization
-    opt = pyo.SolverFactory('gurobi')
+    opt = pyo.SolverFactory(SOLVER)
     opt.options['mipgap'] = settings.OptSettings.mip_gap
     opt.options['timelimit'] = settings.OptSettings.time_limit
     opt.options['logfile'] = os.path.join(resultspath, 'optimization.log')
@@ -67,7 +70,7 @@ def main(runid):
     # -------------------------------- Solve the Model --------------------------------
     result = opt.solve(model, tee=True)
 
-        # -------------------------------- Process the results --------------------------------
+    # -------------------------------- Process the results --------------------------------
     # Save model results to csv
     dfres = tt.utils.model_to_df(model)
     dfres.to_csv(os.path.join(resultspath, 'results.csv'), sep=';')

@@ -40,7 +40,9 @@ heating demands.
 
 ## Description
 
-To run the model, several incidence matrices have to be formulated
+To run the model, several incidence matrices have to be formulated. Then, the linear regression
+parameters can be calculated for a given supply, ambient and return temperature of the network. 
+A pyomo model is then set up and solved with the solver of your choice.
 
 ## Why should I use this?
 
@@ -53,12 +55,11 @@ been benchmarked and validated.
 
 ## Getting Started
 
-So how do you get this template to work for your project? It is easier than you think.
+This repository needs a PC capable to run python and its standard libraries. 
 
 ### Requirements
 
-* Have a project ready where you can add a README
-* Basic knowledge of [Markdown][about-markdown] (here is a [Cheatsheet][markdown-cheatsheet])
+* Anaconda, mamba or venv
 
 ### Install
 
@@ -111,7 +112,7 @@ Generate the input incidence matrices for the district with .parquet format (see
 Then, modify and run the main.py script.
 
 ```bash
-python main.py
+python run_sts.py
 ```
 
 ## Contribute
@@ -122,4 +123,4 @@ Please make sure to update tests as appropriate.
 
 ## License
 
-[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+[MIT](https://choosealicense.com/licenses/mit/), see LICENSE file.
