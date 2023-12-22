@@ -1,6 +1,6 @@
-# DHN Benchmark Paper
+# topotherm
 
-Topotherm is a pyomo-based open-source optimization model for
+topotherm is a pyomo-based open-source optimization model for
 district heating network design.
 
 ## Intro
