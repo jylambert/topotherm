@@ -35,8 +35,7 @@ heating demands.
   * [Usage](#usage)
 * [Contribute](#contribute)
 * [License](#license)
-* [Sources](#sources)
-* [Conclusion](#conclusion)
+
 
 ## Description
 
