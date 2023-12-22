@@ -35,8 +35,7 @@ heating demands.
   * [Usage](#usage)
 * [Contribute](#contribute)
 * [License](#license)
-* [Sources](#sources)
-* [Conclusion](#conclusion)
+
 
 ## Description
 
@@ -123,4 +122,4 @@ Please make sure to update tests as appropriate.
 
 ## License
 
-[MIT](https://choosealicense.com/licenses/mit/), see LICENSE file.
+[MIT](https://en.wikipedia.org/wiki/MIT_License), see LICENSE file.
