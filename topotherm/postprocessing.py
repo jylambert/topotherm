@@ -12,6 +12,7 @@ from scipy.optimize import fsolve
 
 from topotherm import settings
 
+
 def sts(model, matrices, sets, temperatures):
     """Create variables for the thermo-hydraulic coupled optimization.
 
