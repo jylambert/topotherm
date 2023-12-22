@@ -3,7 +3,7 @@
 @author: Jerry Lambert (jerry.lambert@tum.de); Amedeo Ceruti (amedeo.ceruti@tum.de)
 
 This file is used to optimize district heating systems with the tool topotherm
-of the Chair of Energy Systems.
+of the Chair of Energy Systems. This is the example file for the MTS-Easy model.
 """
 
 import os
@@ -18,23 +18,25 @@ import topotherm.settings as settings
 
 RUNID = ['Example']  # name of the district to be optimized
 DATAPATH = 'data/'  # path to the data
-OUTPUTPATH = 'new_results/mts_easy/'  # output path for results
+OUTPUTPATH = 'new_results/mts/'  # output path for results
 REGRESSION = 'regression.csv'  # regression coefficients for thermal capacity and heat losses
 TIMESERIES = 'timeseries.csv'  # timeseries for heat scaling
 PLOTS = False  # save plots of the district
 SOLVER = 'gurobi' # 'gurobi' or 'cbc'
 
 
-def read_regression(path, id):
-    """Read the regression coefficients for the thermal capacity and heat losses from csv file"""
-    # read df and force floats 
+def read_regression(path, index):
+    """Read the regression coefficients for the thermal capacity and heat losses from csv file.
+    
+    """
+    # read df and force floats
     df = pd.read_csv(path, sep=',', index_col=0, header=0, dtype=float)
-    r_thermal_cap = dict(power_flow_max_kW=[df.loc[id, "power_flow_max_kW"]],
-                         params={"a": df.loc[id, "capacity_a"],
-                                 "b": df.loc[id, "capacity_a"]},
-                         power_flow_max_partload=df.loc[id, "power_flow_max_partload"])
-    r_heat_loss = dict(params={"a": df.loc[id, "heat_loss_a"],
-                                 "b": df.loc[id, "heat_loss_b"]
+    r_thermal_cap = dict(power_flow_max_kW=[df.loc[index, "power_flow_max_kW"]],
+                         params={"a": df.loc[index, "capacity_a"],
+                                 "b": df.loc[index, "capacity_b"]},
+                         power_flow_max_partload=df.loc[index, "power_flow_max_partload"])
+    r_heat_loss = dict(params={"a": df.loc[index, "heat_loss_a"],
+                                 "b": df.loc[index, "heat_loss_b"]
                                  })
     return r_thermal_cap, r_heat_loss
 
@@ -57,7 +59,7 @@ def main(runid):
                              sep=';', index_col=0, header=0).iloc[4:9, :].values.squeeze()
     # create dummy profile, q_c should already contain the timeseries of all consumer demands
     mat['q_c'] = mat['q_c'] * timeseries  # convert from MW to W
-    
+
     if PLOTS:
         f = tt.plotting.district(mat, isnot_init=False) # Save initial District
         f.savefig(os.path.join(resultspath, 'district_initial.svg'), bbox_inches='tight')
@@ -67,7 +69,7 @@ def main(runid):
 
     # -------------------------------- Create Model --------------------------------
     model_sets = tt.model.create_sets(mat)
-    model = tt.model.mts_easy(mat, model_sets, r_thermal_cap, r_heat_loss,
+    model = tt.model.mts(mat, model_sets, r_thermal_cap, r_heat_loss,
                               flh_scaling=timeseries.sum())
 
     # -------------------------------- Initialize Optimization --------------------------------
@@ -76,7 +78,7 @@ def main(runid):
     opt.options['mipgap'] = settings.OptSettings.mip_gap
     opt.options['timelimit'] = settings.OptSettings.time_limit
     opt.options['logfile'] = os.path.join(resultspath, 'optimization.log')
-    #opt.options['Seed'] = 56324978
+    opt.options['Seed'] = 56324978
 
     # -------------------------------- Solve the Model --------------------------------
     result = opt.solve(model, tee=True)
@@ -90,7 +92,7 @@ def main(runid):
     dfsol = tt.utils.solver_to_df(result, model, solver='gurobi')
     dfsol.to_csv(os.path.join(resultspath, 'solver.csv'), sep=';')
 
-    opt_mats = tt.postprocessing.postprocess(model, mat, model_sets, temperatures=temps)
+    opt_mats = tt.postprocessing.mts(model, mat, model_sets, temperatures=temps)
 
     # iterate over opt_mats and save each matrix as parquet file
     for key, value in opt_mats.items():
