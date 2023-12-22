@@ -57,7 +57,7 @@ def main(runid):
 
     # -------------------------------- Create Model --------------------------------
     model_sets = tt.model.create_sets(mat)
-    model = tt.model.sts(mat, model_sets, r_thermal_cap, r_heat_loss)
+    model = tt.model.sts(mat, model_sets, r_thermal_cap, r_heat_loss, "eco")
 
     # -------------------------------- Initialize Optimization --------------------------------
     # Optimization initialization
