@@ -186,7 +186,7 @@ def sts(matrices, sets, regression_caps, regression_losses, opt_mode):
         model.cons_connection_to_consumer_ji = pyo.Constraint(model.set_con_ji,
                                                               rule=connection_to_consumer_ji,
                                                               doc=msg)
-    elif opt_mode == "forced":
+    if opt_mode == "forced":
         def connection_to_consumer_ij(m, j):
             return m.lambda_dir_1[j] == sets['lambda_c_ij'][j]
         msg_ = 'Constraint if houses have their own connection-pipe and set the direction (ij)'
@@ -200,6 +200,7 @@ def sts(matrices, sets, regression_caps, regression_losses, opt_mode):
         model.cons_connection_to_consumer_ji = pyo.Constraint(model.set_con_ji,
                                                               rule=connection_to_consumer_ji,
                                                               doc=msg)
+
     def one_pipe(m, j):
         return m.lambda_dir_1[j] + m.lambda_dir_2[j] <= 1
     model.one_pipe = pyo.Constraint(model.set_n_i, rule=one_pipe,
@@ -230,12 +231,12 @@ def sts(matrices, sets, regression_caps, regression_losses, opt_mode):
                     * annuity(Economics.c_irr, Economics.life_time) for k in m.set_n_p)
 
         if opt_mode == "eco":
-            term4 = sum(
-                sum((m.lambda_dir_1[sets['a_i_in'][j][0][0]])
-                    * m.P_12[k, 0] for k in sets['a_c_out'][j][0] if len(sets['a_i_in'][j][0]) > 0)
-                + sum((m.lambda_dir_2[sets['a_i_out'][j][0][0]])
-                      * m.P_22[k, 0] for k in sets['a_c_out'][j][0] if len(sets['a_i_out'][j][0]) > 0)
-                for j in model.set_n) * Economics.flh * Economics.heat_price * (-1)
+            term4 = sum(sum(
+                        sum((m.lambda_dir_1[sets['a_i_in'][j][0][0]])
+                            * matrices['q_c'][k, t] for k in sets['a_c_out'][j][0] if len(sets['a_i_in'][j][0]) > 0)
+                        + sum((m.lambda_dir_2[sets['a_i_out'][j][0][0]])
+                            * matrices['q_c'][k, t] for k in sets['a_c_out'][j][0] if len(sets['a_i_out'][j][0]) > 0)
+                        for j in model.set_n) for t in model.set_t) * Economics.flh * Economics.heat_price * (-1)
         else:
             term4 = 0
 
@@ -243,7 +244,6 @@ def sts(matrices, sets, regression_caps, regression_losses, opt_mode):
 
     model.obj = pyo.Objective(rule=objective_function,
                               doc='Objective function')
-
     return model
 
 
