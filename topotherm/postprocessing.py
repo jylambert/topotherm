@@ -4,7 +4,7 @@ from scipy.optimize import fsolve
 
 from topotherm import settings
 
-def postprocess(model, matrices, sets, temperatures):
+def postprocess(model, matrices, sets, mode, temperatures):
     """Create variables for the thermo-hydraulic coupled optimization.
 
     Args:
@@ -21,7 +21,9 @@ def postprocess(model, matrices, sets, temperatures):
     p_11 = np.zeros([sets['a_i_shape'][1], len(model.set_t)])
     lambda_dir_1 = np.zeros([sets['a_i_shape'][1], len(model.set_t)])
     lambda_dir_2 = np.zeros([sets['a_i_shape'][1], len(model.set_t)])
+    lambda_built = np.zeros(sets['a_i_shape'][1])
     p_source_built = np.zeros(sets['a_p_shape'][1])
+    p_cap = np.zeros(sets['a_i_shape'][1])
 
     for v in model.component_objects(pyo.Var, active=True):
         var_dict = {(v.name, index): pyo.value(v[index]) for index in v}
@@ -38,22 +40,40 @@ def postprocess(model, matrices, sets, temperatures):
         if v.name == 'lambda_dir_2':
             for index in v:
                 lambda_dir_2[index] = pyo.value(v[index])
+        if v.name == "lambda_built":
+            for index in v:
+                lambda_built[index] = pyo.value(v[index])
         if v.name == 'P_source_cap':
             for index in v:
                 p_source_built[index] = pyo.value(v[index])
+        if v.name == "P_cap":
+            for index in v:
+                p_cap[index] = pyo.value(v[index])
 
     lambda_dir_1 = np.around(lambda_dir_1, 0)
     lambda_dir_2 = np.around(lambda_dir_2, 0)
+    lambda_built = np.around(lambda_built, 0)
 
     # Restart, Adaption of Incidence Matrix for the thermo-hydraulic coupled optimization
-    for q, _ in enumerate(lambda_dir_1):
-        if lambda_dir_1[q] == 0 and lambda_dir_2[q] == 0:
-            matrices['a_i'][:, q] = 0
-            matrices['l_i'][q] = 0
-        elif lambda_dir_2[q] == 1:
-            matrices['a_i'][:, q] = matrices['a_i'][:, q] * (-1)
+    if mode == "sts":
+        for q, _ in enumerate(lambda_dir_1):
+            if lambda_dir_1[q] == 0 and lambda_dir_2[q] == 0:
+                matrices['a_i'][:, q] = 0
+                matrices['l_i'][q] = 0
+            elif lambda_dir_2[q] == 1:
+                matrices['a_i'][:, q] = matrices['a_i'][:, q] * (-1)
+    elif mode == "mts":
+        for q, _ in enumerate(lambda_dir_1):
+            if lambda_built[q] == 0:
+                matrices['a_i'][:, q] = 0
+                matrices['l_i'][q] = 0
+            elif (lambda_built[q] == 1) & (lambda_dir_1[q, 0] == 0):
+                matrices['a_i'][:, q] = matrices['a_i'][:, q] * (-1)
 
-    p_lin = p_11 + p_21
+    if mode == "sts":
+        p_lin = p_11 + p_21
+    elif mode == "mts":
+        p_lin = p_cap
     p_lin_opt = np.delete(p_lin, np.where(~matrices['a_i'].any(axis=0)))
     pos_opt = np.delete(matrices['position'], np.where(~matrices['a_i'].any(axis=1)), axis=0)
     a_c_opt = np.delete(matrices['a_c'], np.where(~matrices['a_i'].any(axis=1)), axis=0)

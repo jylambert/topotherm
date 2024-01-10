@@ -18,10 +18,10 @@ import topotherm.settings as settings
 
 RUNID = ['Example']  # name of the district to be optimized
 DATAPATH = 'data/'  # path to the data
-OUTPUTPATH = 'new_results/mts_easy/'  # output path for results
+OUTPUTPATH = 'new_results/mts_easy_eco/'  # output path for results
 REGRESSION = 'regression.csv'  # regression coefficients for thermal capacity and heat losses
 TIMESERIES = 'timeseries.csv'  # timeseries for heat scaling
-PLOTS = False  # save plots of the district
+PLOTS = True  # save plots of the district
 SOLVER = 'gurobi' # 'gurobi' or 'cbc'
 
 
@@ -31,13 +31,20 @@ def read_regression(path, id):
     df = pd.read_csv(path, sep=',', index_col=0, header=0, dtype=float)
     r_thermal_cap = dict(power_flow_max_kW=[df.loc[id, "power_flow_max_kW"]],
                          params={"a": df.loc[id, "capacity_a"],
-                                 "b": df.loc[id, "capacity_a"]},
+                                 "b": df.loc[id, "capacity_b"]},
                          power_flow_max_partload=df.loc[id, "power_flow_max_partload"])
     r_heat_loss = dict(params={"a": df.loc[id, "heat_loss_a"],
                                  "b": df.loc[id, "heat_loss_b"]
                                  })
     return r_thermal_cap, r_heat_loss
 
+def regressions(temperatures):
+    """Calculate the regression coefficients for the thermal capacity and heat losses"""
+    # thermal capacity regression and max power as well as part loads
+    r_thermal_cap = precalc.regression_thermal_capacity(temperatures)
+    # heat loss regression
+    r_heat_loss = precalc.regression_heat_losses(temperatures, r_thermal_cap)
+    return r_thermal_cap, r_heat_loss
 
 def main(runid):
     """Main function to run the optimization"""
@@ -54,20 +61,21 @@ def main(runid):
     mat = tt.fileio.load(filepath)
     # read in demand profile
     timeseries = pd.read_csv(os.path.join(filepath, TIMESERIES),
-                             sep=';', index_col=0, header=0).iloc[4:9, :].values.squeeze()
+                             sep=';', index_col=0, header=0).iloc[7:9, :].values.squeeze() # 4:9
     # create dummy profile, q_c should already contain the timeseries of all consumer demands
-    mat['q_c'] = mat['q_c'] * timeseries  # convert from MW to W
+    mat['q_c'] = mat['q_c'] * timeseries  # convert to timeseries
     
     if PLOTS:
         f = tt.plotting.district(mat, isnot_init=False) # Save initial District
         f.savefig(os.path.join(resultspath, 'district_initial.svg'), bbox_inches='tight')
 
     # regression
-    r_thermal_cap, r_heat_loss = read_regression(os.path.join(DATAPATH, runid, REGRESSION), 0)
+    #r_thermal_cap, r_heat_loss = read_regression(os.path.join(DATAPATH, runid, REGRESSION), 0)
+    r_thermal_cap, r_heat_loss = regressions(temps)
 
     # -------------------------------- Create Model --------------------------------
     model_sets = tt.model.create_sets(mat)
-    model = tt.model.mts_easy(mat, model_sets, r_thermal_cap, r_heat_loss,
+    model = tt.model.mts_easy(mat, model_sets, r_thermal_cap, r_heat_loss, "eco",
                               flh_scaling=timeseries.sum())
 
     # -------------------------------- Initialize Optimization --------------------------------
@@ -90,7 +98,7 @@ def main(runid):
     dfsol = tt.utils.solver_to_df(result, model, solver='gurobi')
     dfsol.to_csv(os.path.join(resultspath, 'solver.csv'), sep=';')
 
-    opt_mats = tt.postprocessing.postprocess(model, mat, model_sets, temperatures=temps)
+    opt_mats = tt.postprocessing.postprocess(model, mat, model_sets, "mts", temperatures=temps)
 
     # iterate over opt_mats and save each matrix as parquet file
     for key, value in opt_mats.items():
