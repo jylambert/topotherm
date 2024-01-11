@@ -18,7 +18,7 @@ import topotherm.settings as settings
 
 RUNID = ['Example']  # name of the district to be optimized
 DATAPATH = 'data/'  # path to the data
-OUTPUTPATH = 'new_results/mts_eco/'  # output path for results
+OUTPUTPATH = 'new_results/mts_easy_eco/'  # output path for results
 REGRESSION = 'regression.csv'  # regression coefficients for thermal capacity and heat losses
 TIMESERIES = 'timeseries.csv'  # timeseries for heat scaling
 PLOTS = True  # save plots of the district
@@ -75,7 +75,7 @@ def main(runid):
 
     # -------------------------------- Create Model --------------------------------
     model_sets = tt.model.create_sets(mat)
-    model = tt.model.mts(mat, model_sets, r_thermal_cap, r_heat_loss, "eco",
+    model = tt.model.mts_easy(mat, model_sets, r_thermal_cap, r_heat_loss, "eco",
                               flh_scaling=timeseries.sum())
 
     # -------------------------------- Initialize Optimization --------------------------------

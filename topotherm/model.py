@@ -459,3 +459,87 @@ def mts_easy(matrices, sets, regression_caps, regression_losses, opt_mode, flh_s
                               doc='Objective function')
 
     return model
+
+
+def mts(matrices, sets, regression_caps, regression_losses, opt_mode, flh_scaling):
+    """Create the optimization model for the thermo-hydraulic coupled with multiple time
+    step operation. The model is based on the STS model and implements a simplified thermal
+    loss equation to alleviate the computational burden.
+
+    Args:
+        matrices (dict): Dictionary with the matrices of the district heating network with keys
+        a_i, a_p, a_c, l_i, position, q_c
+        sets (dict): Dictionary with the sets for the optimization
+        regression_caps (dict): Dictionary with the regression coefficients for the thermal capacity
+        regression_losses (dict): Dictionary with the regression coefficients for the heat losses
+        flh_scaling (float): Scaling factor for the full load hours
+
+    Returns:
+        model (pyomo.environ.ConcreteModel): pyomo model
+    """
+
+    model = mts_easy(matrices, sets, regression_caps, regression_losses, opt_mode, flh_scaling)
+    p_max_pipe_const = float(regression_caps['power_flow_max_kW'][-1])  # Big-M-Constraint for pipes
+
+    model.P_loss_1 = pyo.Var(model.set_n_i, model.set_t,
+                             bounds=(0, p_max_pipe_const),
+                             domain=pyo.NonNegativeReals,
+                             initialize=0,
+                             doc='Heat power at the exit of the pipe 1')
+    model.P_loss_2 = pyo.Var(model.set_n_i, model.set_t,
+                             bounds=(0, p_max_pipe_const),
+                             domain=pyo.NonNegativeReals,
+                             initialize=0,
+                             doc='Heat power at the exit of the pipe 2')
+
+    def calculation_loss_1_1(m, j, t):
+        return m.P_loss_1[j, t] - p_max_pipe_const * m.lambda_dir_1[j, t] <= 0
+
+    model.cons_calculation_loss_1_1 = pyo.Constraint(
+        model.set_n_i, model.set_t, rule=calculation_loss_1_1, doc='Complex loss calc 1 to 1')
+
+    def calculation_loss_1_2(m, j, t):
+        reg1 = regression_losses['params']['a'] * regression_caps['power_flow_max_partload'] \
+               * m.P_cap[j]
+        reg2 = regression_losses['params']['b'] * m.lambda_dir_1[j, t]
+        return (reg1 + reg2) * matrices['l_i'][j] - m.P_loss_1[j, t] \
+            - p_max_pipe_const * (1 - m.lambda_dir_1[j, t]) <= 0
+
+    model.cons_calculation_loss_1_2 = pyo.Constraint(
+        model.set_n_i, model.set_t, rule=calculation_loss_1_2, doc='Complex loss calc 1 to 2')
+
+    def calculation_loss_2_1(m, j, t):
+        return m.P_loss_2[j, t] - p_max_pipe_const * m.lambda_dir_2[j, t] <= 0
+
+    model.cons_calculation_loss_2_1 = pyo.Constraint(
+        model.set_n_i, model.set_t, rule=calculation_loss_2_1)
+
+    def calculation_loss_2_2(m, j, t):
+        return (regression_losses['params']['a'] * regression_caps['power_flow_max_partload']
+                * m.P_cap[j]
+                + regression_losses['params']['b'] * m.lambda_dir_2[j, t]) * matrices['l_i'][j] \
+            - m.P_loss_2[j, t] - p_max_pipe_const * (1 - m.lambda_dir_2[j, t]) <= 0
+
+    model.cons_calculation_loss_2_2 = pyo.Constraint(
+        model.set_n_i, model.set_t, rule=calculation_loss_2_2, doc='Complex loss calc 2 to 2')
+
+    # delete previous power_balance constraints
+    model.del_component(model.cons_power_balance_pipe_12)
+    model.del_component(model.cons_power_balance_pipe_21)
+
+    # add new power_balance constraints with complex losses
+    def power_balance_pipe_12(m, j, t):
+        return m.P_11[j, t] - m.P_12[j, t] - m.P_loss_1[j, t] == 0
+
+    model.cons_power_balance_pipe_12_cmplx = pyo.Constraint(
+        model.set_n_i, model.set_t, rule=power_balance_pipe_12,
+        doc='Complex Power balance pipe j->i')
+
+    def power_balance_pipe_21(m, j, t):
+        return m.P_21[j, t] - m.P_22[j, t] - m.P_loss_2[j, t] == 0
+
+    model.cons_power_balance_pipe_21_cmplx = pyo.Constraint(
+        model.set_n_i, model.set_t, rule=power_balance_pipe_21,
+        doc='Complex Power balance pipe j->i')
+
+    return model
