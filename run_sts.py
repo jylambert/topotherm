@@ -18,7 +18,7 @@ import topotherm.settings as settings
 
 RUNID = ['Example']
 DATAPATH = 'data/'
-OUTPUTPATH = 'new_results/'
+OUTPUTPATH = 'new_results/sts_forced'
 PLOTS = True
 SOLVER = 'gurobi' # 'gurobi' or 'cbc'
 
@@ -57,7 +57,7 @@ def main(runid):
 
     # -------------------------------- Create Model --------------------------------
     model_sets = tt.model.create_sets(mat)
-    model = tt.model.sts(mat, model_sets, r_thermal_cap, r_heat_loss)
+    model = tt.model.sts(mat, model_sets, r_thermal_cap, r_heat_loss, "forced")
 
     # -------------------------------- Initialize Optimization --------------------------------
     # Optimization initialization
@@ -79,7 +79,7 @@ def main(runid):
     dfsol = tt.utils.solver_to_df(result, model, solver='gurobi')
     dfsol.to_csv(os.path.join(resultspath, 'solver.csv'), sep=';')
 
-    opt_mats = tt.postprocessing.sts(model, mat, model_sets, temperatures=temps)
+    opt_mats = tt.postprocessing.postprocess(model, mat, model_sets, "sts", temperatures=temps)
 
     # iterate over opt_mats and save each matrix as parquet file
     for key, value in opt_mats.items():

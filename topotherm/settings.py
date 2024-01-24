@@ -48,9 +48,10 @@ class OptSettings:
     mip_gap = 1e-4  # MIP gap
     time_limit = 10000  # Time limit for the optimization in seconds
 
+
 class Economics:
     flh = 2500
-    #heat_price = 110 * 10**-3  # Selling Price for heat in €/kW
+    heat_price = 120 * 10**-3  # Selling Price for heat in €/kW
     source_price = 80 * 10**-3  # Price for heat in €/kW
     c_inv_source = np.array([0])  # Investment costs for each source, same order as sources in A_p
     life_time = 40  # Number of years for deprecation
