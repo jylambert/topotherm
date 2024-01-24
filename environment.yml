@@ -1,0 +1,15 @@
+name: topotherm
+channels:
+  - defaults
+dependencies:
+  - python=3.11
+  - numpy
+  - pandas
+  - scipy
+  - networkx
+  - matplotlib
+  - pyomo
+  - pillow
+  - pyarrow
+  - python-louvain
+  - seaborn
