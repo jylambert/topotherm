@@ -1,6 +1,7 @@
 name: topotherm
 channels:
   - defaults
+  - conda-forge
 dependencies:
   - python=3.11
   - numpy
@@ -9,7 +10,5 @@ dependencies:
   - networkx
   - matplotlib
   - pyomo
-  - pillow
-  - pyarrow
-  - python-louvain
-  - seaborn
+  - pyarrow>=14.0.1
+  - Pillow>=10.2.0
