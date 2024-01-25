@@ -1,9 +1,9 @@
-- python<=3.12, >=3.9
-- numpy
-- pandas
-- scipy
-- networkx
-- matplotlib
-- pyomo
-- pyarrow>=14.0.1
-- Pillow>=10.2.0
+python<=3.12, >=3.9
+numpy
+pandas
+scipy
+networkx
+matplotlib
+pyomo
+pyarrow>=14.0.1
+Pillow>=10.2.0
