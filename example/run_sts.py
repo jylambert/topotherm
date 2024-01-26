@@ -13,14 +13,13 @@ import pyomo.environ as pyo
 
 import topotherm as tt
 import topotherm.precalculation_hydraulic as precalc
-import topotherm.settings as settings
+from topotherm import settings
 
 
-RUNID = ['Example']
-DATAPATH = 'data/'
-OUTPUTPATH = 'new_results/sts_forced'
-PLOTS = True
-SOLVER = 'gurobi' # 'gurobi' or 'cbc'
+DATAPATH = './data/'  # input directory
+OUTPUTPATH = './results/sts_forced/'  # output directory
+PLOTS = True  # plot districts before and after optimization
+SOLVER = 'gurobi'  # 'gurobi' or 'cbc'
 
 
 def regressions(temperatures):
@@ -32,20 +31,17 @@ def regressions(temperatures):
     return r_thermal_cap, r_heat_loss
 
 
-def main(runid):
+def main(filepath, outputpath, plots=True, solver='gurobi'):
     """Main function to run the optimization"""
     # Create output directory if it does not exist
-    resultspath = os.path.join(OUTPUTPATH, runid)
-    filepath = os.path.join(DATAPATH, runid)
-
-    tt.utils.create_dir(resultspath)
+    tt.utils.create_dir(outputpath)
 
     # Load the district
     mat = tt.fileio.load(filepath)
 
-    if PLOTS:
+    if plots:
         f = tt.plotting.district(mat, isnot_init=False) # Save initial District
-        f.savefig(os.path.join(resultspath, 'district_initial.svg'), bbox_inches='tight')
+        f.savefig(os.path.join(outputpath, 'district_initial.svg'), bbox_inches='tight')
 
     # Run STS
     # @TODO: put this into separate notebook? and import dicts from csv
@@ -61,10 +57,10 @@ def main(runid):
 
     # -------------------------------- Initialize Optimization --------------------------------
     # Optimization initialization
-    opt = pyo.SolverFactory(SOLVER)
+    opt = pyo.SolverFactory(solver)
     opt.options['mipgap'] = settings.OptSettings.mip_gap
     opt.options['timelimit'] = settings.OptSettings.time_limit
-    opt.options['logfile'] = os.path.join(resultspath, 'optimization.log')
+    opt.options['logfile'] = os.path.join(outputpath, 'optimization.log')
     #opt.options['Seed'] = 56324978
 
     # -------------------------------- Solve the Model --------------------------------
@@ -73,24 +69,25 @@ def main(runid):
     # -------------------------------- Process the results --------------------------------
     # Save model results to csv
     dfres = tt.utils.model_to_df(model)
-    dfres.to_csv(os.path.join(resultspath, 'results.csv'), sep=';')
+    dfres.to_csv(os.path.join(outputpath, 'results.csv'), sep=';')
 
     # save solver results
-    dfsol = tt.utils.solver_to_df(result, model, solver='gurobi')
-    dfsol.to_csv(os.path.join(resultspath, 'solver.csv'), sep=';')
+    dfsol = tt.utils.solver_to_df(result, model, solver=solver)
+    dfsol.to_csv(os.path.join(outputpath, 'solver.csv'), sep=';')
 
     opt_mats = tt.postprocessing.postprocess(model, mat, model_sets, "sts", temperatures=temps)
 
     # iterate over opt_mats and save each matrix as parquet file
     for key, value in opt_mats.items():
-        pd.DataFrame(value).to_parquet(os.path.join(resultspath, key + '.parquet'))
+        pd.DataFrame(value).to_parquet(os.path.join(outputpath, key + '.parquet'))
 
     # Save figure optimized districts
-        if PLOTS:
+        if plots:
             f = tt.plotting.district(opt_mats, diameter=opt_mats['d_i_0'], isnot_init=True)
-            f.savefig(os.path.join(resultspath, 'district_optimal.svg'), bbox_inches='tight')
+            f.savefig(os.path.join(outputpath, 'district_optimal.svg'), bbox_inches='tight')
+
 
 if __name__ == '__main__':
-    for name in RUNID:
-        main(name)
-        print(f'Finished {name}')
+    main(filepath=os.path.join(DATAPATH), outputpath=os.path.join(OUTPUTPATH),
+         plots=PLOTS, solver=SOLVER)
+    print(f'Finished {OUTPUTPATH}')
