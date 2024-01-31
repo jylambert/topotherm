@@ -7,7 +7,7 @@ district heating network design.
 
 Topotherm is a pyomo-based mixed-integer linear programming district heating 
 network design model which scales well into larger districts for single
-and mulitple time steps. 
+and mulitple time steps.
 It has been benchmarked against multiple other open-source models for a
 publication, that is currently under review. Preprint available at:
 
@@ -15,13 +15,14 @@ publication, that is currently under review. Preprint available at:
 
 ## Feature overview
 
-* Single time step topology and piping optimization.
-  * Greenfield optimization only for now, existing network in development.
-* Forced expansion of the distric theating network to consumers.
-  * Economic expansion in development.
-* Multiple time steps version additionally includes operation with variable
-heating demands.
-* Supports all solvers of pyomo, but the output might have to be rewritten (utils.py)
+* Single time-step topology and piping optimization.
+  * Multiple time-steps version additionally includes operation with variable
+  heating demands.
+  * Greenfield optimization
+  * Existing network in development.
+* Forced and economic expansion of the district heating network to consumers.
+* Supports all solvers of pyomo, but the output helper functions in utils.py
+might have to be rewritten (utils.py)
 * Plotting functions included
 
 ## Contents
@@ -39,13 +40,13 @@ heating demands.
 ## Description
 
 To run the model, several incidence matrices have to be formulated. Then, the linear regression
-parameters can be calculated for a given supply, ambient and return temperature of the network. 
+parameters can be calculated for a given supply, ambient and return temperature of the network.
 A pyomo model is then set up and solved with the solver of your choice.
 
 ## Why should I use this?
 
-Topotherm has the best scaling of multiple open-source models and has
-been benchmarked and validated.
+Topotherm has the best scaling properties of multiple open-source models and
+has been benchmarked and validated.
 
 ## How to cite
 
@@ -53,48 +54,50 @@ been benchmarked and validated.
 
 ## Getting Started
 
-This repository needs a PC capable to run python and its standard libraries. 
+This repository needs a PC capable to run python and its standard libraries.
 
 ### Requirements
 
 * Anaconda, mamba or venv
 
-### Install
+## Install
 
-Use git to clone this repository into your computer.
+Use git to clone this repository into your computer. Then, install topotherm
+with a package manager such as Anaconda, or directly with Python.
 
 ```git
 git clone https://github.com/jylambert/topotherm.git
 ```
 
-#### Anaconda
+### Python
+
+```Python
+cd topotherm
+python setup.py install
+```
+
+This can also be done with venv or equivalent.
+
+### Anaconda or mamba
 
 We recommend to install the dependencies with anaconda or mamba:
 
 ```conda
-conda env create -f environment.yml
+cd topotherm
+conda create -n topotherm python
 conda activate topotherm
+pip install -e .
 ```
 
-#### pip
+## Solver
 
-Alternatively, the packages can be installed manually via pip and/or in a venv with the `requirements.txt` file.
-
-```Python
-python3 -m venv env
-source env/bin/activate
-pip install -r requirements.txt
-```
-
-### Solver
-
-#### Gurobi
+### Gurobi
 
 The results in the paper were obtained with the commercial solver gurobi.
 A free academic license is available and can be installed by following
 the documentation [here](https://support.gurobi.com/hc/en-us/articles/360044290292-How-do-I-install-Gurobi-for-Python-).
 
-#### Open-source Alternatives
+### Open-source Alternatives
 
 You can try the code on smaller benchmarks with several open source solvers,
 such as GLPK. Other popular open-source options are COIN-OR's cbc, HiGHS or SCIP.
@@ -104,20 +107,20 @@ conda activate topotherm
 conda install -c conda-forge glpk
 ```
 
-### Usage
+## Usage
 
-Generate the input incidence matrices for the district with .parquet format (see Example).
-Then, modify and run the main.py script.
+Generate the input incidence matrices for the district with .parquet format (see example).
+Then, modify and run the either one of the three scripts in that folder.
 
 ```bash
+cd example
 python run_sts.py
 ```
 
 ## Contribute
 
-Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
-
-Please make sure to update tests as appropriate.
+Pull requests and any feedback regarding the code are very welcome. For major
+changes, please open an issue first to discuss what you would like to change.
 
 ## License
 
