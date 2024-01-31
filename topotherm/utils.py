@@ -51,6 +51,17 @@ def solver_to_df(result, model, solver):
         dfslvr.loc['Time', 'unit'] = 's'
         dfslvr.loc['Objective', 0] = pyo.value(model.obj)
         dfslvr.loc['Objective', 'unit'] = '-'
+    elif solver == "scip":
+        dfslvr.loc['Termination condition', 0] = slvr_res['Termination condition']
+        dfslvr.loc['Termination condition', 'unit'] = '-'
+        dfslvr.loc['Termination messag', 0] = slvr_res['Termination condition']
+        dfslvr.loc['Termination messag', 'unit'] = '-'
+        dfslvr.loc['Time', 0] = slvr_res['Wallclock time']
+        dfslvr.loc['Time', 'unit'] = 's'
+        dfslvr.loc['Objective', 0] = pyo.value(model.obj)
+        dfslvr.loc['Objective', 'unit'] = '-'
+    else:
+        raise NotImplementedError(f"Solver {solver} not implemented")
     return dfslvr
 
 
