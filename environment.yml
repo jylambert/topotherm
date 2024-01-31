@@ -3,7 +3,7 @@ channels:
   - defaults
   - conda-forge
 dependencies:
-  - python=3.11
+  - python>=3.9
   - numpy
   - pandas
   - scipy
@@ -12,3 +12,4 @@ dependencies:
   - pyomo
   - pyarrow>=14.0.1
   - Pillow>=10.2.0
+  - pytest

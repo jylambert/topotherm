@@ -13,13 +13,17 @@ from scipy.optimize import fsolve
 from topotherm import settings
 
 
-def postprocess(model, matrices, sets, mode, temperatures):
+def postprocess(model, matrices, sets, mode, t_supply, t_return):
     """Create variables for the thermo-hydraulic coupled optimization.
 
     Args:
-        model (_type_): pyomo model
-        matrices (_type_): dict containing the matrices
-        sets (_type_): dict containing the sets
+        model (pyo.ConcreteModel): pyomo model
+        matrices (dict): dict containing the matrices
+        sets (dict): dict containing the sets
+        mode (str): sts or mts
+        t_supply (float): supply temperature
+        t_return (float): return temperature
+
     
     Returns:
         _type_: dict containing the variables
@@ -95,9 +99,8 @@ def postprocess(model, matrices, sets, mode, temperatures):
     a_i_shape_opt = np.shape(a_i_opt)  # (rows 0, columns 1)
     d_lin2 = np.zeros(a_i_shape_opt[1])
     v_lin2 = np.zeros(a_i_shape_opt[1])
-    supply_temp_opt = np.ones(a_i_shape_opt[1]) * temperatures['supply'][0]
-    return_temp_opt = np.ones(a_i_shape_opt[1]) * temperatures['return'][0]
-
+    supply_temp_opt = np.ones(a_i_shape_opt[1]) * t_supply
+    return_temp_opt = np.ones(a_i_shape_opt[1]) * t_return
     def equations(v):
         vel, d = v
         reynolds = (settings.Water.density * vel * d) / settings.Water.dynamic_viscosity
@@ -126,7 +129,7 @@ def postprocess(model, matrices, sets, mode, temperatures):
     return res
 
 
-def mts(model, matrices, sets, temperatures):
+def mts(model, matrices, sets, t_supply, t_return):
     """returns all matrices and results for further processing. Essentially, it simplifies the
     results from the optimization, including pipe diameter and mass flow, eliminating the ununsed
     pipes and nodes.
@@ -186,8 +189,8 @@ def mts(model, matrices, sets, temperatures):
     a_i_shape_opt = np.shape(a_i_opt)  # (rows 0, columns 1)
     d_lin2 = np.zeros(a_i_shape_opt[1])
     v_lin2 = np.zeros(a_i_shape_opt[1])
-    supply_temp_opt = np.ones(a_i_shape_opt[1]) * temperatures['supply'][0]
-    return_temp_opt = np.ones(a_i_shape_opt[1]) * temperatures['return'][0]
+    supply_temp_opt = np.ones(a_i_shape_opt[1]) * t_supply
+    return_temp_opt = np.ones(a_i_shape_opt[1]) * t_return
 
     def equations(v):
         vel, d = v

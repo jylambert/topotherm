@@ -21,7 +21,7 @@ class Temperatures:
     """Temperatures for the regression"""
     ambient = -20  # in °C
     supply = 90  # in °C
-    _return = 55  # in °C
+    return_ = 55  # in °C
 
 
 class Piping:

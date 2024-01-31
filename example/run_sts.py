@@ -12,26 +12,36 @@ import pandas as pd
 import pyomo.environ as pyo
 
 import topotherm as tt
-import topotherm.precalculation_hydraulic as precalc
 from topotherm import settings
 
 
-DATAPATH = './data/'  # input directory
-OUTPUTPATH = './results/sts_forced/'  # output directory
+DATAPATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
+OUTPUTPATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                          'results', 'sts_forced')
+# regression coefficients for thermal capacity and heat losses
+REGRESSION = 'regression.csv'
 PLOTS = True  # plot districts before and after optimization
 SOLVER = 'gurobi'  # 'gurobi' or 'cbc'
 
 
-def regressions(temperatures):
-    """Calculate the regression coefficients for the thermal capacity and heat losses"""
-    # thermal capacity regression and max power as well as part loads
-    r_thermal_cap = precalc.regression_thermal_capacity(temperatures)
-    # heat loss regression
-    r_heat_loss = precalc.regression_heat_losses(temperatures, r_thermal_cap)
+def read_regression(path, i):
+    """Read the regression coefficients for the thermal capacity and heat
+    losses from csv file.
+    
+    """
+    # read df and force floats
+    df = pd.read_csv(path, sep=',', index_col=0, header=0, dtype=float)
+    r_thermal_cap = dict(power_flow_max_kW=[df.loc[i, "power_flow_max_kW"]],
+                         params={"a": df.loc[i, "capacity_a"],
+                                 "b": df.loc[i, "capacity_b"]},
+                         power_flow_max_partload=df.loc[i, "power_flow_max_partload"])
+    r_heat_loss = dict(params={"a": df.loc[i, "heat_loss_a"],
+                                 "b": df.loc[i, "heat_loss_b"]
+                                 })
     return r_thermal_cap, r_heat_loss
 
 
-def main(filepath, outputpath, plots=True, solver='gurobi'):
+def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
     """Main function to run the optimization"""
     # Create output directory if it does not exist
     tt.utils.create_dir(outputpath)
@@ -43,19 +53,12 @@ def main(filepath, outputpath, plots=True, solver='gurobi'):
         f = tt.plotting.district(mat, isnot_init=False) # Save initial District
         f.savefig(os.path.join(outputpath, 'district_initial.svg'), bbox_inches='tight')
 
-    # Run STS
-    # @TODO: put this into separate notebook? and import dicts from csv
-    # init temperatures
-    temps = precalc.init_temperatures()
-
     # regression
-    r_thermal_cap, r_heat_loss = regressions(temps)
+    r_thermal_cap, r_heat_loss = read_regression(os.path.join(filepath, REGRESSION), 0)
 
-    # -------------------------------- Create Model --------------------------------
     model_sets = tt.model.create_sets(mat)
-    model = tt.model.sts(mat, model_sets, r_thermal_cap, r_heat_loss, "forced")
+    model = tt.model.sts(mat, model_sets, r_thermal_cap, r_heat_loss, mode)
 
-    # -------------------------------- Initialize Optimization --------------------------------
     # Optimization initialization
     opt = pyo.SolverFactory(solver)
     opt.options['mipgap'] = settings.OptSettings.mip_gap
@@ -63,10 +66,8 @@ def main(filepath, outputpath, plots=True, solver='gurobi'):
     opt.options['logfile'] = os.path.join(outputpath, 'optimization.log')
     #opt.options['Seed'] = 56324978
 
-    # -------------------------------- Solve the Model --------------------------------
     result = opt.solve(model, tee=True)
 
-    # -------------------------------- Process the results --------------------------------
     # Save model results to csv
     dfres = tt.utils.model_to_df(model)
     dfres.to_csv(os.path.join(outputpath, 'results.csv'), sep=';')
@@ -75,7 +76,9 @@ def main(filepath, outputpath, plots=True, solver='gurobi'):
     dfsol = tt.utils.solver_to_df(result, model, solver=solver)
     dfsol.to_csv(os.path.join(outputpath, 'solver.csv'), sep=';')
 
-    opt_mats = tt.postprocessing.postprocess(model, mat, model_sets, "sts", temperatures=temps)
+    opt_mats = tt.postprocessing.postprocess(model, mat, model_sets, "sts",
+                                             t_return=settings.Temperatures.return_,
+                                             t_supply=settings.Temperatures.supply)
 
     # iterate over opt_mats and save each matrix as parquet file
     for key, value in opt_mats.items():
@@ -89,5 +92,5 @@ def main(filepath, outputpath, plots=True, solver='gurobi'):
 
 if __name__ == '__main__':
     main(filepath=os.path.join(DATAPATH), outputpath=os.path.join(OUTPUTPATH),
-         plots=PLOTS, solver=SOLVER)
+         plots=PLOTS, solver=SOLVER, mode='forced')
     print(f'Finished {OUTPUTPATH}')
