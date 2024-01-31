@@ -4,7 +4,6 @@ import pyomo.environ as pyo
 import pandas as pd
 
 import topotherm as tt
-import topotherm.precalculation_hydraulic as precalc
 
 
 def read_regression(path, i):
@@ -23,7 +22,7 @@ def read_regression(path, i):
     return r_thermal_cap, r_heat_loss
 
 
-def test_sts_forced():
+def test_mtseasy_forced():
     """Main function to run the optimization"""
     # Load the district
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -34,12 +33,13 @@ def test_sts_forced():
         os.path.join(current_path, 'data', 'regression.csv'), 0)
 
     model_sets = tt.model.create_sets(mat)
-    model = tt.model.sts(mat, model_sets, r_thermal_cap, r_heat_loss, "forced")
+    model = tt.model.mts_easy(mat, model_sets, r_thermal_cap, r_heat_loss, "forced",
+                         flh_scaling=1.9254)
 
     # Optimization initialization
     opt = pyo.SolverFactory('gurobi')
     opt.options['mipgap'] = 0.01
-    opt.options['timelimit'] = 600
+    opt.options['timelimit'] = 3600
 
     result = opt.solve(model, tee=True)
     assert result.solver.status == pyo.SolverStatus.ok
@@ -48,7 +48,7 @@ def test_sts_forced():
     assert (abs(pyo.value(model.obj)) - 4.6259e+06) < 0.02 * 4.6259e+06
 
 
-def test_sts_eco():
+def test_mtseasy_eco():
     """Main function to run the optimization"""
     # Load the district
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -59,12 +59,13 @@ def test_sts_eco():
         os.path.join(current_path, 'data', 'regression.csv'), 0)
 
     model_sets = tt.model.create_sets(mat)
-    model = tt.model.sts(mat, model_sets, r_thermal_cap, r_heat_loss, "eco")
+    model = tt.model.mts_easy(mat, model_sets, r_thermal_cap, r_heat_loss, "eco",
+                         flh_scaling=1.9254)
 
     # Optimization initialization
     opt = pyo.SolverFactory('gurobi')
     opt.options['mipgap'] = 0.01
-    opt.options['timelimit'] = 600
+    opt.options['timelimit'] = 3600
 
     result = opt.solve(model, tee=True)
     assert result.solver.status == pyo.SolverStatus.ok
