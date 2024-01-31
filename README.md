@@ -5,7 +5,7 @@ district heating network design.
 
 ## Intro
 
-Topotherm is a pyomo-based mixed-integer linear programming district heating 
+Topotherm is a pyomo-based mixed-integer linear programming district heating
 network design model which scales well into larger districts for single
 and mulitple time steps.
 It has been benchmarked against multiple other open-source models for a
@@ -100,11 +100,11 @@ the documentation [here](https://support.gurobi.com/hc/en-us/articles/3600442902
 ### Open-source Alternatives
 
 You can try the code on smaller benchmarks with several open source solvers,
-such as GLPK. Other popular open-source options are COIN-OR's cbc, HiGHS or SCIP.
+such as SCIP. Other popular open-source options are COIN-OR's cbc or HiGHS.
 
 ```conda
 conda activate topotherm
-conda install -c conda-forge glpk
+conda install -c conda-forge pyscipopt
 ```
 
 ## Usage
@@ -121,6 +121,14 @@ python run_sts.py
 
 Pull requests and any feedback regarding the code are very welcome. For major
 changes, please open an issue first to discuss what you would like to change.
+
+## Tests
+
+To run the tests, use pytest.
+
+```Python
+pytest test
+```
 
 ## License
 
