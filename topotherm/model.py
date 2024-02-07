@@ -63,27 +63,20 @@ def create_sets(matrices):
     s['lambda_c_ji'] = np.zeros(s['a_i_shape'][1])
     s['lambda_c_ji'][s['connection_c_ji']] = 1
 
-    s['a_i_out'] = defaultdict(list)
-    s['a_i_in'] = defaultdict(list)
-    row_len_a_i = range(s['a_i_shape'][0])
+    # create a dict with {row: [outgoing pipes], row: [ingoing pipes]}
+    s['a_i_out'] = {}
+    s['a_i_in'] = {}
+    for i in range(s['a_i_shape'][0]):
+        s['a_i_out'][i] = np.where(matrices['a_i'][i, :] == 1)[0]
+        s['a_i_in'][i] = np.where(matrices['a_i'][i, :] == -1)[0]
 
-    for i in row_len_a_i:
-        pipesout = np.where(matrices['a_i'][i, :] == 1)[0]
-        s['a_i_out'][i].append(pipesout)
-        pipesin = np.where(matrices['a_i'][i, :] == -1)[0]
-        s['a_i_in'][i].append(pipesin)
+    s['a_p_in'] = {}
+    for i in range(s['a_p_shape'][0]):
+        s['a_p_in'][i] = np.where(matrices['a_p'][i, :] == -1)[0]
 
-    s['a_p_in'] = defaultdict(list)
-    row_len_a_p = range(s['a_p_shape'][0])
-    for i in row_len_a_p:
-        num_prod_out = np.where(matrices['a_p'][i, :] == -1)[0]
-        s['a_p_in'][i].append(num_prod_out)
-
-    s['a_c_out'] = defaultdict(list)
-    row_len_a_c = range(s['a_c_shape'][0])
-    for i in row_len_a_c:
-        num_cons_out = np.where(matrices['a_c'][i, :] == 1)[0]
-        s['a_c_out'][i].append(num_cons_out)
+    s['a_c_out'] = {}
+    for i in range(s['a_c_shape'][0]):
+        s['a_c_out'][i] = np.where(matrices['a_c'][i, :] == 1)[0]
     return s
 
 
@@ -155,17 +148,17 @@ def sts(matrices, sets, regression_caps, regression_losses, opt_mode):
 
 
     def nodal_power_balance(m, j, t):
-        term1 = sum(m.P_11[k, t] - m.P_22[k, t] for k in sets['a_i_out'][j][0]) # Sum of outgoing flows from pipes
-        term2 = sum(m.P_21[k, t] - m.P_12[k, t] for k in sets['a_i_in'][j][0])  # Sum of incoming flows from pipes
-        term3 = sum(- m.P_source[k, t] for k in sets['a_p_in'][j][0])           # Flows from producer
+        term1 = sum(m.P_11[k, t] - m.P_22[k, t] for k in sets['a_i_out'][j]) # Sum of outgoing flows from pipes
+        term2 = sum(m.P_21[k, t] - m.P_12[k, t] for k in sets['a_i_in'][j])  # Sum of incoming flows from pipes
+        term3 = sum(- m.P_source[k, t] for k in sets['a_p_in'][j])           # Flows from producer
         term4 = 0
         if opt_mode == "forced":
-            term4 = sum(matrices['q_c'][k, t] for k in sets['a_c_out'][j][0])
+            term4 = sum(matrices['q_c'][k, t] for k in sets['a_c_out'][j])
         elif opt_mode == "eco":
-            term4 = sum((m.lambda_dir_1[sets['a_i_in'][j][0][0]])
-                         * matrices['q_c'][k, t] for k in sets['a_c_out'][j][0] if len(sets['a_i_in'][j][0]) > 0) \
-                   + sum((m.lambda_dir_2[sets['a_i_out'][j][0][0]])
-                         * matrices['q_c'][k, t] for k in sets['a_c_out'][j][0] if len(sets['a_i_out'][j][0]) > 0)
+            term4 = sum((m.lambda_dir_1[sets['a_i_in'][j][0]])
+                         * matrices['q_c'][k, t] for k in sets['a_c_out'][j] if len(sets['a_i_in'][j]) > 0) \
+                   + sum((m.lambda_dir_2[sets['a_i_out'][j][0]])
+                         * matrices['q_c'][k, t] for k in sets['a_c_out'][j] if len(sets['a_i_out'][j]) > 0)
         return term1 + term2 + term3 + term4 == 0
     model.cons_nodal_balance = pyo.Constraint(model.set_n, model.set_t, rule=nodal_power_balance,
                                               doc='Nodal Power Balance')
@@ -260,10 +253,10 @@ def sts(matrices, sets, regression_caps, regression_losses, opt_mode):
 
         if opt_mode == "eco":
             term4 = sum(sum(
-                        sum((m.lambda_dir_1[sets['a_i_in'][j][0][0]])
-                            * matrices['q_c'][k, t] for k in sets['a_c_out'][j][0] if len(sets['a_i_in'][j][0]) > 0)
-                        + sum((m.lambda_dir_2[sets['a_i_out'][j][0][0]])
-                            * matrices['q_c'][k, t] for k in sets['a_c_out'][j][0] if len(sets['a_i_out'][j][0]) > 0)
+                        sum((m.lambda_dir_1[sets['a_i_in'][j]])
+                            * matrices['q_c'][k, t] for k in sets['a_c_out'][j] if len(sets['a_i_in'][j]) > 0)
+                        + sum((m.lambda_dir_2[sets['a_i_out'][j]])
+                            * matrices['q_c'][k, t] for k in sets['a_c_out'][j] if len(sets['a_i_out'][j]) > 0)
                         for j in model.set_n) for t in model.set_t) * Economics.flh * Economics.heat_price * (-1)
         else:
             term4 = 0
@@ -358,17 +351,17 @@ def mts_easy(matrices, sets, regression_caps, regression_losses, opt_mode, flh_s
 
 
     def nodal_power_balance(m, j, t):
-        term1 = sum(m.P_11[k, t] - m.P_22[k, t] for k in sets['a_i_out'][j][0]) # Sum of outgoing flows from pipes
-        term2 = sum(m.P_21[k, t] - m.P_12[k, t] for k in sets['a_i_in'][j][0])  # Sum of incoming flows from pipes
-        term3 = sum(- m.P_source[k, t] for k in sets['a_p_in'][j][0])           # Flows from producer
+        term1 = sum(m.P_11[k, t] - m.P_22[k, t] for k in sets['a_i_out'][j]) # Sum of outgoing flows from pipes
+        term2 = sum(m.P_21[k, t] - m.P_12[k, t] for k in sets['a_i_in'][j])  # Sum of incoming flows from pipes
+        term3 = sum(- m.P_source[k, t] for k in sets['a_p_in'][j])           # Flows from producer
         term4 = 0
         if opt_mode == "forced":
-            term4 = sum(matrices['q_c'][k, t] for k in sets['a_c_out'][j][0])
+            term4 = sum(matrices['q_c'][k, t] for k in sets['a_c_out'][j])
         elif opt_mode == "eco":
-            term4 = sum((m.lambda_dir_1[sets['a_i_in'][j][0][0], t])
-                         * matrices['q_c'][k, t] for k in sets['a_c_out'][j][0] if len(sets['a_i_in'][j][0]) > 0) \
-                   + sum((m.lambda_dir_2[sets['a_i_out'][j][0][0], t])
-                         * matrices['q_c'][k, t] for k in sets['a_c_out'][j][0] if len(sets['a_i_out'][j][0]) > 0)
+            term4 = sum((m.lambda_dir_1[sets['a_i_in'][j][0], t])
+                         * matrices['q_c'][k, t] for k in sets['a_c_out'][j] if len(sets['a_i_in'][j]) > 0) \
+                   + sum((m.lambda_dir_2[sets['a_i_out'][j][0], t])
+                         * matrices['q_c'][k, t] for k in sets['a_c_out'][j] if len(sets['a_i_out'][j]) > 0)
         return term1 + term2 + term3 + term4 == 0
     model.cons_nodal_balance = pyo.Constraint(model.set_n, model.set_t, rule=nodal_power_balance,
                                               doc='Nodal Power Balance')
@@ -500,10 +493,10 @@ def mts_easy(matrices, sets, regression_caps, regression_losses, opt_mode, flh_s
 
         if opt_mode == "eco":
             term4 = sum(sum(
-                        sum((m.lambda_dir_1[sets['a_i_in'][j][0][0], t])
-                            * matrices['q_c'][k, t] for k in sets['a_c_out'][j][0] if len(sets['a_i_in'][j][0]) > 0)
-                        + sum((m.lambda_dir_2[sets['a_i_out'][j][0][0], t])
-                            * matrices['q_c'][k, t] for k in sets['a_c_out'][j][0] if len(sets['a_i_out'][j][0]) > 0)
+                        sum((m.lambda_dir_1[sets['a_i_in'][j][0], t])
+                            * matrices['q_c'][k, t] for k in sets['a_c_out'][j] if len(sets['a_i_in'][j]) > 0)
+                        + sum((m.lambda_dir_2[sets['a_i_out'][j][0], t])
+                            * matrices['q_c'][k, t] for k in sets['a_c_out'][j] if len(sets['a_i_out'][j]) > 0)
                         for j in model.set_n) for t in model.set_t) * model.flh * Economics.heat_price * (-1)
         else:
             term4 = 0
