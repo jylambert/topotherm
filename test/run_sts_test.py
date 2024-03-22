@@ -4,8 +4,7 @@ import pyomo.environ as pyo
 import pandas as pd
 
 import topotherm as tt
-import topotherm.precalculation_hydraulic as precalc
-
+from topotherm.settings import Optimization
 
 def read_regression(path, i):
     """Read the regression coefficients for the thermal capacity and heat
@@ -13,13 +12,16 @@ def read_regression(path, i):
     """
     # read df and force floats
     df = pd.read_csv(path, sep=',', index_col=0, header=0, dtype=float)
-    r_thermal_cap = dict(power_flow_max_kW=[df.loc[i, "power_flow_max_kW"]],
-                         params={"a": df.loc[i, "capacity_a"],
-                                 "b": df.loc[i, "capacity_b"]},
-                         power_flow_max_partload=df.loc[i, "power_flow_max_partload"])
-    r_heat_loss = dict(params={"a": df.loc[i, "heat_loss_a"],
-                                 "b": df.loc[i, "heat_loss_b"]
-                                 })
+    r_thermal_cap = {
+        "power_flow_max_kW" : df.loc[i, "power_flow_max_kW"],
+        "a": df.loc[i, "capacity_a"],
+        "b": df.loc[i, "capacity_b"],
+        "power_flow_max_partload": df.loc[i, "power_flow_max_partload"]
+    }
+    r_heat_loss = {
+        "a": df.loc[i, "heat_loss_a"],
+        "b": df.loc[i, "heat_loss_b"]
+    }
     return r_thermal_cap, r_heat_loss
 
 
@@ -34,7 +36,8 @@ def test_sts_forced():
         os.path.join(current_path, 'data', 'regression.csv'), 0)
 
     model_sets = tt.model.create_sets(mat)
-    model = tt.model.sts(mat, model_sets, r_thermal_cap, r_heat_loss, "forced")
+    model = tt.model.sts(mat, model_sets, r_thermal_cap, r_heat_loss,
+                         Optimization().economics, "forced")
 
     # Optimization initialization
     opt = pyo.SolverFactory('gurobi')
@@ -59,7 +62,8 @@ def test_sts_eco():
         os.path.join(current_path, 'data', 'regression.csv'), 0)
 
     model_sets = tt.model.create_sets(mat)
-    model = tt.model.sts(mat, model_sets, r_thermal_cap, r_heat_loss, "eco")
+    model = tt.model.sts(mat, model_sets, r_thermal_cap, r_heat_loss,
+                         Optimization().economics, "eco")
 
     # Optimization initialization
     opt = pyo.SolverFactory('gurobi')

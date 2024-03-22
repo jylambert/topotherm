@@ -4,6 +4,7 @@ import pyomo.environ as pyo
 import pandas as pd
 
 import topotherm as tt
+from topotherm.settings import Optimization
 
 
 def read_regression(path, i):
@@ -12,13 +13,16 @@ def read_regression(path, i):
     """
     # read df and force floats
     df = pd.read_csv(path, sep=',', index_col=0, header=0, dtype=float)
-    r_thermal_cap = dict(power_flow_max_kW=[df.loc[i, "power_flow_max_kW"]],
-                         params={"a": df.loc[i, "capacity_a"],
-                                 "b": df.loc[i, "capacity_b"]},
-                         power_flow_max_partload=df.loc[i, "power_flow_max_partload"])
-    r_heat_loss = dict(params={"a": df.loc[i, "heat_loss_a"],
-                                 "b": df.loc[i, "heat_loss_b"]
-                                 })
+    r_thermal_cap = {
+        "power_flow_max_kW" : df.loc[i, "power_flow_max_kW"],
+        "a": df.loc[i, "capacity_a"],
+        "b": df.loc[i, "capacity_b"],
+        "power_flow_max_partload": df.loc[i, "power_flow_max_partload"]
+    }
+    r_heat_loss = {
+        "a": df.loc[i, "heat_loss_a"],
+        "b": df.loc[i, "heat_loss_b"]
+    }
     return r_thermal_cap, r_heat_loss
 
 
@@ -33,8 +37,9 @@ def test_mtseasy_forced():
         os.path.join(current_path, 'data', 'regression.csv'), 0)
 
     model_sets = tt.model.create_sets(mat)
-    model = tt.model.mts_easy(mat, model_sets, r_thermal_cap, r_heat_loss, "forced",
-                         flh_scaling=1.9254)
+    settings = Optimization()
+    model = tt.model.mts_easy(mat, model_sets, r_thermal_cap, r_heat_loss,
+                              economics=settings.economics, opt_mode="forced", flh_scaling=1.9254)
 
     # Optimization initialization
     opt = pyo.SolverFactory('gurobi')
@@ -59,8 +64,9 @@ def test_mtseasy_eco():
         os.path.join(current_path, 'data', 'regression.csv'), 0)
 
     model_sets = tt.model.create_sets(mat)
-    model = tt.model.mts_easy(mat, model_sets, r_thermal_cap, r_heat_loss, "eco",
-                         flh_scaling=1.9254)
+    settings = Optimization()
+    model = tt.model.mts_easy(mat, model_sets, r_thermal_cap, r_heat_loss, 
+                              economics=settings.economics, opt_mode="eco", flh_scaling=1.9254)
 
     # Optimization initialization
     opt = pyo.SolverFactory('gurobi')
