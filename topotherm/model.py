@@ -13,13 +13,11 @@ The module contains the following functions:
     step operation. The model is based on the MTS easy model and implements the full thermal
     loss equation. The model is more accurate but also more computationally expensive.
 """
-
-from collections import defaultdict
+from topotherm.settings import Economics
 
 import numpy as np
 import pyomo.environ as pyo
 
-from topotherm.settings import Economics
 
 
 def annuity(c_i, n):
@@ -80,7 +78,8 @@ def create_sets(matrices):
     return s
 
 
-def sts(matrices, sets, regression_caps, regression_losses, opt_mode):
+def sts(matrices, sets, regression_caps, regression_losses,
+        economics: Economics, opt_mode: str):
     """Create the optimization model for the thermo-hydraulic coupled with single time
     step operation. 
 
@@ -98,7 +97,7 @@ def sts(matrices, sets, regression_caps, regression_losses, opt_mode):
     # @TODO: a unidirectional flow formulation with multiple time step with topotherm sts)
     model = pyo.ConcreteModel()
 
-    p_max_pipe_const = float(regression_caps['power_flow_max_kW'][-1])  # Big-M-Constraint for pipes
+    p_max_pipe_const = float(regression_caps['power_flow_max_kW'])  # Big-M-Constraint for pipes
     p_max_source = matrices['q_c'].sum()*2  # Big-M-Constraint for source
 
     # Define index sets
@@ -165,18 +164,18 @@ def sts(matrices, sets, regression_caps, regression_losses, opt_mode):
 
     def power_balance_pipe_12(m, j, t):
         term1 = m.P_11[j, t] - m.P_12[j, t]
-        reg1 = regression_losses['params']['a'] * regression_caps['power_flow_max_partload'] \
+        reg1 = regression_losses['a'] * regression_caps['power_flow_max_partload'] \
             * m.P_11[j, t]
-        reg2 = regression_losses['params']['b'] * m.lambda_dir_1[j]
+        reg2 = regression_losses['b'] * m.lambda_dir_1[j]
         return term1 - (reg1 + reg2) * matrices['l_i'][j] == 0
     model.cons_power_balance_pipe_12 = pyo.Constraint(model.set_n_i, model.set_t,
                                                       rule=power_balance_pipe_12,
                                                       doc='Power balance pipe i->j')
 
     def power_balance_pipe_21(m, j, t):
-        reg1 = regression_losses['params']['a'] * regression_caps['power_flow_max_partload'] \
+        reg1 = regression_losses['a'] * regression_caps['power_flow_max_partload'] \
             * m.P_21[j, t]
-        reg2 = regression_losses['params']['b'] * m.lambda_dir_2[j]
+        reg2 = regression_losses['b'] * m.lambda_dir_2[j]
         return m.P_21[j, t] - m.P_22[j, t] - (reg1 + reg2) * matrices['l_i'][j] == 0
     model.cons_power_balance_pipe_21 = pyo.Constraint(model.set_n_i, model.set_t,
                                                       rule=power_balance_pipe_21,
@@ -238,18 +237,18 @@ def sts(matrices, sets, regression_caps, regression_losses, opt_mode):
 
     def objective_function(m):
         term1 = sum(
-            sum(m.P_source[k, t] * Economics.source_price * Economics.flh for k in m.set_n_p)
+            sum(m.P_source[k, t] * economics.source_price * economics.flh for k in m.set_n_p)
             for t in model.set_t
                 )
         term2 = sum(
             (
-                ((m.P_11[k, 0] + m.P_21[k, 0]) * regression_caps['params']['a']
-                    + regression_caps['params']['b'] * (m.lambda_dir_1[k]+m.lambda_dir_2[k])
-                ) * annuity(Economics.c_irr, Economics.life_time) * matrices['l_i'][k]
+                ((m.P_11[k, 0] + m.P_21[k, 0]) * regression_caps['a']
+                    + regression_caps['b'] * (m.lambda_dir_1[k]+m.lambda_dir_2[k])
+                ) * annuity(economics.c_irr, economics.life_time) * matrices['l_i'][k]
             ) for k in m.set_n_i
         )
-        term3 = sum(m.P_source_cap[k] * Economics.c_inv_source[k]
-                    * annuity(Economics.c_irr, Economics.life_time) for k in m.set_n_p)
+        term3 = sum(m.P_source_cap[k] * economics.c_inv_source[k]
+                    * annuity(economics.c_irr, economics.life_time) for k in m.set_n_p)
 
         if opt_mode == "eco":
             term4 = sum(sum(
@@ -257,7 +256,7 @@ def sts(matrices, sets, regression_caps, regression_losses, opt_mode):
                             * matrices['q_c'][k, t] for k in sets['a_c_out'][j] if len(sets['a_i_in'][j]) > 0)
                         + sum((m.lambda_dir_2[sets['a_i_out'][j]])
                             * matrices['q_c'][k, t] for k in sets['a_c_out'][j] if len(sets['a_i_out'][j]) > 0)
-                        for j in model.set_n) for t in model.set_t) * Economics.flh * Economics.heat_price * (-1)
+                        for j in model.set_n) for t in model.set_t) * economics.flh * economics.heat_price * (-1)
         else:
             term4 = 0
 
@@ -272,7 +271,8 @@ def sts(matrices, sets, regression_caps, regression_losses, opt_mode):
 # @TODO: change the flh_scaling somehow
 # @TODO: implement existing pipes and sources
 
-def mts_easy(matrices, sets, regression_caps, regression_losses, opt_mode, flh_scaling):
+def mts_easy(matrices, sets, regression_caps, regression_losses,
+             economics: Economics, opt_mode: str, flh_scaling: float):
     """Create the optimization model for the thermo-hydraulic coupled with multiple time 
     step operation. The model is based on the STS model and implements a simplified themal
     loss equation to alleviate the computational burden.
@@ -291,9 +291,9 @@ def mts_easy(matrices, sets, regression_caps, regression_losses, opt_mode, flh_s
     # @TODO: check how to solve the problem with the scaling of the flh
     model = pyo.ConcreteModel()
 
-    p_max_pipe_const = float(regression_caps['power_flow_max_kW'][-1])  # Big-M-Constraint for pipes
+    p_max_pipe_const = float(regression_caps['power_flow_max_kW'])  # Big-M-Constraint for pipes
     p_max_source = matrices['q_c'].sum()*2  # Big-M-Constraint for source
-    model.flh = Economics.flh / flh_scaling
+    model.flh = economics.flh / flh_scaling
 
     # Define index sets
     model.set_n_i = pyo.Set(initialize=range(sets['a_i_shape'][1]),
@@ -368,17 +368,17 @@ def mts_easy(matrices, sets, regression_caps, regression_losses, opt_mode, flh_s
 
     def power_balance_pipe_12(m, j, t):
         term1 = m.P_11[j, t] - m.P_12[j, t]
-        reg1 = regression_losses['params']['a'] * regression_caps['power_flow_max_partload'] \
+        reg1 = regression_losses['a'] * regression_caps['power_flow_max_partload'] \
             * m.P_11[j, t]
-        reg2 = regression_losses['params']['b'] * m.lambda_dir_1[j, t]
+        reg2 = regression_losses['b'] * m.lambda_dir_1[j, t]
         return term1 - (reg1 + reg2) * matrices['l_i'][j] == 0
     model.cons_power_balance_pipe_12 = pyo.Constraint(
         model.set_n_i, model.set_t, rule=power_balance_pipe_12, doc='Power balance pipe i->j')
 
     def power_balance_pipe_21(m, j, t):
-        reg1 = regression_losses['params']['a'] * regression_caps['power_flow_max_partload'] \
+        reg1 = regression_losses['a'] * regression_caps['power_flow_max_partload'] \
             * m.P_21[j, t]
-        reg2 = regression_losses['params']['b'] * m.lambda_dir_2[j, t]
+        reg2 = regression_losses['b'] * m.lambda_dir_2[j, t]
         return m.P_21[j, t] - m.P_22[j, t] - (reg1 + reg2) * matrices['l_i'][j] == 0
     model.cons_power_balance_pipe_21 = pyo.Constraint(
         model.set_n_i, model.set_t, rule=power_balance_pipe_21, doc='Power balance pipe j->i')
@@ -478,18 +478,18 @@ def mts_easy(matrices, sets, regression_caps, regression_losses, opt_mode, flh_s
     def objective_function(m):
 
         term1 = sum(
-            sum(m.P_source[k, t] * Economics.source_price * model.flh for k in m.set_n_p)
+            sum(m.P_source[k, t] * economics.source_price * model.flh for k in m.set_n_p)
             for t in model.set_t
                 )
         term2 = sum(
             (
-                (m.P_cap[k] * regression_caps['params']['a']
-                    + regression_caps['params']['b'] * m.lambda_built[k]
-                 ) * annuity(Economics.c_irr, Economics.life_time) * matrices['l_i'][k]
+                (m.P_cap[k] * regression_caps['a']
+                    + regression_caps['b'] * m.lambda_built[k]
+                 ) * annuity(economics.c_irr, economics.life_time) * matrices['l_i'][k]
             ) for k in m.set_n_i
         )
-        term3 = sum(m.P_source_cap[k] * Economics.c_inv_source[k]
-                    * annuity(Economics.c_irr, Economics.life_time) for k in m.set_n_p)
+        term3 = sum(m.P_source_cap[k] * economics.c_inv_source[k]
+                    * annuity(economics.c_irr, economics.life_time) for k in m.set_n_p)
 
         if opt_mode == "eco":
             term4 = sum(sum(
@@ -497,7 +497,7 @@ def mts_easy(matrices, sets, regression_caps, regression_losses, opt_mode, flh_s
                             * matrices['q_c'][k, t] for k in sets['a_c_out'][j] if len(sets['a_i_in'][j]) > 0)
                         + sum((m.lambda_dir_2[sets['a_i_out'][j][0], t])
                             * matrices['q_c'][k, t] for k in sets['a_c_out'][j] if len(sets['a_i_out'][j]) > 0)
-                        for j in model.set_n) for t in model.set_t) * model.flh * Economics.heat_price * (-1)
+                        for j in model.set_n) for t in model.set_t) * model.flh * economics.heat_price * (-1)
         else:
             term4 = 0
         return term1 + term2 + term3 + term4
@@ -508,7 +508,8 @@ def mts_easy(matrices, sets, regression_caps, regression_losses, opt_mode, flh_s
     return model
 
 
-def mts(matrices, sets, regression_caps, regression_losses, opt_mode, flh_scaling):
+def mts(matrices, sets, regression_caps, regression_losses,
+        economics: Economics, opt_mode: str, flh_scaling: float):
     """Create the optimization model for the thermo-hydraulic coupled with multiple time
     step operation. The model is based on the STS model and implements a simplified thermal
     loss equation to alleviate the computational burden.
@@ -524,8 +525,9 @@ def mts(matrices, sets, regression_caps, regression_losses, opt_mode, flh_scalin
         model (pyomo.environ.ConcreteModel): pyomo model
     """
 
-    model = mts_easy(matrices, sets, regression_caps, regression_losses, opt_mode, flh_scaling)
-    p_max_pipe_const = float(regression_caps['power_flow_max_kW'][-1])  # Big-M-Constraint for pipes
+    model = mts_easy(matrices, sets, regression_caps, regression_losses,
+                     economics=economics, opt_mode=opt_mode, flh_scaling=flh_scaling)
+    p_max_pipe_const = float(regression_caps['power_flow_max_kW'])  # Big-M-Constraint for pipes
 
     model.P_loss_1 = pyo.Var(model.set_n_i, model.set_t,
                              bounds=(0, p_max_pipe_const),
@@ -538,7 +540,6 @@ def mts(matrices, sets, regression_caps, regression_losses, opt_mode, flh_scalin
                              initialize=0,
                              doc='Heat power at the exit of the pipe 2')
 
-
     def calculation_loss_1_1(m, j, t):
         return m.P_loss_1[j, t] - p_max_pipe_const * m.lambda_dir_1[j, t] <= 0
 
@@ -546,9 +547,9 @@ def mts(matrices, sets, regression_caps, regression_losses, opt_mode, flh_scalin
         model.set_n_i, model.set_t, rule=calculation_loss_1_1, doc='Complex loss calc 1 to 1')
 
     def calculation_loss_1_2(m, j, t):
-        reg1 = regression_losses['params']['a'] * regression_caps['power_flow_max_partload'] \
+        reg1 = regression_losses['a'] * regression_caps['power_flow_max_partload'] \
                * m.P_cap[j]
-        reg2 = regression_losses['params']['b'] * m.lambda_dir_1[j, t]
+        reg2 = regression_losses['b'] * m.lambda_dir_1[j, t]
         return (reg1 + reg2) * matrices['l_i'][j] - m.P_loss_1[j, t] \
             - p_max_pipe_const * (1 - m.lambda_dir_1[j, t]) <= 0
 
@@ -562,9 +563,9 @@ def mts(matrices, sets, regression_caps, regression_losses, opt_mode, flh_scalin
         model.set_n_i, model.set_t, rule=calculation_loss_2_1)
 
     def calculation_loss_2_2(m, j, t):
-        return (regression_losses['params']['a'] * regression_caps['power_flow_max_partload']
+        return (regression_losses['a'] * regression_caps['power_flow_max_partload']
                 * m.P_cap[j]
-                + regression_losses['params']['b'] * m.lambda_dir_2[j, t]) * matrices['l_i'][j] \
+                + regression_losses['b'] * m.lambda_dir_2[j, t]) * matrices['l_i'][j] \
             - m.P_loss_2[j, t] - p_max_pipe_const * (1 - m.lambda_dir_2[j, t]) <= 0
 
     model.cons_calculation_loss_2_2 = pyo.Constraint(
