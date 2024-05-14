@@ -29,6 +29,13 @@ jobs:
         python -m pip install --upgrade pip
         python -m pip install flake8 pytest
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+    - name: Install SCIP Optimization Suite
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y scip
+    - name: Install PySCIPOpt
+      run: |
+        python -m pip install pyscipopt
     - name: Install topotherm
       run: |
         python -m pip install .

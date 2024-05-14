@@ -42,7 +42,7 @@ def test_mtseasy_forced():
                               economics=settings.economics, opt_mode="forced", flh_scaling=1.9254)
 
     # Optimization initialization
-    opt = pyo.SolverFactory('gurobi')
+    opt = pyo.SolverFactory('scip')
     opt.options['mipgap'] = 0.01
     opt.options['timelimit'] = 3600
 
@@ -69,7 +69,7 @@ def test_mtseasy_eco():
                               economics=settings.economics, opt_mode="eco", flh_scaling=1.9254)
 
     # Optimization initialization
-    opt = pyo.SolverFactory('gurobi')
+    opt = pyo.SolverFactory('scip')
     opt.options['mipgap'] = 0.01
     opt.options['timelimit'] = 3600
 

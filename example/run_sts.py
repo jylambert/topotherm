@@ -21,7 +21,7 @@ OUTPUTPATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
 # regression coefficients for thermal capacity and heat losses
 REGRESSION = 'regression.csv'
 PLOTS = True  # plot districts before and after optimization
-SOLVER = 'gurobi'  # 'gurobi', 'cplex' or 'scip'
+SOLVER = 'scip'  # 'gurobi', 'cplex' or 'scip'
 
 
 def read_regression(path, i):

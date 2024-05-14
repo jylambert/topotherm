@@ -41,7 +41,7 @@ def test_mts_forced():
                          Optimization().economics, "forced", flh_scaling=1.9254)
 
     # Optimization initialization
-    opt = pyo.SolverFactory('gurobi')
+    opt = pyo.SolverFactory('scip')
     opt.options['mipgap'] = 0.01
     opt.options['timelimit'] = 3600
 
@@ -67,7 +67,7 @@ def test_mts_eco():
                          Optimization().economics, "eco", flh_scaling=1.9254)
 
     # Optimization initialization
-    opt = pyo.SolverFactory('gurobi')
+    opt = pyo.SolverFactory('scip')
     opt.options['mipgap'] = 0.01
     opt.options['timelimit'] = 3600
 

@@ -40,7 +40,7 @@ def test_sts_forced():
                          Optimization().economics, "forced")
 
     # Optimization initialization
-    opt = pyo.SolverFactory('gurobi')
+    opt = pyo.SolverFactory('scip')
     opt.options['mipgap'] = 0.01
     opt.options['timelimit'] = 600
 
@@ -66,7 +66,7 @@ def test_sts_eco():
                          Optimization().economics, "eco")
 
     # Optimization initialization
-    opt = pyo.SolverFactory('gurobi')
+    opt = pyo.SolverFactory('scip')
     opt.options['mipgap'] = 0.01
     opt.options['timelimit'] = 600
 
