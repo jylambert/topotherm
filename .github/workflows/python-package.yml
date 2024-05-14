@@ -31,8 +31,15 @@ jobs:
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     - name: Install SCIP Optimization Suite
       run: |
-        sudo apt-get update
-        sudo apt-get install -y scip
+        apt-get install wget cmake g++ m4 xz-utils libgmp-dev unzip zlib1g-dev libboost-program-options-dev libboost-serialization-dev libboost-regex-dev libboost-iostreams-dev libtbb-dev libreadline-dev pkg-config git liblapack-dev libgsl-dev flex bison libcliquer-dev gfortran file dpkg-dev libopenblas-dev rpm
+        wget https://scipopt.org/download.php?fname=scip-9.0.1.tgz
+        tar xvzf scip-9.0.1.tgz
+        cd scip-9.0.1
+        mkdir build
+        cd build
+        cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local
+        sudo make
+        sudo make install
     - name: Install PySCIPOpt
       run: |
         python -m pip install pyscipopt
