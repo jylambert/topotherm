@@ -19,7 +19,6 @@ import numpy as np
 import pyomo.environ as pyo
 
 
-
 def annuity(c_i, n):
     """Calculate the annuity factor.
 
@@ -84,11 +83,14 @@ def sts(matrices, sets, regression_caps, regression_losses,
     step operation. 
 
     Args:
-        matrices (dict): Dictionary with the matrices of the district heating network with keys 
-        a_i, a_p, a_c, l_i, position, q_c
-        sets (dict): Dictionary with the sets for the optimization, obtained from matrices
-        regression_caps (dict): Dictionary with the regression coefficients for the thermal capacity
-        regression_losses (dict): Dictionary with the regression coefficients for the heat losses
+        matrices (dict): Dictionary with the matrices of the district heating
+            network with keys a_i, a_p, a_c, l_i, position, q_c
+        sets (dict): Dictionary with the sets for the optimization, obtained
+            from matrices
+        regression_caps (dict): Dictionary with the regression coefficients
+            for the thermal capacity
+        regression_losses (dict): Dictionary with the regression coefficients
+            for the heat losses
     
     Returns:
         model (pyomo.environ.ConcreteModel): pyomo model
@@ -144,7 +146,6 @@ def sts(matrices, sets, regression_caps, regression_losses,
     model.cons_heat_source_cap = pyo.Constraint(model.set_n_p, model.set_t, rule=heat_source_cap,
                                                 doc='Investment costs for the heat source')
     # @TODO: Check if nodal power balance is the same for forced and eco (it should be the case, but testing is needed)
-
 
     def nodal_power_balance(m, j, t):
         term1 = sum(m.P_11[k, t] - m.P_22[k, t] for k in sets['a_i_out'][j]) # Sum of outgoing flows from pipes
@@ -272,7 +273,6 @@ def sts(matrices, sets, regression_caps, regression_losses,
 # @TODO: discuss with jerry simplification strategies, since both models share a lot of equations.
 # @TODO: change the flh_scaling somehow
 # @TODO: implement existing pipes and sources
-
 def mts_easy(matrices, sets, regression_caps, regression_losses,
              economics: Economics, opt_mode: str, flh_scaling: float):
     """Create the optimization model for the thermo-hydraulic coupled with multiple time 
@@ -345,13 +345,11 @@ def mts_easy(matrices, sets, regression_caps, regression_losses,
     model.P_source_cap = pyo.Var(model.set_n_p,
                                  doc='Thermal capacity of the heat source', **source_power)
 
-
     def heat_source_cap(m, j, t):
         return m.P_source[j, t] <= m.P_source_cap[j]
     model.cons_heat_source_cap = pyo.Constraint(
         model.set_n_p, model.set_t,
         rule=heat_source_cap, doc='Investment costs for the heat source')
-
 
     def nodal_power_balance(m, j, t):
         term1 = sum(m.P_11[k, t] - m.P_22[k, t] for k in sets['a_i_out'][j]) # Sum of outgoing flows from pipes
@@ -481,7 +479,6 @@ def mts_easy(matrices, sets, regression_caps, regression_losses,
                                                           rule=built_usage_mapping_help2)
 
     def objective_function(m):
-
         term1 = sum(
             sum(m.P_source[k, t] * economics.source_price * model.flh for k in m.set_n_p)
             for t in model.set_t
@@ -594,4 +591,3 @@ def mts(matrices, sets, regression_caps, regression_losses,
         doc='Complex Power balance pipe j->i')
 
     return model
-

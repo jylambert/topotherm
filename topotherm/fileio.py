@@ -6,9 +6,28 @@ import pandas as pd
 
 
 def load(path):
-    """Input: file_name and file_path
-    Returns: Matrices A_i A_p and A_c, Heat Demand, Length of edges, and positions"""
+    """Read the input data from the given path and return the matrices A_i,
+    A_p, A_c, Heat Demand, Length of edges, and positions.
+    
+    Args:
+        path (str or os.path): Path to the input data.
+    
+    Returns:
+        r (dict): Matrices stored in keys 'a_i', 'a_p', 'a_c', 'q_c', 'l_i',
+            and 'position'.
+    """
+
     def duplicate_columns(data, minoccur=2):
+        """Find duplicate columns in a numpy array.
+        
+        Args:
+            data (np.array): Data to check for duplicates.
+            minoccur (int): Minimum number of occurrences to be considered a
+                duplicate.
+        
+        Returns:
+            result (list): List of indices of duplicate columns.
+        """
         ind = np.lexsort(data)
         diff = np.any(data.T[ind[1:]] != data.T[ind[:-1]], axis=1)
         edges = np.where(diff)[0] + 1
@@ -19,9 +38,14 @@ def load(path):
     a_i = pd.read_parquet(os.path.join(path, 'A_i.parquet')).to_numpy()
     a_p = pd.read_parquet(os.path.join(path, 'A_p.parquet')).to_numpy()
     a_c = pd.read_parquet(os.path.join(path, 'A_c.parquet')).to_numpy()
-    length = pd.read_parquet(os.path.join(path, 'L_i.parquet')).to_numpy().astype(float)
-    q_c = (pd.read_parquet(os.path.join(path, 'Q_c.parquet')).to_numpy().astype(float)) / 1000 #Example data is in W, optimization in kW
-    position = pd.read_parquet(os.path.join(path, 'rel_positions.parquet')).loc[:, 'x_rel':'y_rel'].to_numpy().astype(float)
+    length = pd.read_parquet(
+        os.path.join(path, 'L_i.parquet')).to_numpy().astype(float)
+    q_c = (pd.read_parquet(
+        os.path.join(path, 'Q_c.parquet')
+        ).to_numpy().astype(float)) / 1000  # Data is in W, optimization in kW
+    position = pd.read_parquet(
+        os.path.join(path, 'rel_positions.parquet')
+        ).loc[:, 'x_rel':'y_rel'].to_numpy().astype(float)
 
     if (a_i.sum(axis=0).sum() != 0) | (np.abs(a_i).sum(axis=0).sum()/2 != np.shape(a_i)[1]):
         print("Warning: The structure of A_i is not correct!")
@@ -38,7 +62,7 @@ def load(path):
     elif np.shape(position)[0] != np.shape(a_i)[0]:
         print("Warning: Position doesn't match with the number of nodes!")
     elif len(duplicate_columns(a_i)) != 0:
-        print("Warning: There are duplicate columns in A_i, but we took care of it!")
+        print("Warning: There are duplicate columns in A_i, we took care of it!")
         delete_col = duplicate_columns(a_i)
         if length[delete_col[0][0]] > length[delete_col[0][1]]:
             np.delete(length, delete_col[0][0], axis=0)

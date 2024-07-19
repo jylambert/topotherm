@@ -81,5 +81,4 @@ def model_to_df(model):
         solution[labels[obj]] = pyo.value(obj)
 
     df = pd.Series(solution)
-
     return df
