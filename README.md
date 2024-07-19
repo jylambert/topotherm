@@ -27,15 +27,25 @@ might have to be rewritten (utils.py)
 
 ## Contents
 
-* [Description](#description)
-* [How to cite](#how-to-cite)
-* [Why should I use this?](#why-should-i-use-this)
-* [Getting started](#getting-started)
-  * [Requirements](#requirements)
-  * [Install](#install)
-  * [Usage](#usage)
-* [Contribute](#contribute)
-* [License](#license)
+- [topotherm](#topotherm)
+  - [Intro](#intro)
+  - [Feature overview](#feature-overview)
+  - [Contents](#contents)
+  - [Description](#description)
+  - [Why should I use this?](#why-should-i-use-this)
+  - [How to cite](#how-to-cite)
+  - [Getting Started](#getting-started)
+    - [Requirements](#requirements)
+  - [Install](#install)
+    - [Python](#python)
+    - [Anaconda or mamba](#anaconda-or-mamba)
+  - [Solver](#solver)
+    - [Gurobi](#gurobi)
+    - [Open-source Alternatives](#open-source-alternatives)
+  - [Usage](#usage)
+  - [Contribute](#contribute)
+  - [Tests](#tests)
+  - [License](#license)
 
 ## Description
 
@@ -127,7 +137,7 @@ changes, please open an issue first to discuss what you would like to change.
 To run the tests, use pytest.
 
 ```Python
-pytest test
+pytest tests
 ```
 
 ## License
