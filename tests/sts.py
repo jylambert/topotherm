@@ -37,7 +37,7 @@ def test_sts_forced(request):
         os.path.join(current_path, 'data', 'regression.csv'), 0)
 
     model_sets = tt.model.create_sets(mat)
-    model = tt.model.sts(mat, model_sets, r_thermal_cap, r_heat_loss,
+    model = tt.model.sts_orig(mat, model_sets, r_thermal_cap, r_heat_loss,
                          Optimization().economics, "forced")
 
     # Optimization initialization

@@ -13,6 +13,8 @@ import pyomo.environ as pyo
 
 import topotherm as tt
 from topotherm.settings import Optimization
+from topotherm.model.create_sets import main as create_sets
+from topotherm.model.sts import main as sts
 
 
 DATAPATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
@@ -21,7 +23,7 @@ OUTPUTPATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
 # regression coefficients for thermal capacity and heat losses
 REGRESSION = 'regression.csv'
 PLOTS = True  # plot districts before and after optimization
-SOLVER = 'scip'  # 'gurobi', 'cplex' or 'scip'
+SOLVER = 'gurobi'  # 'gurobi', 'cplex' or 'scip'
 
 
 def read_regression(path, i):
@@ -53,19 +55,27 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
 
     if plots:
         f = tt.plotting.district(mat, isnot_init=False) # Save initial District
-        f.savefig(os.path.join(outputpath, 'district_initial.svg'), bbox_inches='tight')
+        f.savefig(os.path.join(outputpath, 'district_initial.svg'),
+                  bbox_inches='tight')
 
     # regression
-    r_thermal_cap, r_heat_loss = read_regression(os.path.join(filepath, REGRESSION), 0)
+    r_thermal_cap, r_heat_loss = read_regression(
+        os.path.join(filepath, REGRESSION),
+        0)
 
     # default settings
     settings = Optimization()
     settings.economics.c_inv_source = (0, )  # no investment costs for sources
     settings.economics.flh = 2500  # full load hours
 
-    model_sets = tt.model.create_sets(mat)
-    model = tt.model.sts(mat, model_sets, r_thermal_cap, r_heat_loss, settings.economics, mode)
-
+    model_sets = create_sets(mat)
+    model = sts(
+        mat,
+        model_sets,
+        r_thermal_cap,
+        r_heat_loss,
+        settings.economics,
+        mode)
 
     # Optimization initialization
     opt = pyo.SolverFactory(solver)
