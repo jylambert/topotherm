@@ -257,7 +257,7 @@ def main(matrices: dict,
 
     def objective_function(m):
         fuel = sum(
-            sum(m.P_source[k, t] * economics.source_price * economics.flh
+            sum(m.P_source[k, t] * economics.source_price[k] * economics.flh[k]
                 for k in m.set_n_p)
             for t in model.set_t)
         # CAREFUL HARDCODED FOR 0 TIMESTEPS
@@ -268,12 +268,12 @@ def main(matrices: dict,
             return (regression_inst['b']
                     * (m.lambda_['ij', k] + m.lambda_['ji', k]))
         pipes = sum(((pipes_fix(k) + pipes_var(k))
-                     * annuity(economics.c_irr, economics.life_time)
+                     * annuity(economics.c_irr, economics.lifetime_pipes)
                      * matrices['l_i'][k])
                      for k in m.set_n_i)
         source = sum(m.P_source_inst[k]
                      * economics.c_inv_source[k]
-                     * annuity(economics.c_irr, economics.life_time)
+                     * annuity(economics.c_irr, economics.lifetime_inv)
                      for k in m.set_n_p)
 
         if opt_mode == "eco":

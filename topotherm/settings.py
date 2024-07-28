@@ -52,7 +52,7 @@ class Piping:
         754, 886, 1171, 1184,
         1197, 1401, 1755
         ))
-    number_diameter: int = 15  # number of discrete diameters
+    number_diameter: int = 15  # number of discrete diameters   
     max_pr_loss: int = 250  # assumed pressure loss in Pa per meter
     roughness: float = 0.05e-3  # pipe roughness factor
     thermal_conductivity: float = 0.024  # pipe thermal conductivity in W/mK
@@ -68,11 +68,13 @@ class OptSettings:
 @dataclass
 class Economics:
     flh: int = 2500  # h/kWp and y
-    heat_price: float = 120 * 10**-3  # Selling Price for heat in €/kW
-    source_price: float = 80 * 10**-3  # Price for heat production at supply in €/kW
+    heat_price: float = 120e-3  # Selling Price for heat in €/kW
+    source_price: float = (80e-3, )  # Price for heat production at supply in €/kW
     c_inv_source: tuple = (0, )  # Investment costs for each source, same dim as sources in A_p
     life_time: int = 40  # Number of years for deprecation
     c_irr: float = 0.08  # Interest rate
+    lifetime_pipes = 50  # years for piping investments
+    lifetime_inv = (20, )  # years for source investments
 
 
 @dataclass
