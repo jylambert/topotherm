@@ -131,8 +131,8 @@ def thermal_resistance(hydraulic_diameter, outer_diameter, depth, thermal_conduc
         thermal_resistance_soil = np.log(
             4 * depth / (outer_radius * 2)) / (2 * np.pi * thermal_conductivity)
     else:
-        thermal_resistance_soil = 0  # alternatively, raise an error
-        # raise ValueError("Depth is too small for the calculayftion of the thermal resistance")
+        # thermal_resistance_soil = 0  # alternatively, raise an error
+        raise ValueError("Depth is too small for the calculation of the thermal resistance")
     thermal_resistance_insulation = np.log(
         diameter_ratio) / (2 * np.pi * thermal_conductivity)
     thermal_resistance_total = thermal_resistance_insulation + thermal_resistance_soil
