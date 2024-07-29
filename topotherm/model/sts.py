@@ -62,7 +62,7 @@ def main(matrices: dict,
     model = pyo.ConcreteModel()
 
     # Big-M-Constraint for pipes
-    p_max_pipe_const = float(regression_inst['power_flow_max_kW'])
+    p_max_pipe_const = float(regression_inst['power_flow_max_kW'].max())
     # Big-M-Constraint for source
     p_max_source = matrices['q_c'].sum()*2
 
@@ -198,7 +198,7 @@ def main(matrices: dict,
     #                                                  doc='Maximum Powerflow constant j->i')
     
     def connection_to_consumer_eco(m, d, j):
-        return m.lambda_ij[d, j] <= sets[f'lambda_c_{d}'][j]
+        return m.lambda_[d, j] <= sets[f'lambda_c_{d}'][j]
 
     # def connection_to_consumer_ji_eco(m, j):
     #     return m.lambda_ji[j] <= sets['lambda_c_ji'][j]
@@ -212,7 +212,7 @@ def main(matrices: dict,
     if opt_mode == "eco":
         msg_ = 'Constraint if houses have their own connection-pipe and set the direction (ij)'
         model.cons_connection_to_consumer = pyo.Constraint(
-            model.set_cons,
+            model.cons,
             rule=connection_to_consumer_eco,
             doc=msg_)
         
