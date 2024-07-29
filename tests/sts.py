@@ -25,8 +25,9 @@ def read_regression(path, i):
     return r_thermal_cap, r_heat_loss
 
 
-def test_sts_forced():
+def test_sts_forced(request):
     """Main function to run the optimization"""
+    solver_name = request.config.getoption("--solver")
     # Load the district
     current_path = os.path.dirname(os.path.abspath(__file__))
     mat = tt.fileio.load(os.path.join(current_path, 'data'))
@@ -40,7 +41,7 @@ def test_sts_forced():
                          Optimization().economics, "forced")
 
     # Optimization initialization
-    opt = pyo.SolverFactory('scip')
+    opt = pyo.SolverFactory(solver_name)
     opt.options['mipgap'] = 0.01
     opt.options['timelimit'] = 600
 
@@ -51,8 +52,9 @@ def test_sts_forced():
     assert (abs(pyo.value(model.obj)) - 4.6259e+06) < 0.02 * 4.6259e+06
 
 
-def test_sts_eco():
+def test_sts_eco(request):
     """Main function to run the optimization"""
+    solver_name = request.config.getoption("--solver")
     # Load the district
     current_path = os.path.dirname(os.path.abspath(__file__))
     mat = tt.fileio.load(os.path.join(current_path, 'data'))
@@ -66,7 +68,7 @@ def test_sts_eco():
                          Optimization().economics, "eco")
 
     # Optimization initialization
-    opt = pyo.SolverFactory('scip')
+    opt = pyo.SolverFactory(solver_name)
     opt.options['mipgap'] = 0.01
     opt.options['timelimit'] = 600
 
