@@ -108,6 +108,7 @@ def main(matrices: dict,
         doc='Thermal capacity of the heat source',
         **source_power)
 
+
     def heat_source_inst(m, j, t):
         """Never exceed the installed capacity of the heat source."""
         return m.P_source[j, t] <= m.P_source_inst[j]
@@ -117,8 +118,7 @@ def main(matrices: dict,
         rule=heat_source_inst,
         doc='Upper bound for the heat source supply delivery')
 
-    # @TODO: Check if nodal power balance is the same for forced and eco (it
-    # should be the case, but testing is needed)
+
     def nodal_power_balance(m, j, t):
         """REFERENCE DIRECTION: left to right
                 P_ji, in            P_ji, out
