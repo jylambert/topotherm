@@ -1,20 +1,12 @@
-"""This module contains the optimization models for the thermo-hydraulic coupled district
-heating network.
+"""This module contains the optimization models for the single-timestep 
+district heating network design.
 
 The module contains the following functions:
     * annuity: Calculate the annuity factor
-    * create_sets: Create sets for the optimization based on the incidence matrices
-    * sts: Create the optimization model for the thermo-hydraulic coupled with single time
-    step operation
-    * mts_easy: Create the optimization model for the thermo-hydraulic coupled with multiple time 
-    step operation. The model is based on the STS model and implements a simplified themal
-    loss equation to alleviate the computational burden.
-    * mts: Create the optimization model for the thermo-hydraulic coupled with multiple time
-    step operation. The model is based on the MTS easy model and implements the full thermal
-    loss equation. The model is more accurate but also more computationally expensive.
+    * main: Create the optimization model for the single time step operation
 """
-from topotherm.settings import Economics
 
+from topotherm.settings import Economics
 import pyomo.environ as pyo
 
 
@@ -39,8 +31,8 @@ def main(matrices: dict,
          regression_losses: dict,
          economics: Economics,
          opt_mode: str):
-    """Create the optimization model for the thermo-hydraulic coupled with single time
-    step operation. 
+    """Create the optimization model for the thermo-hydraulic coupled with
+    single time step operation. 
 
     Args:
         matrices (dict): Dictionary with the matrices of the district heating
@@ -62,13 +54,13 @@ def main(matrices: dict,
     model = pyo.ConcreteModel()
 
     # Big-M-Constraint for pipes
-    p_max_pipe_const = float(regression_inst['power_flow_max_kW'].max())
+    p_max_pipe_const = float(regression_inst['power_flow_max_kW'].max())*20
     # Big-M-Constraint for source
-    p_max_source = matrices['q_c'].sum()*2
+    p_max_source = matrices['q_c'].sum()*20
 
     # Define index sets
     model.set_n_i = pyo.Set(initialize=range(sets['a_i_shape'][1]),
-                            doc='Number of Pipe connections supply/return line')   
+                            doc='N° of Pipe connections supply/return line')   
     model.set_n_p = pyo.Set(initialize=range(sets['a_p_shape'][1]),
                             doc='Number of producers')
     model.set_n_c = pyo.Set(initialize=range(sets['a_c_shape'][1]),
@@ -161,6 +153,7 @@ def main(matrices: dict,
         rule=nodal_power_balance,
         doc='Nodal Power Balance')
 
+
     def power_balance_pipe(m, d, j, t):
         term1 = m.P[d, 'in', j, t] - m.P[d, 'out', j, t]
         reg1 = (regression_losses['a']
@@ -174,14 +167,6 @@ def main(matrices: dict,
         rule=power_balance_pipe,
         doc='Power balance pipe')
 
-    # def power_balance_pipe_ji(m, j, t):
-    #     reg1 = regression_losses['a'] * regression_inst['power_flow_max_partload'] \
-    #         * m.P_ji_in[j, t]
-    #     reg2 = regression_losses['b'] * m.lambda_ji[j]
-    #     return m.P_ji_in[j, t] - m.P_ji_out[j, t] - (reg1 + reg2) * matrices['l_i'][j] == 0
-    # model.power_balance_pipe_ji = pyo.Constraint(model.set_n_i, model.set_t,
-    #                                                   rule=power_balance_pipe_ji,
-    #                                                   doc='Power balance pipe j->i')
 
     def power_bigm_P(m, d, j, t):
         lhs = m.P[d, 'in', j, t] - p_max_pipe_const * m.lambda_[d, j]
@@ -191,26 +176,16 @@ def main(matrices: dict,
         model.dirs, model.set_n_i, model.set_t,
         rule=power_bigm_P, doc='Big-M constraint for powerflow')
 
-    # def power_bigm_P_ji(m, j, t):
-    #     return m.P_ji_in[j, t] - p_max_pipe_const * m.lambda_ji[j] <= 0
-    # model.cons_power_bigm_P_ji = pyo.Constraint(model.set_n_i, model.set_t,
-    #                                                  rule=power_bigm_P_ji,
-    #                                                  doc='Maximum Powerflow constant j->i')
     
     def connection_to_consumer_eco(m, d, j):
         return m.lambda_[d, j] <= sets[f'lambda_c_{d}'][j]
 
-    # def connection_to_consumer_ji_eco(m, j):
-    #     return m.lambda_ji[j] <= sets['lambda_c_ji'][j]
-
     def connection_to_consumer_fcd(m, d, j):
         return m.lambda_[d, j] == sets[f'lambda_c_{d}'][j]
 
-    # def connection_to_consumer_ij_fcd(m, j):
-    #     return m.lambda_ij[j] == sets['lambda_c_ij'][j]
-
     if opt_mode == "eco":
-        msg_ = 'Constraint if houses have their own connection-pipe and set the direction (ij)'
+        msg_ = """Constraint if houses have their own connection-pipe
+            and set the direction (ij)"""
         model.cons_connection_to_consumer = pyo.Constraint(
             model.cons,
             rule=connection_to_consumer_eco,
@@ -220,7 +195,8 @@ def main(matrices: dict,
         # model.cons_connection_to_consumer_ji = pyo.Constraint(
         #     model.set_con_ji, rule=connection_to_consumer_ji_eco, doc=msg)
     elif opt_mode == "forced":
-        msg_ = 'Constraint if houses have their own connection-pipe and set the direction (ij)'
+        msg_ = """Constraint if houses have their own connection-pipe
+            and set the direction (ij)"""
         model.cons_connection_to_consumer = pyo.Constraint(
             model.cons,
             rule=connection_to_consumer_fcd,
@@ -230,7 +206,8 @@ def main(matrices: dict,
         # model.cons_connection_to_consumer_ji = pyo.Constraint(
         #     model.set_con_ji, rule=connection_to_consumer_ji_fcd, doc=msg)
     else:
-        raise NotImplementedError("Optimization mode %s not implemented" % opt_mode)
+        raise NotImplementedError(
+            "Optimization mode %s not implemented" % opt_mode)
 
     def one_pipe(m, j):
         return m.lambda_['ij', j] + m.lambda_['ji', j] <= 1
@@ -257,7 +234,9 @@ def main(matrices: dict,
 
     def objective_function(m):
         fuel = sum(
-            sum(m.P_source[k, t] * economics.source_price[k] * economics.flh[k]
+            sum(m.P_source[k, t]
+                * economics.source_price[k]
+                * economics.source_flh[k]
                 for k in m.set_n_p)
             for t in model.set_t)
         # CAREFUL HARDCODED FOR 0 TIMESTEPS
@@ -267,13 +246,16 @@ def main(matrices: dict,
         def pipes_var(k):
             return (regression_inst['b']
                     * (m.lambda_['ij', k] + m.lambda_['ji', k]))
-        pipes = sum(((pipes_fix(k) + pipes_var(k))
-                     * annuity(economics.c_irr, economics.lifetime_pipes)
+        pipes = (sum(((pipes_fix(k) + pipes_var(k))
                      * matrices['l_i'][k])
                      for k in m.set_n_i)
+                     * annuity(economics.pipes_c_irr,
+                               economics.pipes_lifetime))
+        print(annuity(economics.pipes_c_irr, economics.pipes_lifetime))
         source = sum(m.P_source_inst[k]
-                     * economics.c_inv_source[k]
-                     * annuity(economics.c_irr, economics.lifetime_inv)
+                     * economics.source_c_inv[k]
+                     * annuity(economics.source_c_irr[k],
+                               economics.source_lifetime[k])
                      for k in m.set_n_p)
 
         if opt_mode == "eco":
@@ -290,7 +272,7 @@ def main(matrices: dict,
                         if len(sets['a_i_out'][j]) > 0)
                         for j in model.set_n)
                 for t in model.set_t)
-                * economics.flh * economics.heat_price * (-1))
+                * economics.flh[0] * economics.heat_price * (-1))
         else:
             term4 = 0
 
@@ -301,4 +283,9 @@ def main(matrices: dict,
     return model
 
 if __name__ == "__main__":
-    main()
+    main(matrices,
+         sets,
+         regression_inst,
+         regression_losses,
+         economics,
+         opt_mode)

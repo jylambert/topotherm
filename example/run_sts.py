@@ -12,7 +12,7 @@ import pandas as pd
 import pyomo.environ as pyo
 
 import topotherm as tt
-from topotherm.settings import Optimization
+# from topotherm.settings import Settings
 from topotherm.model.create_sets import main as create_sets
 from topotherm.model.sts import main as sts
 
@@ -64,9 +64,12 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
         0)
 
     # default settings
-    settings = Optimization()
-    settings.economics.c_inv_source = (0, )  # no investment costs for sources
-    settings.economics.flh = 2500  # full load hours
+    # Example usage
+    settings = tt.settings.load('./data/config.yaml')
+    print(settings)
+    settings.economics.source_c_inv = [0.]  # no investment costs for sources
+    settings.economics.source_flh = [2500.]  # full load hours
+    settings.economics.consumers_flh = 2500.  # full load hours
 
     model_sets = create_sets(mat)
     model = sts(
@@ -79,8 +82,8 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
 
     # Optimization initialization
     opt = pyo.SolverFactory(solver)
-    opt.options['mipgap'] = settings.opt_settings.mip_gap
-    opt.options['timelimit'] = settings.opt_settings.time_limit
+    opt.options['mipgap'] = settings.solver.mip_gap
+    opt.options['timelimit'] = settings.solver.time_limit
     opt.options['logfile'] = os.path.join(outputpath, 'optimization.log')
     #opt.options['Seed'] = 56324978
 
@@ -94,9 +97,12 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
     dfsol = tt.utils.solver_to_df(result, model, solver=solver)
     dfsol.to_csv(os.path.join(outputpath, 'solver.csv'), sep=';')
 
-    opt_mats = tt.postprocessing.postprocess(model, mat, model_sets, "sts",
-                                             t_return=settings.temperatures.return_,
-                                             t_supply=settings.temperatures.supply)
+    opt_mats = tt.postprocessing.postprocess(
+        model=model,
+        matrices=mat,
+        sets=model_sets,
+        mode="sts",
+        settings=settings)
 
     # iterate over opt_mats and save each matrix as parquet file
     for key, value in opt_mats.items():
