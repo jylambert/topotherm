@@ -6,8 +6,9 @@ The module contains the following functions:
     * main: Create the optimization model for the single time step operation
 """
 
-from topotherm.settings import Economics
 import pyomo.environ as pyo
+
+from topotherm.settings import Economics
 
 
 def annuity(c_i, n):
@@ -24,7 +25,6 @@ def annuity(c_i, n):
     return a
 
 
-# Add the main function
 def main(matrices: dict,
          sets: dict,
          regression_inst: dict,
@@ -73,10 +73,6 @@ def main(matrices: dict,
                         doc='Set of pipe directions.')
     model.flow = pyo.Set(initialize=['in', 'out'],
                          doc='Flow direction in the pipe')
-    # model.set_con_ij = pyo.Set(initialize=sets['connection_c_ij'],
-    #                            doc='Pipes with consumer in direction ij')
-    # model.set_con_ji = pyo.Set(initialize=sets['connection_c_ji'],
-    #                            doc='Pipes with consumer in direction ji')
     # Define the combined set for pipes with consumers in both directions
     model.cons = pyo.Set(
         initialize=[('ij', edge) for edge in sets['connection_c_ij']] +
@@ -96,8 +92,8 @@ def main(matrices: dict,
     model.lambda_ = pyo.Var(
         model.dirs, model.set_n_i,
         initialize=1,
-                            domain=pyo.Binary,
-                            doc='Binary direction decisions')
+        domain=pyo.Binary,
+        doc='Binary direction decisions')
 
     # Thermal power of the source
     source_power = {'bounds': (0, p_max_source),
@@ -113,30 +109,39 @@ def main(matrices: dict,
         **source_power)
 
     def heat_source_inst(m, j, t):
+        """Never exceed the installed capacity of the heat source."""
         return m.P_source[j, t] <= m.P_source_inst[j]
 
     model.cons_heat_source_inst = pyo.Constraint(
         model.set_n_p, model.set_t,
         rule=heat_source_inst,
-        doc='Investment costs for the heat source')
+        doc='Upper bound for the heat source supply delivery')
+
     # @TODO: Check if nodal power balance is the same for forced and eco (it
     # should be the case, but testing is needed)
-
     def nodal_power_balance(m, j, t):
-        outgoing = sum(m.P['ij', 'in', k, t]
-                       - m.P['ji', 'out', k, t]
-                       for k in sets['a_i_out'][j])
-        ingoing = sum(m.P['ji', 'in', k, t]
+        """REFERENCE DIRECTION: left to right
+                P_ji, in            P_ji, out
+        PIPE    <-------    NODE    <-------    PIPE
+                ------->            -------> 
+                P_ij, out           P_ij, in
+        
+        Energy balance system: out - in = 0
+        """
+        pipe_to_node = sum(m.P['ji', 'in', k, t]
                       - m.P['ij', 'out', k, t]
                       for k in sets['a_i_in'][j])
+        node_to_pipe = sum(m.P['ij', 'in', k, t]
+                                    - m.P['ji', 'out', k, t]
+                                    for k in sets['a_i_out'][j])
         sources = sum(- m.P_source[k, t]
                       for k in sets['a_p_in'][j])
-        term4 = 0
+        sink = 0
         if opt_mode == "forced":
-            term4 = sum(matrices['q_c'][k, t]
+            sink = sum(matrices['q_c'][k, t]
                         for k in sets['a_c_out'][j])
         elif opt_mode == "eco":
-            term4 = (
+            sink = (
                 sum(
                     (m.lambda_['ij', sets['a_i_in'][j][0]])
                     * matrices['q_c'][k, t]
@@ -146,7 +151,7 @@ def main(matrices: dict,
                     * matrices['q_c'][k, t]
                     for k in sets['a_c_out'][j] if len(sets['a_i_out'][j]) > 0)
                 )
-        return outgoing + ingoing + sources + term4 == 0
+        return node_to_pipe + pipe_to_node + sources + sink == 0
 
     model.cons_nodal_balance = pyo.Constraint(
         model.set_n, model.set_t,
@@ -155,12 +160,22 @@ def main(matrices: dict,
 
 
     def power_balance_pipe(m, d, j, t):
-        term1 = m.P[d, 'in', j, t] - m.P[d, 'out', j, t]
-        reg1 = (regression_losses['a']
+        """Power balance for the pipes.
+        
+        P_ji, out            P_ji, in
+        <-------    PIPE    <-------
+        ------->            ------->
+        P_ij, in            P_ij, out
+
+        """
+        # flows into and out of pipe
+        flows = m.P[d, 'in', j, t] - m.P[d, 'out', j, t]
+        # thermal losses calculation
+        variable = (regression_losses['a']
                 * regression_inst['power_flow_max_partload']
                 * m.P[d, 'in', j, t])
-        reg2 = regression_losses['b'] * m.lambda_[d, j]
-        return term1 - (reg1 + reg2) * matrices['l_i'][j] == 0
+        fix = regression_losses['b'] * m.lambda_[d, j]
+        return flows - (variable + fix) * matrices['l_i'][j] == 0
 
     model.cons_power_balance_pipe = pyo.Constraint(
         model.dirs, model.set_n_i, model.set_t,
@@ -190,10 +205,7 @@ def main(matrices: dict,
             model.cons,
             rule=connection_to_consumer_eco,
             doc=msg_)
-        
-        # msg = 'Constraint if houses have their own connection-pipe and set the direction (ji)'
-        # model.cons_connection_to_consumer_ji = pyo.Constraint(
-        #     model.set_con_ji, rule=connection_to_consumer_ji_eco, doc=msg)
+
     elif opt_mode == "forced":
         msg_ = """Constraint if houses have their own connection-pipe
             and set the direction (ij)"""
@@ -202,9 +214,6 @@ def main(matrices: dict,
             rule=connection_to_consumer_fcd,
             doc=msg_)
 
-        # msg = 'Constraint if houses have their own connection-pipe and set the direction (ji)'
-        # model.cons_connection_to_consumer_ji = pyo.Constraint(
-        #     model.set_con_ji, rule=connection_to_consumer_ji_fcd, doc=msg)
     else:
         raise NotImplementedError(
             "Optimization mode %s not implemented" % opt_mode)
@@ -215,7 +224,8 @@ def main(matrices: dict,
                                     rule=one_pipe,
                                     doc='Just one Direction for each pipe')
 
-    # @TODO: Develop total energy conservation equation for the eco mode (testing needed if beneficial)
+    # @TODO: Develop total energy conservation equation for the eco mode
+    # (testing needed if beneficial)
     if opt_mode == "forced":
         def total_energy_cons(m, t):
             sources = sum(m.P_source[k, t]
@@ -281,6 +291,7 @@ def main(matrices: dict,
     model.obj = pyo.Objective(rule=objective_function,
                               doc='Objective function')
     return model
+
 
 if __name__ == "__main__":
     main(matrices,
