@@ -30,12 +30,8 @@ def sts(model: pyo.ConcreteModel,
     p_ij = np.array(pyo.value(model.P['ij', 'in', :, :]))
     p_ji = np.array(pyo.value(model.P['ji', 'in', :, :]))
     # flow direction, binary
-    lambda_ij = np.around(
-        np.array(pyo.value(model.lambda_['ij', :])),
-        0)
-    lambda_ji = np.around(
-        np.array(pyo.value(model.lambda_['ji', :])),
-        0)
+    lambda_ij = np.around(np.array(pyo.value(model.lambda_['ij', :])), 0)
+    lambda_ji = np.around(np.array(pyo.value(model.lambda_['ji', :])), 0)
 
     # Adaption of Incidence Matrix for thermo-hydraulic coupled optimization
     for q, _ in enumerate(lambda_ij):

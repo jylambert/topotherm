@@ -9,7 +9,6 @@ q_c = numpy.load('data/Q_c.npy', allow_pickle=True)
 position = numpy.load('data/rel_positions.npy', allow_pickle=True)
 
 # save as parquet files
-
 import pandas as pd
 
 pd.DataFrame(a_i).to_parquet('data/A_i.parquet')
@@ -18,4 +17,3 @@ pd.DataFrame(a_c).to_parquet('data/A_c.parquet')
 pd.DataFrame(l_i).to_parquet('data/L_i.parquet')
 pd.DataFrame(q_c).T.to_parquet('data/Q_c.parquet')
 pd.DataFrame(position).to_parquet('data/rel_positions.parquet')
-

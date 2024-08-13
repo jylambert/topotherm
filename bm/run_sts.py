@@ -65,8 +65,7 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
         os.path.join(filepath, REGRESSION),
         0)
 
-    # default settings
-    # Example usage
+    # import settings
     settings = tt.settings.load('./data/config.yaml')
     print(settings)
     settings.economics.source_c_inv = [0.]  # no investment costs for sources
