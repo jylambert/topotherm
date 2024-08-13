@@ -74,3 +74,16 @@ def district(matrices, diameter=[0], isnot_init=False):
     plt.box(False)
 
     return fig0
+
+
+def plot_networkx(n):
+    """Input: n: a networkx graph
+    + Returns: Figure of the networkx graph
+    """
+
+    fig, ax = plt.subplots(figsize=(15, 5))
+
+    nx.draw(n, with_labels=True, font_weight='bold', ax=ax)
+    plt.show()
+    return fig
+
