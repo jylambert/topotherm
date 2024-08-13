@@ -45,7 +45,7 @@ def load(path):
         ).to_numpy().astype(float)) / 1000  # Data is in W, optimization in kW
     position = pd.read_parquet(
         os.path.join(path, 'rel_positions.parquet')
-        ).loc[:, 'x_rel':'y_rel'].to_numpy().astype(float)
+        ).iloc[:,  [0,1]].to_numpy().astype(float)
 
     if (a_i.sum(axis=0).sum() != 0) | (np.abs(a_i).sum(axis=0).sum()/2 != np.shape(a_i)[1]):
         print("Warning: The structure of A_i is not correct!")
