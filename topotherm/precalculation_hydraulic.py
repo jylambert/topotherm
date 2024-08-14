@@ -68,11 +68,6 @@ def pipe_capacity(mass_flow, temperature_supply, temperature_return, cp_water):
     return pipe_capacity
 
 
-def capacity_to_diameter(pipe_capacity, temperature_supply, temperature_return, cp_water):
-    mass_flow = pipe_capacity / (cp_water * (temperature_supply - temperature_return))
-    return mass_flow
-
-
 def thermal_resistance(diameter, diameter_ratio, depth, settings):
     """Input: diameter (m), diameter_ratio = outer diameter / diameter (-),
     depth (below ground level) (m)
@@ -164,13 +159,12 @@ def regression_heat_losses(settings: Regression, thermal_capacity):
     mass_flow = thermal_capacity['mass_flow_max']
     maximal_power = thermal_capacity['power_flow_max']
 
-    heat_loss = np.zeros([settings.piping.number_diameter])
-
     heat_loss = heat_loss_pipe(mass_flow, pipe_length, settings.temperatures.supply, res_pipe,
                                 settings.temperatures.ambient, settings.water.heat_capacity_cp)
     regression = stats.linregress(maximal_power/1000, heat_loss/1000)
 
     r = {}
+
     r['b'] = np.round(regression.intercept, 6)
     r['a'] = np.round(regression.slope, 10)
     r['r2'] = regression.rvalue**2
