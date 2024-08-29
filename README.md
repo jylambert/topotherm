@@ -8,8 +8,8 @@ district heating network design.
 Topotherm is a pyomo-based mixed-integer linear programming district heating
 network design model which scales well into larger districts for single
 and mulitple time steps.
-It has been benchmarked against multiple other open-source models for a
-publication, that is currently under review. Preprint available at:
+It has been benchmarked against multiple other open-source models in a
+publication available at:
 
 >  Lambert, Jerry and Ceruti, Amedeo and Spliethoff, Hartmut, Benchmark of Milp Formulations for District Heating Network Design. Available at SSRN: https://ssrn.com/abstract=4688228 or http://dx.doi.org/10.2139/ssrn.4688228 
 
