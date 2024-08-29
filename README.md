@@ -60,7 +60,7 @@ has been benchmarked and validated.
 
 ## How to cite
 
->  Lambert, Jerry and Ceruti, Amedeo and Spliethoff, Hartmut, Benchmark of Milp Formulations for District Heating Network Design. Available at SSRN: https://ssrn.com/abstract=4688228 or http://dx.doi.org/10.2139/ssrn.4688228 
+>  Lambert, Jerry and Ceruti, Amedeo and Spliethoff, Hartmut, Benchmark of Mixed-Integer Linear Programming Formulations for District Heating Network Design. Energy, Volume 308, 2024, 132885, ISSN 0360-5442, https://doi.org/10.1016/j.energy.2024.132885
 
 ## Getting Started
 
