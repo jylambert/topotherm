@@ -63,9 +63,25 @@ def postprocess(model, matrices, sets, mode, t_supply, t_return):
             for index in v:
                 p_cap[index] = pyo.value(v[index])
 
+    # Round lamdda_dir and lambda_built to make sure that hey are integer
     lambda_dir_1 = np.around(lambda_dir_1, 0)
     lambda_dir_2 = np.around(lambda_dir_2, 0)
     lambda_built = np.around(lambda_built, 0)
+
+    q_c_real = np.zeros([sets['a_c_shape'][1], len(model.set_t)])
+
+    # Exclude non-connected consumers in Q_c, only affects the economic case
+    # Check for consumers connected in direction ij
+    for i in sets['connection_c_ij']:
+        q_c_real[np.where(matrices['a_c'][np.where(matrices['a_i'][:, i] == -1)[0], :][0] == 1)[0], :] = \
+            lambda_dir_1[i, 0] * matrices['q_c'][np.where(matrices['a_c'][np.where(matrices['a_i'][:, i] == -1)[0], :][0] == 1)[0], :]
+
+    # Check for consumers connected in direction ji
+    for i in sets['connection_c_ji']:
+        q_c_real[np.where(matrices['a_c'][np.where(matrices['a_i'][:, i] == 1)[0], :][0] == 1)[0], :] = \
+            lambda_dir_2[i, 0] * matrices['q_c'][np.where(matrices['a_c'][np.where(matrices['a_i'][:, i] == 1)[0], :][0] == 1)[0], :]
+
+    q_c_real = q_c_real[q_c_real.any(axis=1)]     # Remove nonzero elements row-wise
 
     # Restart, Adaption of Incidence Matrix for the thermo-hydraulic coupled optimization
     if mode == "sts":
@@ -82,6 +98,11 @@ def postprocess(model, matrices, sets, mode, t_supply, t_return):
                 matrices['l_i'][q] = 0
             elif (lambda_built[q] == 1) & (lambda_dir_1[q, 0] == 0):
                 matrices['a_i'][:, q] = matrices['a_i'][:, q] * (-1)
+                lambda_dir_1[q, np.where(lambda_dir_1[q, 1:] == 0)[0]] = 1
+                lambda_dir_2[q, np.where(lambda_dir_2[q, 1:] == 1)[0]] = 0
+
+    lambda_dir_1 = lambda_dir_1[lambda_dir_1.any(axis=1)]
+    lambda_dir_2 = lambda_dir_2[lambda_dir_2.any(axis=1)]
 
     if mode == "sts":
         p_lin = p_11 + p_21
@@ -96,17 +117,19 @@ def postprocess(model, matrices, sets, mode, t_supply, t_return):
     a_i_opt = np.delete(a_i_opt, np.where(~a_i_opt.any(axis=1)), axis=0)
     l_i_opt = matrices['l_i'][matrices['l_i'] != 0]
 
-    a_i_shape_opt = np.shape(a_i_opt)  # (rows 0, columns 1)
-    d_lin2 = np.zeros(a_i_shape_opt[1])
-    v_lin2 = np.zeros(a_i_shape_opt[1])
-    supply_temp_opt = np.ones(a_i_shape_opt[1]) * t_supply
-    return_temp_opt = np.ones(a_i_shape_opt[1]) * t_return
+    # Prepare variables for the calculation of linear diameters
+    a_i_shape_opt = np.shape(a_i_opt)   # (rows 0, columns 1)
+    d_lin = np.zeros(a_i_shape_opt[1])  # Initialize linear diameters
+    v_lin = np.zeros(a_i_shape_opt[1])  # Initialize velocities
+    supply_temp_opt = np.ones(a_i_shape_opt[1]) * t_supply   # Assign constant supply temperature
+    return_temp_opt = np.ones(a_i_shape_opt[1]) * t_return   # Assign constant return temperature
+
     def equations(v):
         vel, d = v
         reynolds = (settings.Water.density * vel * d) / settings.Water.dynamic_viscosity
-        f = (-1.8 * np.log10((settings.Piping.roughness / (3.7 * d)) ** 1.11 + 6.9 / reynolds))**-2
-        eq1 = vel - np.sqrt((2 * settings.Piping.max_pr_loss * d) / (f * settings.Water.density))
-        eq2 = mass_lin - settings.Water.density * vel * (np.pi / 4) * d ** 2
+        f = (-1.8 * np.log10((settings.Piping.roughness / (3.7 * d)) ** 1.11 + 6.9 / reynolds))**-2  # friction factor
+        eq1 = vel - np.sqrt((2 * settings.Piping.max_pr_loss * d) / (f * settings.Water.density))  # eq. for diameter
+        eq2 = mass_lin - settings.Water.density * vel * (np.pi / 4) * d ** 2    # eq. for velocity
         return [eq1, eq2]
 
     m_lin = (p_lin_opt*1000)/(settings.Water.heat_capacity_cp * (supply_temp_opt - return_temp_opt))
@@ -115,7 +138,7 @@ def postprocess(model, matrices, sets, mode, t_supply, t_return):
         mass_lin = m_lin[h]
         sol = root(equations, (0.5, 0.02), method='lm')
         if sol.success:
-            v_lin2[h], d_lin2[h] = sol.x
+            v_lin[h], d_lin[h] = sol.x
         else:
             print(h, 'failed to calculate diameter and velocity!')
 
@@ -124,9 +147,12 @@ def postprocess(model, matrices, sets, mode, t_supply, t_return):
         a_p=a_p_opt,
         a_c=a_c_opt,
         q_c=matrices['q_c'],
+        q_c_con=q_c_real,
         l_i=l_i_opt,
-        d_i_0=d_lin2,
+        d_i_0=d_lin,
         m_i_0=m_lin,
+        lambda_dir_1=lambda_dir_1,
+        lambda_dir_2=lambda_dir_2,
         position=pos_opt,
     )
 
