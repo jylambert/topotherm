@@ -8,7 +8,7 @@ This module includes the following functions:
 
 import numpy as np
 import pyomo.environ as pyo
-from scipy.optimize import fsolve
+from scipy.optimize import root
 
 from topotherm import settings
 
@@ -113,7 +113,11 @@ def postprocess(model, matrices, sets, mode, t_supply, t_return):
 
     for h in range(a_i_shape_opt[1]):
         mass_lin = m_lin[h]
-        v_lin2[h], d_lin2[h] = fsolve(equations, (0.5, 0.02))
+        sol = root(equations, (0.5, 0.02), method='lm')
+        if sol.success:
+            v_lin2[h], d_lin2[h] = sol.x
+        else:
+            print(h, 'failed to calculate diameter and velocity!')
 
     res = dict(
         a_i=a_i_opt,
