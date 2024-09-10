@@ -12,7 +12,6 @@ import pandas as pd
 import pyomo.environ as pyo
 
 import topotherm as tt
-from topotherm.settings import Optimization
 
 
 DATAPATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
@@ -53,24 +52,36 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
 
     if plots:
         f = tt.plotting.district(mat, isnot_init=False) # Save initial District
-        f.savefig(os.path.join(outputpath, 'district_initial.svg'), bbox_inches='tight')
+        f.savefig(os.path.join(outputpath, 'district_initial.svg'),
+                  bbox_inches='tight')
 
     # regression
-    r_thermal_cap, r_heat_loss = read_regression(os.path.join(filepath, REGRESSION), 0)
+    r_thermal_cap, r_heat_loss = read_regression(
+        os.path.join(filepath, REGRESSION), 0)
 
-    settings = Optimization()
-    settings.economics.c_inv_source = (0, 0)
-    model_sets = tt.model.create_sets(mat)
-    model = tt.model.sts(mat, model_sets, r_thermal_cap, r_heat_loss,
-                         economics=settings.economics, opt_mode=mode)
+    # import settings
+    # CAREFUL, the settings file is different for each example, the two
+    # producers example uses a list with length 2 for the producers
+    # for several parameters.
+    settings = tt.settings.load(os.path.join(filepath, 'config.yaml'))
+    # model creation
+    model_sets = tt.sets.create(mat)
+    model = tt.single_timestep.model(
+        matrices=mat,
+        sets=model_sets,
+        regression_inst=r_thermal_cap,
+        regression_losses=r_heat_loss,
+        economics=settings.economics,
+        optimization_mode=mode)
 
     # Optimization initialization
     opt = pyo.SolverFactory(solver)
-    opt.options['mipgap'] = settings.opt_settings.mip_gap
-    opt.options['timelimit'] = settings.opt_settings.time_limit
+    opt.options['mipgap'] = settings.solver.mip_gap
+    opt.options['timelimit'] = settings.solver.time_limit
     opt.options['logfile'] = os.path.join(outputpath, 'optimization.log')
     #opt.options['Seed'] = 56324978
 
+    # Solve the optimization problem
     result = opt.solve(model, tee=True)
 
     # Save model results to csv
@@ -81,18 +92,23 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
     dfsol = tt.utils.solver_to_df(result, model, solver=solver)
     dfsol.to_csv(os.path.join(outputpath, 'solver.csv'), sep=';')
 
-    opt_mats = tt.postprocessing.postprocess(model, mat, model_sets, "sts",
-                                             t_return=settings.temperatures.return_,
-                                             t_supply=settings.temperatures.supply)
+    # Postprocessing of the optimization results
+    opt_mats = tt.postprocessing.sts(
+        model=model,
+        matrices=mat,
+        settings=settings)
 
     # iterate over opt_mats and save each matrix as parquet file
     for key, value in opt_mats.items():
         pd.DataFrame(value).to_parquet(os.path.join(outputpath, key + '.parquet'))
 
     # Save figure optimized districts
-        if plots:
-            f = tt.plotting.district(opt_mats, diameter=opt_mats['d_i_0'], isnot_init=True)
-            f.savefig(os.path.join(outputpath, 'district_optimal.svg'), bbox_inches='tight')
+    if plots:
+        f = tt.plotting.district(opt_mats,
+                                 diameter=opt_mats['d_i_0'],
+                                 isnot_init=True)
+        f.savefig(os.path.join(outputpath, 'district_optimal.svg'),
+                    bbox_inches='tight')
 
 
 if __name__ == '__main__':

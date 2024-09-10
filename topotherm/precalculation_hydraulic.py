@@ -5,7 +5,7 @@ import numpy as np
 from scipy import stats
 from scipy.optimize import root
 
-from topotherm.settings import Regression
+from topotherm.settings import Settings
 
 
 def determine_feed_line_temp(ambient_temperature, temp_sup_high, temp_sup_low,
@@ -68,19 +68,37 @@ def pipe_capacity(mass_flow, temperature_supply, temperature_return, cp_water):
     return pipe_capacity
 
 
+def capacity_to_diameter(pipe_capacity,
+                         temperature_supply,
+                         temperature_return,
+                         cp_water):
+    """Input: pipe_capacity (W), temperature_supply (°C or K) at a specific
+    time step, temperature_return (°C or K) at a specific time step
+    Returns: diameter (m)"""
+    mass_flow = pipe_capacity / (cp_water * (temperature_supply - temperature_return))
+    return mass_flow
+
+
 def thermal_resistance(diameter, diameter_ratio, depth, settings):
     """Input: diameter (m), diameter_ratio = outer diameter / diameter (-),
     depth (below ground level) (m)
     Returns: thermal_resistance_pipe (m*K/W)
     Formula: see Blommaert 2020 --> D'Eustachio 1957"""
     outer_diameter = diameter * diameter_ratio
-    thermal_resistance_ground = np.log(4 * depth / outer_diameter) / (2 * np.pi * settings.ground.thermal_conductivity)
+    thermal_resistance_ground = (np.log(4 * depth / outer_diameter)
+                                 / (2 * np.pi
+                                    * settings.ground.thermal_conductivity))
     thermal_resistance_insulation = np.log(diameter_ratio) / (2 * np.pi * settings.piping.thermal_conductivity)
     thermal_resistance_pipe = thermal_resistance_insulation + thermal_resistance_ground
     return thermal_resistance_pipe
 
 
-def heat_loss_pipe(mass_flow, length, temperature_in, thermal_resistance_pipe, ambient_temperature, cp_water):
+def heat_loss_pipe(mass_flow,
+                   length,
+                   temperature_in,
+                   thermal_resistance_pipe,
+                   ambient_temperature,
+                   cp_water):
     """Input: mass_flow (kg/s), length (m), temperature_in (K or °C) at a
     specific time step, thermal_resistance_pipe (m*K/W),
     ambient_temperature (K or C°) at a specific time step
@@ -93,12 +111,12 @@ def heat_loss_pipe(mass_flow, length, temperature_in, thermal_resistance_pipe, a
             )
         )
     temperature_out = temp_diff_out + ambient_temperature
-    heat_loss_pipe = mass_flow * cp_water * (
+    losses = mass_flow * cp_water * (
         temperature_in - temperature_out) / length
-    return heat_loss_pipe
+    return losses
 
 
-def regression_thermal_capacity(settings: Regression):
+def regression_thermal_capacity(settings: Settings):
     """
     Calculates the regression factors for the linearization of the thermal
     capacity of the pipes
@@ -117,7 +135,7 @@ def regression_thermal_capacity(settings: Regression):
 
     r = {}  # results of the regression
 
-    velocity_max = np.zeros(settings.piping.number_diameter)  # initialize array
+    velocity_max = np.zeros(settings.piping.number_diameters)  # initialize array
     # iterate over all diameters
     for i, diam in enumerate(settings.piping.diameter):
         velocity_max[i] = max_flow_velocity(V_INIT, diam, settings.piping.roughness,
@@ -125,7 +143,7 @@ def regression_thermal_capacity(settings: Regression):
 
     r['mass_flow_max'] = mass_flow(velocity_max, np.array(settings.piping.diameter), settings.water.density)
 
-    r['power_flow_max'] = np.zeros([settings.piping.number_diameter])  # init
+    r['power_flow_max'] = np.zeros([settings.piping.number_diameters])  # init
 
     # do the regression for each diameter
     r['power_flow_max'] = pipe_capacity(
@@ -146,18 +164,20 @@ def regression_thermal_capacity(settings: Regression):
     return r
 
 
-def regression_heat_losses(settings: Regression, thermal_capacity):
+def regression_heat_losses(settings: Settings, thermal_capacity):
     """Input: mass_flow (kg/s), temperature_supply (K or °C), pipe_depth (m),
     pipe_length (m), ambient_temperature (K or °C) at a specific time step
     Returns: Heat_loss_pipe (in W/m) and regression factors for linearization
     (in kW/m)"""
-    pipe_depth = np.ones(settings.piping.number_diameter)
-    pipe_length = 100*np.ones(settings.piping.number_diameter)
+    pipe_depth = np.ones(settings.piping.number_diameters)
+    pipe_length = 100*np.ones(settings.piping.number_diameters)
     ratio = np.array(settings.piping.outer_diameter) / np.array(settings.piping.diameter)
     res_pipe = thermal_resistance(np.array(settings.piping.diameter), ratio, pipe_depth, settings)
 
     mass_flow = thermal_capacity['mass_flow_max']
     maximal_power = thermal_capacity['power_flow_max']
+
+    heat_loss = np.zeros([settings.piping.number_diameters])
 
     heat_loss = heat_loss_pipe(mass_flow, pipe_length, settings.temperatures.supply, res_pipe,
                                 settings.temperatures.ambient, settings.water.heat_capacity_cp)

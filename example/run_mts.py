@@ -94,9 +94,9 @@ def main(filepath, outputpath, plots=True, solver='gurobi'):
         pd.DataFrame(value).to_parquet(os.path.join(outputpath, key + '.parquet'))
 
     # Save figure optimized districts
-        if plots:
-            f = tt.plotting.district(opt_mats, diameter=opt_mats['d_i_0'], isnot_init=True)
-            f.savefig(os.path.join(outputpath, 'district_optimal.svg'), bbox_inches='tight')
+    if plots:
+        f = tt.plotting.district(opt_mats, diameter=opt_mats['d_i_0'], isnot_init=True)
+        f.savefig(os.path.join(outputpath, 'district_optimal.svg'), bbox_inches='tight')
 
 if __name__ == '__main__':
     main(filepath=DATAPATH, outputpath=RESULTSPATH, plots=False)

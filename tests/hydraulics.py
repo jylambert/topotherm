@@ -1,12 +1,11 @@
 """Test the hydraulic precalculation module."""
 from topotherm import precalculation_hydraulic as precalc
-from topotherm.settings import Regression
+import topotherm as tt
 
-settings = Regression()
+settings = tt.settings.Settings()
 settings.temperatures.ambient = -20
 settings.temperatures.supply = 90
 settings.temperatures.return_ = 55
-
 
 
 def test_feed_line_temp():
@@ -29,7 +28,8 @@ def test_regression():
     assert abs(r_thermal_cap['b'] - 567.335) < 0.01 * 567.335
     assert abs(r_thermal_cap['r2'] - 0.869778) < 0.01 * 0.869778
     # heat loss regression
-    r_heat_loss = precalc.regression_heat_losses(settings, thermal_capacity=r_thermal_cap)
+    r_heat_loss = precalc.regression_heat_losses(settings,
+                                                 thermal_capacity=r_thermal_cap)
     # assert that each params item is within 1% of the expected value
     assert abs(r_heat_loss['a'] - 4.348000e-07) < 0.01 * 4.348000e-07
     assert abs(r_heat_loss['b'] - 0.02189) < 0.01 * 0.02189

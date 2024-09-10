@@ -11,6 +11,8 @@ import os
 
 import pandas as pd
 import pyomo.environ as pyo
+import matplotlib.pyplot as plt
+import networkx as nx
 
 import topotherm as tt
 
@@ -18,7 +20,6 @@ import topotherm as tt
 DATAPATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
 OUTPUTPATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                           'results', 'sts_forced')
-
 # regression coefficients for thermal capacity and heat losses
 REGRESSION = 'regression.csv'
 PLOTS = True  # plot districts before and after optimization
@@ -44,7 +45,7 @@ def read_regression(path, i):
     return r_thermal_cap, r_heat_loss
 
 
-def main(filepath, outputpath, plots=True, solver='gurobi', mode='economic'):
+def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
     """Main function to run the optimization"""
     # Create output directory if it does not exist
     tt.utils.create_dir(outputpath)
@@ -65,7 +66,6 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='economic'):
     # import settings
     settings = tt.settings.load(os.path.join(filepath, 'config.yaml'))
     print(settings)
-    # modify either in code or in the config file
     settings.economics.source_c_inv = [0.]  # no investment costs for sources
     settings.economics.source_flh = [2500.]  # full load hours
     settings.economics.consumers_flh = [2500.]  # full load hours
@@ -101,6 +101,10 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='economic'):
         matrices=mat,
         settings=settings)
 
+    # Debug prints to check shapes
+    for key, value in opt_mats.items():
+        print(f"{key} shape: {value.shape}")
+
     # iterate over opt_mats and save each matrix as parquet file
     for key, value in opt_mats.items():
         pd.DataFrame(value).to_parquet(os.path.join(outputpath, key + '.parquet'))
@@ -108,9 +112,49 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='economic'):
     # Save figure optimized districts
     if plots:
         f = tt.plotting.district(opt_mats, diameter=opt_mats['d_i_0'],
-                                    isnot_init=True)
+                                 isnot_init=True)
         f.savefig(os.path.join(outputpath, 'district_optimal.svg'),
-                    bbox_inches='tight')
+                  bbox_inches='tight')
+
+    network = tt.postprocessing.to_networkx_graph(opt_mats)
+
+    print(len(network.edges))
+    print(mat['a_i'].shape[1])
+    print(len(network.nodes))
+    print(mat['a_i'].shape[0])
+
+    fig, ax = plt.subplots(figsize=(20, 20), layout='constrained')
+    node_colors = []
+    node_label = []
+    node_id = {}
+    node_pos = []
+    edges_p = []
+    edges_label = {}
+
+    for node in network.nodes(data=True):
+        node_colors.append(node[1]['color'])
+        node_label.append(node[1]['type'])
+        node_id[node[0]] = str(node[0])
+        node_pos.append([node[1]['x'], node[1]['y']])
+
+    for edge in network.edges(data=True):
+        edges_p.append(edge[2]['p'])
+        edges_label[(edge[0], edge[1])] = str(edge[0]) + ' -> ' + str(edge[1])
+
+    nx.draw_networkx_edges(network, pos=node_pos,
+                            edgelist=network.edges, width=edges_p, ax=ax,
+                            label=edges_label, alpha=0.3, edge_color='grey')
+    nx.draw_networkx_nodes(network, pos=node_pos, node_color=node_colors,
+                            ax=ax, label=node)
+
+    nx.draw_networkx_labels(network, pos=node_pos, labels=node_id, ax=ax)#
+    nx.draw_networkx_edge_labels(network, pos=node_pos, edge_labels=edges_label, ax=ax)
+
+    fig.show()
+    plt.pause(120)
+    fig.savefig(os.path.join(outputpath, 'networkx.svg'), bbox_inches='tight')
+    # close all figures
+    plt.close('all')
 
 
 if __name__ == '__main__':

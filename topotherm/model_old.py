@@ -7,7 +7,6 @@ The module contains the following functions:
     * sts: Create the optimization model for the thermo-hydraulic coupled with single time
     step operation
     * mts_easy: Create the optimization model for the thermo-hydraulic coupled with multiple time 
-    step operation. The model is based on the STS model and implements a simplified themal
     loss equation to alleviate the computational burden.
     * mts: Create the optimization model for the thermo-hydraulic coupled with multiple time
     step operation. The model is based on the MTS easy model and implements the full thermal
@@ -77,7 +76,7 @@ def create_sets(matrices):
     return s
 
 
-def sts(matrices, sets, regression_caps, regression_losses,
+def sts_orig(matrices, sets, regression_caps, regression_losses,
         economics: Economics, opt_mode: str):
     """Create the optimization model for the thermo-hydraulic coupled with single time
     step operation. 

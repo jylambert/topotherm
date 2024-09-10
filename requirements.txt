@@ -7,3 +7,5 @@ pyomo
 pyarrow>=14.0.1
 Pillow>=10.2.0
 pytest
+pyyaml
+pydantic

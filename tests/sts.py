@@ -4,7 +4,6 @@ import pyomo.environ as pyo
 import pandas as pd
 
 import topotherm as tt
-from topotherm.settings import Optimization
 
 def read_regression(path, i):
     """Read the regression coefficients for the thermal capacity and heat
@@ -28,6 +27,7 @@ def read_regression(path, i):
 def test_sts_forced(request):
     """Main function to run the optimization"""
     solver_name = request.config.getoption("--solver")
+    assert solver_name in ["scip", "gurobi", "cbc"], f"Unsupported solver: {solver_name}"
     # Load the district
     current_path = os.path.dirname(os.path.abspath(__file__))
     mat = tt.fileio.load(os.path.join(current_path, 'data'))
@@ -36,9 +36,14 @@ def test_sts_forced(request):
     r_thermal_cap, r_heat_loss = read_regression(
         os.path.join(current_path, 'data', 'regression.csv'), 0)
 
-    model_sets = tt.model.create_sets(mat)
-    model = tt.model.sts(mat, model_sets, r_thermal_cap, r_heat_loss,
-                         Optimization().economics, "forced")
+    model_sets = tt.sets.create(mat)
+    model = tt.single_timestep.model(
+        matrices=mat,
+        sets=model_sets,
+        regression_inst=r_thermal_cap,
+        regression_losses=r_heat_loss,
+        economics=tt.settings.Settings().economics,
+        optimization_mode="forced")
 
     # Optimization initialization
     opt = pyo.SolverFactory(solver_name)
@@ -55,6 +60,8 @@ def test_sts_forced(request):
 def test_sts_eco(request):
     """Main function to run the optimization"""
     solver_name = request.config.getoption("--solver")
+    assert solver_name in ["scip", "gurobi", "cbc"], f"Unsupported solver: {solver_name}"
+
     # Load the district
     current_path = os.path.dirname(os.path.abspath(__file__))
     mat = tt.fileio.load(os.path.join(current_path, 'data'))
@@ -63,9 +70,14 @@ def test_sts_eco(request):
     r_thermal_cap, r_heat_loss = read_regression(
         os.path.join(current_path, 'data', 'regression.csv'), 0)
 
-    model_sets = tt.model.create_sets(mat)
-    model = tt.model.sts(mat, model_sets, r_thermal_cap, r_heat_loss,
-                         Optimization().economics, "eco")
+    model_sets = tt.sets.create(mat)
+    model = tt.single_timestep.model(
+        matrices=mat,
+        sets=model_sets,
+        regression_inst=r_thermal_cap,
+        regression_losses=r_heat_loss,
+        economics=tt.settings.Settings().economics,
+        optimization_mode="economic")
 
     # Optimization initialization
     opt = pyo.SolverFactory(solver_name)
