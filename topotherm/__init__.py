@@ -1,4 +1,3 @@
-from . import model
 from . import plotting
 from . import utils
 from . import fileio

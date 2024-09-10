@@ -13,14 +13,12 @@ import pandas as pd
 import pyomo.environ as pyo
 
 import topotherm as tt
-# from topotherm.settings import Settings
-from topotherm.model.create_sets import main as create_sets
-from topotherm.model.sts import main as sts
 
 
 DATAPATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
 OUTPUTPATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                           'results', 'sts_forced')
+
 # regression coefficients for thermal capacity and heat losses
 REGRESSION = 'regression.csv'
 PLOTS = True  # plot districts before and after optimization
@@ -64,22 +62,22 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
         os.path.join(filepath, REGRESSION),
         0)
 
-    # default settings
-    # Example usage
-    settings = tt.settings.load('./data/config.yaml')
+    # import settings
+    settings = tt.settings.load(os.path.join(filepath, 'config.yaml'))
     print(settings)
+    # modify either in code or in the config file
     settings.economics.source_c_inv = [0.]  # no investment costs for sources
     settings.economics.source_flh = [2500.]  # full load hours
     settings.economics.consumers_flh = 2500.  # full load hours
 
-    model_sets = create_sets(mat)
-    model = sts(
-        mat,
-        model_sets,
-        r_thermal_cap,
-        r_heat_loss,
-        settings.economics,
-        mode)
+    model_sets = tt.sets.create(mat)
+    model = tt.single_timestep.model(
+        matrices=mat,
+        sets=model_sets,
+        regression_inst=r_thermal_cap,
+        regression_losses=r_heat_loss,
+        economics=settings.economics,
+        optimization_mode=mode)
 
     # Optimization initialization
     opt = pyo.SolverFactory(solver)
@@ -98,11 +96,9 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
     dfsol = tt.utils.solver_to_df(result, model, solver=solver)
     dfsol.to_csv(os.path.join(outputpath, 'solver.csv'), sep=';')
 
-    opt_mats = tt.postprocessing.postprocess(
+    opt_mats = tt.postprocessing.sts(
         model=model,
         matrices=mat,
-        sets=model_sets,
-        mode="sts",
         settings=settings)
 
     # iterate over opt_mats and save each matrix as parquet file

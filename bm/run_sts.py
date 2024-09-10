@@ -64,7 +64,7 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
         0)
 
     # import settings
-    settings = tt.settings.load('./data/config.yaml')
+    settings = tt.settings.load(os.path.join(filepath, 'config.yaml'))
     print(settings)
     settings.economics.source_c_inv = [0.]  # no investment costs for sources
     settings.economics.source_flh = [2500.]  # full load hours
@@ -111,8 +111,10 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
 
     # Save figure optimized districts
     if plots:
-        f = tt.plotting.district(opt_mats, diameter=opt_mats['d_i_0'], isnot_init=True)
-        f.savefig(os.path.join(outputpath, 'district_optimal.svg'), bbox_inches='tight')
+        f = tt.plotting.district(opt_mats, diameter=opt_mats['d_i_0'],
+                                 isnot_init=True)
+        f.savefig(os.path.join(outputpath, 'district_optimal.svg'),
+                  bbox_inches='tight')
 
     network = tt.postprocessing.to_networkx_graph(opt_mats)
 
