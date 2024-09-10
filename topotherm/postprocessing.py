@@ -5,13 +5,14 @@ This module includes the following functions:
     * sts: Postprocessing for the STS model
 """
 
+from typing import Tuple
+
 import numpy as np
 import pyomo.environ as pyo
 from scipy.optimize import root
 import networkx as nx
 
 from topotherm.settings import Settings
-from typing import Tuple
 
 
 def calc_diam_and_velocity(
@@ -47,9 +48,9 @@ def calc_diam_and_velocity(
 def sts(model: pyo.ConcreteModel,
         matrices: dict,
         settings: Settings):
-    """Postprocessing for the STS model. This includes the calculation of
-    the diameter and velocity of the pipes, the elimination of unused pipes
-    and nodes.
+    """Postprocessing for the single time step model. This includes the
+    calculation of the diameter and velocity of the pipes, the elimination of
+    unused pipes and nodes.
 
     Args:
         model (pyo.ConcreteModel): solved pyomo model
@@ -123,7 +124,7 @@ def sts(model: pyo.ConcreteModel,
     supply_temp_opt = np.ones(a_i_shape_opt[1]) * settings.temperatures.supply
     return_temp_opt = np.ones(a_i_shape_opt[1]) * settings.temperatures.return_
 
-
+    # Calculate the mass flow for each pipe with m cp deltaT = P
     m_lin = (p_lin_opt * 1000
              / (settings.water.heat_capacity_cp
                 * (supply_temp_opt - return_temp_opt)
@@ -132,7 +133,7 @@ def sts(model: pyo.ConcreteModel,
     # Calculate the diameter and velocity for each pipe
     for h in range(a_i_shape_opt[1]):
         mass_lin = m_lin[h]
-        sol = root(lambda v: equations(v, mass_lin, settings),
+        sol = root(lambda v: calc_diam_and_velocity(v, mass_lin, settings),
                    (0.5, 0.02),
                    method='lm')
         if sol.success:
@@ -205,7 +206,6 @@ def to_networkx_graph(matrices):
 
     # drop all edges with p=0
     G.remove_edges_from([(u, v) for u, v, d in G.edges(data=True) if d['p'] == 0])
-
     return G
 
 
@@ -297,6 +297,7 @@ def mts(model, matrices, sets, t_supply, t_return):
         d_i_0=d_lin2,
         m_i_0=m_lin,
         position=pos_opt,
+
     )
 
     return res

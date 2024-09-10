@@ -115,5 +115,5 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='economic'):
 
 if __name__ == '__main__':
     main(filepath=os.path.join(DATAPATH), outputpath=os.path.join(OUTPUTPATH),
-         plots=PLOTS, solver=SOLVER, mode='economic')
+         plots=PLOTS, solver=SOLVER, mode='forced')
     print(f'Finished {OUTPUTPATH}')
