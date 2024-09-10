@@ -68,7 +68,7 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
     print(settings)
     settings.economics.source_c_inv = [0.]  # no investment costs for sources
     settings.economics.source_flh = [2500.]  # full load hours
-    settings.economics.consumers_flh = 2500.  # full load hours
+    settings.economics.consumers_flh = [2500.]  # full load hours
 
     model_sets = tt.sets.create(mat)
     model = tt.single_timestep.model(

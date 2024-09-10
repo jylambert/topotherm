@@ -44,7 +44,7 @@ def read_regression(path, i):
     return r_thermal_cap, r_heat_loss
 
 
-def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
+def main(filepath, outputpath, plots=True, solver='gurobi', mode='economic'):
     """Main function to run the optimization"""
     # Create output directory if it does not exist
     tt.utils.create_dir(outputpath)
@@ -68,7 +68,7 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
     # modify either in code or in the config file
     settings.economics.source_c_inv = [0.]  # no investment costs for sources
     settings.economics.source_flh = [2500.]  # full load hours
-    settings.economics.consumers_flh = 2500.  # full load hours
+    settings.economics.consumers_flh = [2500.]  # full load hours
 
     model_sets = tt.sets.create(mat)
     model = tt.single_timestep.model(
@@ -106,14 +106,14 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
         pd.DataFrame(value).to_parquet(os.path.join(outputpath, key + '.parquet'))
 
     # Save figure optimized districts
-        if plots:
-            f = tt.plotting.district(opt_mats, diameter=opt_mats['d_i_0'],
-                                     isnot_init=True)
-            f.savefig(os.path.join(outputpath, 'district_optimal.svg'),
-                      bbox_inches='tight')
+    if plots:
+        f = tt.plotting.district(opt_mats, diameter=opt_mats['d_i_0'],
+                                    isnot_init=True)
+        f.savefig(os.path.join(outputpath, 'district_optimal.svg'),
+                    bbox_inches='tight')
 
 
 if __name__ == '__main__':
     main(filepath=os.path.join(DATAPATH), outputpath=os.path.join(OUTPUTPATH),
-         plots=PLOTS, solver=SOLVER, mode='forced')
+         plots=PLOTS, solver=SOLVER, mode='economic')
     print(f'Finished {OUTPUTPATH}')

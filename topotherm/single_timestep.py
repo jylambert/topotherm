@@ -84,6 +84,7 @@ def model(matrices: dict,
                         doc='Set of pipe directions.')
     mdl.flow = pyo.Set(initialize=['in', 'out'],
                          doc='Flow direction in the pipe')
+
     # Define the combined set for pipes with consumers in both directions
     mdl.cons = pyo.Set(
         initialize=[('ij', edge) for edge in sets['connection_c_ij']] +
