@@ -37,22 +37,22 @@ def sts(model: pyo.ConcreteModel,
 
     # Exclude non-connected consumers in Q_c, only affects the economic case
     # Check for consumers connected in direction ij
-    for d, n in model.cons:
+    for d, e in model.cons:
         if d == 'ij':
             # edge in incidence matrix where pipe exits into node n (==-1)
-            a_i_idx = np.where(matrices['a_i'][:, n] == -1)
+            a_i_idx = np.where(matrices['a_i'][:, e] == -1)
             # location where a_i_idx is connected to a_c
             a_c_idx = np.where(matrices['a_c'][a_i_idx[0], :][0] == 1)
             if len(a_i_idx) != 1 or len(a_c_idx) != 1:
                 raise ValueError('Error in the incidence matrix!')
             # assign the heat demand to the connected consumer if lambda is 1
-            q_c_opt[a_c_idx[0], :] = lambda_ij[n] * matrices['q_c'][a_c_idx[0], :]
+            q_c_opt[a_c_idx[0], :] = lambda_ij[e] * matrices['q_c'][a_c_idx[0], :]
         elif d == 'ji':
-            a_i_idx = np.where(matrices['a_i'][:, n] == 1)
+            a_i_idx = np.where(matrices['a_i'][:, e] == 1)
             a_c_idx = np.where(matrices['a_c'][a_i_idx[0], :][0] == 1)
             if len(a_i_idx) != 1 or len(a_c_idx) != 1:
                 raise ValueError('Error in the incidence matrix!')
-            q_c_opt[a_c_idx[0], :] = lambda_ji[n] * matrices['q_c'][a_c_idx[0], :]
+            q_c_opt[a_c_idx[0], :] = lambda_ji[e] * matrices['q_c'][a_c_idx[0], :]
 
     # Remove nonzero elements row-wise
     q_c_opt = q_c_opt[q_c_opt.any(axis=1)]
