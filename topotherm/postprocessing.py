@@ -11,12 +11,45 @@ from scipy.optimize import root
 import networkx as nx
 
 from topotherm.settings import Settings
+from typing import Tuple
+
+
+def calc_diam_and_velocity(
+        v: Tuple[float, float],
+        mass_lin: float,
+        settings: Settings) -> Tuple[float, float]:
+    """Equations for the calculation of the diameter and velocity of
+    the pipes depending on the mass flow and the power of the pipes.
+
+    Args:
+        v (Tuple[float, float]): Tuple containing the velocity and diameter
+        mass_lin (float): mass flow of the pipe
+        settings (Settings): settings for the optimization
+    
+    Returns:
+        Tuple[float, float]: Tuple containing the velocity and diameter
+    """
+    vel, d = v
+    reynolds = ((settings.water.density * vel * d)
+                / settings.water.dynamic_viscosity)
+    # friction factor
+    f = (-1.8 * np.log10((settings.piping.roughness / (3.7 * d)) ** 1.11
+                            + 6.9 / reynolds)
+                            )**-2
+    # eq. for diameter
+    eq1 = vel - np.sqrt((2 * settings.piping.max_pr_loss * d)
+                        / (f * settings.water.density))
+    # eq. for velocity
+    eq2 = mass_lin - settings.water.density * vel * (np.pi / 4) * d ** 2
+    return [eq1, eq2]
 
 
 def sts(model: pyo.ConcreteModel,
         matrices: dict,
         settings: Settings):
-    """Create variables for the thermo-hydraulic coupled optimization.
+    """Postprocessing for the STS model. This includes the calculation of
+    the diameter and velocity of the pipes, the elimination of unused pipes
+    and nodes.
 
     Args:
         model (pyo.ConcreteModel): solved pyomo model
@@ -57,13 +90,18 @@ def sts(model: pyo.ConcreteModel,
     # Remove nonzero elements row-wise
     q_c_opt = q_c_opt[q_c_opt.any(axis=1)]
 
-    # Adaption of Incidence Matrix for thermo-hydraulic coupled optimization
+    # Adaption of Incidence Matrix for further postprocessing
     for q, _ in enumerate(lambda_ij):
+        # if not active, all is 0
         if lambda_ij[q] == 0 and lambda_ji[q] == 0:
             matrices['a_i'][:, q] = 0
             matrices['l_i'][q] = 0
+        # if opposite direction operational, switch a_i with -1 and switch
+        # values lambda_ij for ji. This is necessary for the postprocessing.
         elif lambda_ji[q] == 1:
             matrices['a_i'][:, q] = matrices['a_i'][:, q] * (-1)
+            lambda_ij[q] = 1
+            lambda_ji[q] = 0
 
     p_lin = p_ij + p_ji  # Power of the pipes
 
@@ -85,23 +123,6 @@ def sts(model: pyo.ConcreteModel,
     supply_temp_opt = np.ones(a_i_shape_opt[1]) * settings.temperatures.supply
     return_temp_opt = np.ones(a_i_shape_opt[1]) * settings.temperatures.return_
 
-    def equations(v):
-        """Equations for the calculation of the diameter and velocity of
-        the pipes depending on the mass flow and the power of the pipes.
-        """
-        vel, d = v
-        reynolds = ((settings.water.density * vel * d)
-                    / settings.water.dynamic_viscosity)
-        # friction factor
-        f = (-1.8 * np.log10((settings.piping.roughness / (3.7 * d)) ** 1.11
-                             + 6.9 / reynolds)
-                             )**-2
-        # eq. for diameter
-        eq1 = vel - np.sqrt((2 * settings.piping.max_pr_loss * d)
-                            / (f * settings.water.density))
-        # eq. for velocity
-        eq2 = mass_lin - settings.water.density * vel * (np.pi / 4) * d ** 2
-        return [eq1, eq2]
 
     m_lin = (p_lin_opt * 1000
              / (settings.water.heat_capacity_cp
@@ -111,7 +132,9 @@ def sts(model: pyo.ConcreteModel,
     # Calculate the diameter and velocity for each pipe
     for h in range(a_i_shape_opt[1]):
         mass_lin = m_lin[h]
-        sol = root(equations, (0.5, 0.02), method='lm')
+        sol = root(lambda v: equations(v, mass_lin, settings),
+                   (0.5, 0.02),
+                   method='lm')
         if sol.success:
             v_lin[h], d_lin[h] = sol.x
         else:
@@ -123,28 +146,32 @@ def sts(model: pyo.ConcreteModel,
         a_c=a_c_opt,
         q_c=q_c_opt,
         l_i=l_i_opt,
-        lambda_ij=lambda_ij,
-        lambda_ji=lambda_ji,
+        lambda_ij_opt=lambda_ij,
+        lambda_ji_opt=lambda_ji,
         d_i_0=d_lin,
         m_i_0=m_lin,
         position=pos_opt,
+        p=p_lin_opt
     )
 
     return res
 
 
 def to_networkx_graph(matrices):
-    """Input: matrices: a dict containing the following keys:
+    """Export the postprocessed, optimal district as a networkx graph. 
+
+    Args:
+        matrices: a dict containing the following keys:
         - a_i (internal matrix)
         - a_p (producer matrix)
         - a_c (consumer matrix)
-        - q_c (heat demand of the consumers)
+        - q_c (heat demand of the connected consumers)
         - l_i (of the pipes)
-        - positions (positions of the nodes)
+        - position (positions of the nodes)
         - d_i_0 (diameters of the optimal pipes)
         - m_i_0 (mass flow of the optimal pipes)
         - p (Power of the optimal pipes)
-    
+        
     Returns: Figure of the district
     """
     G = nx.DiGraph()
@@ -222,7 +249,7 @@ def mts(model, matrices, sets, t_supply, t_return):
     lambda_built = np.around(lambda_built, 0)
     lambda_dir = np.around(lambda_dir, 0)
 
-    # Restart, Adaption of Incidence Matrix for the thermo-hydraulic coupled optimization
+    # @TODO for all timesteps (with new formulation)
     for q, _ in enumerate(lambda_dir_1):
         if lambda_built[q] == 0:
             matrices['a_i'][:, q] = 0

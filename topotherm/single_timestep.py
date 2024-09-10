@@ -273,7 +273,6 @@ def model(matrices: dict,
                      for k in m.set_n_i)
                      * annuity(economics.pipes_c_irr,
                                economics.pipes_lifetime))
-        print(annuity(economics.pipes_c_irr, economics.pipes_lifetime))
         source = sum(m.P_source_inst[k]
                      * economics.source_c_inv[k]
                      * annuity(economics.source_c_irr[k],
