@@ -1,5 +1,5 @@
-"""This file contains all the settings for the optimization problem and should be modified
-and adapted to each case."""
+"""This file contains all the settings for the optimization problem and should
+be modified and adapted to each case through a .yaml file (see examples)."""
 
 import os
 import warnings
@@ -127,8 +127,8 @@ class Economics(BaseModel):
 
     pipes_c_irr: float = Field(0.08,
                                description="Interest rate for pipes")
-    consumers_flh: float = Field(
-        1500.,
+    consumers_flh: List[float] = Field(
+        default_factory=lambda: [1500.],
         description="Full load hours of consumers in h/y")
     heat_price: float = Field(120e-3,
                               description="Selling price for heat in €/kW")

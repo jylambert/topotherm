@@ -45,8 +45,8 @@ def model(matrices: dict,
             for the heat losses
         economics (topotherm.settings.Economics): Object with the economic
             parameters
-        optimization_mode (str): Optimization mode, either 'eco' for economic
-            or 'forced' for forced operation
+        optimization_mode (str): Optimization mode, either 'economic' for
+            economic or 'forced' for forced operation
 
     Returns:
         mdl (pyomo.environ.ConcreteModel): pyomo model
@@ -55,6 +55,13 @@ def model(matrices: dict,
     # (in theory it is possible to do
     # @TODO: a unidirectional flow formulation with multiple time step with
     # topotherm sts)
+
+    # check if the optimization mode is implemented
+    if optimization_mode not in ['economic', 'forced']:
+        raise NotImplementedError(
+            "Optimization mode %s not implemented" % optimization_mode)
+
+    # init model
     mdl = pyo.ConcreteModel()
 
     # Big-M-Constraint for pipes
@@ -144,7 +151,7 @@ def model(matrices: dict,
         if optimization_mode == "forced":
             sink = sum(matrices['q_c'][k, t]
                         for k in sets['a_c_out'][j])
-        elif optimization_mode == "eco":
+        elif optimization_mode == "economic":
             sink = (
                 sum(
                     (m.lambda_['ij', sets['a_i_in'][j][0]])
@@ -203,7 +210,7 @@ def model(matrices: dict,
         return m.lambda_[d, j] == sets[f'lambda_c_{d}'][j]
 
 
-    if optimization_mode == "eco":
+    if optimization_mode == "economic":
         msg_ = """Constraint if houses have their own connection-pipe
             and set the direction (ij)"""
         mdl.cons_connection_to_consumer = pyo.Constraint(
@@ -272,7 +279,8 @@ def model(matrices: dict,
                                economics.source_lifetime[k])
                      for k in m.set_n_p)
 
-        if optimization_mode == "eco":
+        # @TODO Implement consumer-specific flh in the economic mode
+        if optimization_mode == "economic":
             term4 = (sum(
                 sum(
                     sum(m.lambda_['ij', sets['a_i_in'][j].item()]
@@ -286,7 +294,7 @@ def model(matrices: dict,
                         if len(sets['a_i_out'][j]) > 0)
                         for j in mdl.set_n)
                 for t in mdl.set_t)
-                * economics.flh[0] * economics.heat_price * (-1))
+                * economics.consumers_flh[0] * economics.heat_price * (-1))
         else:
             term4 = 0
 
