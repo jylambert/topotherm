@@ -4,7 +4,7 @@ and adapted to each case."""
 import os
 import warnings
 
-from typing import List
+from typing import List, Union
 from typing_extensions import Self
 
 from pydantic import BaseModel, Field, model_validator
@@ -186,8 +186,7 @@ class Settings(BaseModel):
                         economics=economics)
 
 
-
-def load(file_path: str or os.path.abspath) -> Settings:
+def load(file_path: Union[str, os.PathLike[str]]) -> Settings:
     """Load the settings from a yaml file."""
     with open(file_path, 'r', encoding='utf-8') as file:
         data = yaml.safe_load(file)
