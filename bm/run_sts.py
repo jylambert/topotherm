@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-@author: Jerry Lambert (jerry.lambert@tum.de); Amedeo Ceruti (amedeo.ceruti@tum.de)
+@author: Jerry Lambert (jerry.lambert@tum.de); Amedeo Ceruti
+(amedeo.ceruti@tum.de)
 
 This file is used to optimize district heating systems with the tool topotherm
 of the Chair of Energy Systems.
@@ -14,9 +15,6 @@ import matplotlib.pyplot as plt
 import networkx as nx
 
 import topotherm as tt
-# from topotherm.settings import Settings
-from topotherm.model.create_sets import main as create_sets
-from topotherm.model.sts import main as sts
 
 
 DATAPATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
@@ -72,14 +70,14 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
     settings.economics.source_flh = [2500.]  # full load hours
     settings.economics.consumers_flh = 2500.  # full load hours
 
-    model_sets = create_sets(mat)
-    model = sts(
-        mat,
-        model_sets,
-        r_thermal_cap,
-        r_heat_loss,
-        settings.economics,
-        mode)
+    model_sets = tt.sets.create(mat)
+    model = tt.single_timestep.model(
+        matrices=mat,
+        sets=model_sets,
+        regression_inst=r_thermal_cap,
+        regression_losses=r_heat_loss,
+        economics=settings.economics,
+        optimization_mode=mode)
 
     # Optimization initialization
     opt = pyo.SolverFactory(solver)
@@ -155,6 +153,7 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
     fig.savefig(os.path.join(outputpath, 'networkx.svg'), bbox_inches='tight')
     # close all figures
     plt.close('all')
+
 
 if __name__ == '__main__':
     main(filepath=os.path.join(DATAPATH), outputpath=os.path.join(OUTPUTPATH),

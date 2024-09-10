@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-@author: Jerry Lambert (jerry.lambert@tum.de); Amedeo Ceruti (amedeo.ceruti@tum.de)
+@author: Jerry Lambert (jerry.lambert@tum.de); Amedeo Ceruti
+(amedeo.ceruti@tum.de)
 
 This file is used to optimize district heating systems with the tool topotherm
 of the Chair of Energy Systems.
@@ -110,8 +111,10 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
 
     # Save figure optimized districts
         if plots:
-            f = tt.plotting.district(opt_mats, diameter=opt_mats['d_i_0'], isnot_init=True)
-            f.savefig(os.path.join(outputpath, 'district_optimal.svg'), bbox_inches='tight')
+            f = tt.plotting.district(opt_mats, diameter=opt_mats['d_i_0'],
+                                     isnot_init=True)
+            f.savefig(os.path.join(outputpath, 'district_optimal.svg'),
+                      bbox_inches='tight')
 
 
 if __name__ == '__main__':
