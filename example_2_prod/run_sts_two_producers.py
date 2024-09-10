@@ -60,6 +60,9 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
         os.path.join(filepath, REGRESSION), 0)
 
     # import settings
+    # CAREFUL, the settings file is different for each example, the two
+    # producers example uses a list with length 2 for the producers
+    # for several parameters.
     settings = tt.settings.load(os.path.join(filepath, 'config.yaml'))
     # model creation
     model_sets = tt.sets.create(mat)

@@ -1,4 +1,4 @@
-"""set up the package from requirments."""
+"""Set up the package from requirments."""
 import os
 
 from setuptools import setup, find_packages
