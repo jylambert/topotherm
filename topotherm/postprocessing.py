@@ -7,7 +7,7 @@ This module includes the following functions:
 
 import numpy as np
 import pyomo.environ as pyo
-from scipy.optimize import fsolve, root
+from scipy.optimize import root
 import networkx as nx
 
 from topotherm.settings import Settings
@@ -19,12 +19,12 @@ def sts(model: pyo.ConcreteModel,
     """Create variables for the thermo-hydraulic coupled optimization.
 
     Args:
-        model (pyo.ConcreteModel): pyomo model
+        model (pyo.ConcreteModel): solved pyomo model
         matrices (dict): dict containing the matrices
-        sets (dict): dict containing the sets
+        settings (tt.settings.Settings): settings for the optimization
     
     Returns:
-        dict: containing the variables and postprocessed data
+        _dict: containing the variables and postprocessed data
     """
     # Get the values from the model
     p_ij = np.array(pyo.value(model.P['ij', 'in', :, :]))
@@ -32,6 +32,30 @@ def sts(model: pyo.ConcreteModel,
     # flow direction, binary
     lambda_ij = np.around(np.array(pyo.value(model.lambda_['ij', :])), 0)
     lambda_ji = np.around(np.array(pyo.value(model.lambda_['ji', :])), 0)
+
+    q_c_opt = np.zeros([matrices['a_c'].shape[1], len(model.set_t)])
+
+    # Exclude non-connected consumers in Q_c, only affects the economic case
+    # Check for consumers connected in direction ij
+    for d, n in model.cons:
+        if d == 'ij':
+            # edge in incidence matrix where pipe exits into node n (==-1)
+            a_i_idx = np.where(matrices['a_i'][:, n] == -1)
+            # location where a_i_idx is connected to a_c
+            a_c_idx = np.where(matrices['a_c'][a_i_idx[0], :][0] == 1)
+            if len(a_i_idx) != 1 or len(a_c_idx) != 1:
+                raise ValueError('Error in the incidence matrix!')
+            # assign the heat demand to the connected consumer if lambda is 1
+            q_c_opt[a_c_idx[0], :] = lambda_ij[n] * matrices['q_c'][a_c_idx[0], :]
+        elif d == 'ji':
+            a_i_idx = np.where(matrices['a_i'][:, n] == 1)
+            a_c_idx = np.where(matrices['a_c'][a_i_idx[0], :][0] == 1)
+            if len(a_i_idx) != 1 or len(a_c_idx) != 1:
+                raise ValueError('Error in the incidence matrix!')
+            q_c_opt[a_c_idx[0], :] = lambda_ji[n] * matrices['q_c'][a_c_idx[0], :]
+
+    # Remove nonzero elements row-wise
+    q_c_opt = q_c_opt[q_c_opt.any(axis=1)]
 
     # Adaption of Incidence Matrix for thermo-hydraulic coupled optimization
     for q, _ in enumerate(lambda_ij):
@@ -55,8 +79,9 @@ def sts(model: pyo.ConcreteModel,
     l_i_opt = matrices['l_i'][valid_columns]
 
     a_i_shape_opt = np.shape(a_i_opt)  # (rows 0, columns 1)
-    d_lin2 = np.zeros(a_i_shape_opt[1])
-    v_lin2 = np.zeros(a_i_shape_opt[1])
+    d_lin = np.zeros(a_i_shape_opt[1])  # Initialize linear diameters
+    v_lin = np.zeros(a_i_shape_opt[1])  # Initialize velocities
+    # Assign supply and return temperatures
     supply_temp_opt = np.ones(a_i_shape_opt[1]) * settings.temperatures.supply
     return_temp_opt = np.ones(a_i_shape_opt[1]) * settings.temperatures.return_
 
@@ -65,42 +90,51 @@ def sts(model: pyo.ConcreteModel,
         the pipes depending on the mass flow and the power of the pipes.
         """
         vel, d = v
-        reynolds = (settings.water.density * vel * d) / settings.water.dynamic_viscosity
-        f = (-1.8 * np.log10((settings.piping.roughness / (3.7 * d)) ** 1.11 + 6.9 / reynolds))**-2
-        eq1 = vel - np.sqrt((2 * settings.piping.max_pr_loss * d) / (f * settings.water.density))
+        reynolds = ((settings.water.density * vel * d)
+                    / settings.water.dynamic_viscosity)
+        # friction factor
+        f = (-1.8 * np.log10((settings.piping.roughness / (3.7 * d)) ** 1.11
+                             + 6.9 / reynolds)
+                             )**-2
+        # eq. for diameter
+        eq1 = vel - np.sqrt((2 * settings.piping.max_pr_loss * d)
+                            / (f * settings.water.density))
+        # eq. for velocity
         eq2 = mass_lin - settings.water.density * vel * (np.pi / 4) * d ** 2
         return [eq1, eq2]
 
-    m_lin = (p_lin_opt*1000
-             / (settings.water.heat_capacity_cp * (supply_temp_opt - return_temp_opt)))
+    m_lin = (p_lin_opt * 1000
+             / (settings.water.heat_capacity_cp
+                * (supply_temp_opt - return_temp_opt)
+                ))
 
     # Calculate the diameter and velocity for each pipe
     for h in range(a_i_shape_opt[1]):
-        mass_lin = m_lin[h]  # mass flow
-        sol = root(equations, (0.5, 0.02),
-                   method='lm')
+        mass_lin = m_lin[h]
+        sol = root(equations, (0.5, 0.02), method='lm')
         if sol.success:
-            v_lin2[h], d_lin2[h] = sol.x
+            v_lin[h], d_lin[h] = sol.x
         else:
-            print(h, 'Failed to calculate diameter and velocity')
+            print(h, 'failed to calculate diameter and velocity!')
 
-    # Create a dictionary with the results
-    res = {
-        'a_i': a_i_opt,
-        'a_p': a_p_opt,
-        'a_c': a_c_opt,
-        'q_c': matrices['q_c'],
-        'l_i': l_i_opt,
-        'd_i_0': d_lin2,
-        'm_i_0': m_lin,
-        'position': pos_opt,
-        'p': p_lin_opt
-    }
+    res = dict(
+        a_i=a_i_opt,
+        a_p=a_p_opt,
+        a_c=a_c_opt,
+        q_c=q_c_opt,
+        l_i=l_i_opt,
+        lambda_ij=lambda_ij,
+        lambda_ji=lambda_ji,
+        d_i_0=d_lin,
+        m_i_0=m_lin,
+        position=pos_opt,
+    )
+
     return res
 
 
 def to_networkx_graph(matrices):
-    """Input: matrices: a dict containíng the following keys:
+    """Input: matrices: a dict containing the following keys:
         - a_i (internal matrix)
         - a_p (producer matrix)
         - a_c (consumer matrix)
@@ -189,12 +223,14 @@ def mts(model, matrices, sets, t_supply, t_return):
     lambda_dir = np.around(lambda_dir, 0)
 
     # Restart, Adaption of Incidence Matrix for the thermo-hydraulic coupled optimization
-    for q, _ in enumerate(lambda_built):
+    for q, _ in enumerate(lambda_dir_1):
         if lambda_built[q] == 0:
             matrices['a_i'][:, q] = 0
             matrices['l_i'][q] = 0
-        elif (lambda_built[q] == 1) & (lambda_dir[q, 0] == 0):
+        elif (lambda_built[q] == 1) & (lambda_dir_1[q, 0] == 0):
             matrices['a_i'][:, q] = matrices['a_i'][:, q] * (-1)
+            lambda_dir_1[q, np.where(lambda_dir_1[q, 1:] == 0)[0]] = 1
+            lambda_dir_2[q, np.where(lambda_dir_2[q, 1:] == 1)[0]] = 0
 
     p_cap_opt = np.delete(p_cap, np.where(~matrices['a_i'].any(axis=0)))
     pos_opt = np.delete(matrices['position'], np.where(~matrices['a_i'].any(axis=1)), axis=0)

@@ -1,9 +1,9 @@
-""" This module contains the functions for the hydraulic precalculation of the
+""" This module contains the functions for the thermo-hydraulic precalculation of the
 district heating network."""
 
 import numpy as np
 from scipy import stats
-from scipy.optimize import fsolve
+from scipy.optimize import root
 
 from topotherm.settings import Settings
 
@@ -22,7 +22,7 @@ def determine_feed_line_temp(ambient_temperature, temp_sup_high, temp_sup_low,
     elif (ambient_temperature >= temp_turn_high) & (ambient_temperature <= temp_turn_low):
         temp_supply = temp_sup_high - ((ambient_temperature-temp_turn_high)/ \
                                        (temp_turn_low-temp_turn_high)) \
-        *(temp_sup_high-temp_sup_low)
+         * (temp_sup_high-temp_sup_low)
     else:
         temp_supply = temp_sup_low
     return temp_supply
@@ -36,14 +36,19 @@ def max_flow_velocity(vel_init, diameter, roughness, max_spec_pressure_loss, wat
     def vel_calculation(var):
         vel = var
         # Calculate Reynolds number
-        Re: float = (water_parameters.density * vel.squeeze() * diameter) / water_parameters.dynamic_viscosity
+        re: float = (water_parameters.density * vel.squeeze() * diameter) / water_parameters.dynamic_viscosity
         # Calculate friction factor f (from Haaland equation for turbulent flow)
-        f = (-1.8 * np.log10((roughness / (3.7 * diameter)) ** 1.11 + 6.9 / Re)) ** -2
+        f = (-1.8 * np.log10((roughness / (3.7 * diameter)) ** 1.11 + 6.9 / re)) ** -2
         # Determine max. Velocity according to pressure loss and diameter
         eq = vel - np.sqrt((2 * max_spec_pressure_loss * diameter) / (f * water_parameters.density))
         return eq
 
-    vel_max = fsolve(vel_calculation, vel_init)
+    sol = root(vel_calculation, vel_init, method='lm')
+    if sol.success:
+        vel_max = sol.x
+    else:
+        raise ValueError('Failed to calculate maximal flow velocity')
+
     return vel_max
 
 
@@ -146,7 +151,6 @@ def regression_thermal_capacity(settings: Settings):
         settings.water.heat_capacity_cp)
     regression = stats.linregress(r['power_flow_max']/1000, np.array(settings.piping.cost))
 
-
     r['a'] = np.round(regression.slope, 6)
     r['b'] = np.round(regression.intercept, 3)
     r['r2'] = regression.rvalue**2
@@ -180,6 +184,7 @@ def regression_heat_losses(settings: Settings, thermal_capacity):
     regression = stats.linregress(maximal_power/1000, heat_loss/1000)
 
     r = {}
+
     r['b'] = np.round(regression.intercept, 6)
     r['a'] = np.round(regression.slope, 10)
     r['r2'] = regression.rvalue**2
