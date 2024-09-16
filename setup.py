@@ -14,6 +14,9 @@ with open(os.path.join(here, "README.md"), encoding='utf-8') as fid:
 with open(os.path.join(here, "requirements.txt"), encoding='utf-8') as fid:
     reqs = fid.read().splitlines()
 
+with open(os.path.join(here, "requirements-docs.txt"), encoding='utf-8') as fid:
+    reqs_docs = fid.read().splitlines()
+
 # This call to setup() does all the work
 setup(
     name="topotherm",
@@ -34,5 +37,8 @@ setup(
     include_package_data=True,
     install_requires=reqs,
     keywords=["district heating", "optimization", "Linear Programming",
-              "Mixed Integer Linear Programming"]
+              "Mixed Integer Linear Programming"],
+    extras_require={
+            "docs": reqs_docs,
+        },
 )
