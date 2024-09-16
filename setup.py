@@ -1,21 +1,24 @@
-"""Set up the package from requirments."""
-import os
+"""Set up topotherm from requirements."""
 
+import os
 from setuptools import setup, find_packages
+
 
 # The directory containing this file
 here = os.path.dirname(os.path.realpath(__file__))
+
 # The text of the README file
-with open(os.path.join(here, "README.md")) as fid:
+with open(os.path.join(here, "README.md"), encoding='utf-8') as fid:
     readme = fid.read()
-with open(os.path.join(here, "requirements.txt")) as fid:
+
+with open(os.path.join(here, "requirements.txt"), encoding='utf-8') as fid:
     reqs = fid.read().splitlines()
 
 # This call to setup() does all the work
 setup(
     name="topotherm",
     version="0.1.0",
-    description="A package to optimize district heating systems",
+    description="A package to design district heating networks",
     long_description=readme,
     long_description_content_type="text/markdown",
     url="https://github.com/jylambert/topotherm",
