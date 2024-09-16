@@ -51,23 +51,19 @@ def model(matrices: dict,
     Returns:
         mdl (pyomo.environ.ConcreteModel): pyomo model
     """
-    # @TODO: Look with Amedeo if q_c can be adapted to dimensionless vector,
-    # (in theory it is possible to do
-    # @TODO: a unidirectional flow formulation with multiple time step with
-    # topotherm sts)
 
-    # check if the optimization mode is implemented
+    # Check if the optimization mode is implemented
     if optimization_mode not in ['economic', 'forced']:
         raise NotImplementedError(
             "Optimization mode %s not implemented" % optimization_mode)
 
-    # init model
+    # Initialize model
     mdl = pyo.ConcreteModel()
 
     # Big-M-Constraint for pipes
-    p_max_pipe_const = float(regression_inst['power_flow_max_kW'].max())*20
+    p_max_pipe_const = float(regression_inst['power_flow_max_kW'].max())*2
     # Big-M-Constraint for source
-    p_max_source = matrices['q_c'].sum()*20
+    p_max_source = matrices['q_c'].sum()*2
 
     # Define index sets
     mdl.set_n_i = pyo.Set(initialize=range(sets['a_i_shape'][1]),
@@ -100,6 +96,7 @@ def model(matrices: dict,
         mdl.dirs, mdl.flow, mdl.set_n_i, mdl.set_t,
         doc='Heat power at the pipes',
         **pipe_power)
+
     # Building decisions of a pipe
     mdl.lambda_ = pyo.Var(
         mdl.dirs, mdl.set_n_i,
@@ -120,7 +117,6 @@ def model(matrices: dict,
         doc='Thermal capacity of the heat source',
         **source_power)
 
-
     def heat_source_inst(m, j, t):
         """Never exceed the installed capacity of the heat source."""
         return m.P_source[j, t] <= m.P_source_inst[j]
@@ -129,7 +125,6 @@ def model(matrices: dict,
         mdl.set_n_p, mdl.set_t,
         rule=heat_source_inst,
         doc='Upper bound for the heat source supply delivery')
-
 
     def nodal_power_balance(m, j, t):
         """REFERENCE DIRECTION: left to right
@@ -170,7 +165,6 @@ def model(matrices: dict,
         rule=nodal_power_balance,
         doc='Nodal Power Balance')
 
-
     def power_balance_pipe(m, d, j, t):
         """Power balance for the pipes.
         
@@ -194,7 +188,6 @@ def model(matrices: dict,
         rule=power_balance_pipe,
         doc='Power balance pipe')
 
-
     def power_bigm_P(m, d, j, t):
         lhs = m.P[d, 'in', j, t] - p_max_pipe_const * m.lambda_[d, j]
         rhs = 0
@@ -203,13 +196,11 @@ def model(matrices: dict,
         mdl.dirs, mdl.set_n_i, mdl.set_t,
         rule=power_bigm_P, doc='Big-M constraint for power flow')
 
-
     def connection_to_consumer_eco(m, d, j):
         return m.lambda_[d, j] <= sets[f'lambda_c_{d}'][j]
 
     def connection_to_consumer_fcd(m, d, j):
         return m.lambda_[d, j] == sets[f'lambda_c_{d}'][j]
-
 
     if optimization_mode == "economic":
         msg_ = """Constraint if houses have their own connection-pipe

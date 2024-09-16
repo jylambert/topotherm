@@ -227,6 +227,7 @@ def sts_orig(matrices, sets, regression_caps, regression_losses,
         return m.lambda_dir_1[j] + m.lambda_dir_2[j] <= 1
     model.one_pipe = pyo.Constraint(model.set_n_i, rule=one_pipe,
                                     doc='Just one Direction for each pipe')
+
     # @TODO: Develop total energy conservation equation for the eco mode (testing needed if beneficial)
     if opt_mode == "forced":
         def total_energy_cons(m, t):
