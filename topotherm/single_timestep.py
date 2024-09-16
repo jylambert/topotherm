@@ -272,7 +272,7 @@ def model(matrices: dict,
 
         # @TODO Implement consumer-specific flh in the economic mode
         if optimization_mode == "economic":
-            term4 = (sum(
+            revenue = (sum(
                 sum(
                     sum(m.lambda_['ij', sets['a_i_in'][j].item()]
                         * matrices['q_c'][k, t]
@@ -287,9 +287,9 @@ def model(matrices: dict,
                 for t in mdl.set_t)
                 * economics.consumers_flh[0] * economics.heat_price * (-1))
         else:
-            term4 = 0
+            revenue = 0
 
-        return fuel + pipes + source + term4
+        return fuel + pipes + source + revenue
 
     mdl.obj = pyo.Objective(rule=objective_function,
                               doc='Objective function')

@@ -176,6 +176,29 @@ def model(matrices: dict,
         rule=nodal_power_balance,
         doc='Nodal Power Balance for each time step')
 
+    def power_balance_pipe(m, d, j, t):
+        """Power balance for the pipes.
+
+        P_ji, out            P_ji, in
+        <-------    PIPE    <-------
+        ------->            ------->
+        P_ij, in            P_ij, out
+
+        """
+        # flows into and out of pipe
+        flows = m.P[d, 'in', j, t] - m.P[d, 'out', j, t]
+        # thermal losses calculation
+        variable = (regression_losses['a']
+                    * regression_inst['power_flow_max_partload']
+                    * m.P[d, 'in', j, t])
+        fix = regression_losses['b'] * m.lambda_[d, j]
+        return flows - (variable + fix) * matrices['l_i'][j] == 0
+
+    mdl.cons_power_balance_pipe = pyo.Constraint(
+        mdl.dirs, mdl.set_n_i, mdl.set_t,
+        rule=power_balance_pipe,
+        doc='Power balance for each pipe and time step')
+
     def power_bigm_P(m, d, j, t):
         lhs = m.P[d, 'in', j, t] - p_max_pipe_const * m.lambda_[d, j, t]
         rhs = 0
@@ -200,7 +223,7 @@ def model(matrices: dict,
     mdl.cons_built_usage_mapping_help1 = pyo.Constraint(mdl.dirs, mdl.set_n_i, mdl.set_t,
                                                         rule=built_usage_mapping,
                                                         doc='Map lambda direction according to lambda_built')
-    
+
     def connection_to_consumer_eco(m, d, j, t):
         return m.lambda_[d, j, t] <= sets[f'lambda_c_{d}'][j]
 
@@ -241,4 +264,52 @@ def model(matrices: dict,
         mdl.cons_total_energy_cons = pyo.Constraint(mdl.set_t, rule=total_energy_conservation,
                                                     doc='Total energy conservation')
 
+    def objective_function(m):
+        fuel = sum(
+            sum(m.P_source[k, t]
+                * economics.source_price[k]
+                * economics.source_flh[k]
+                for k in m.set_n_p)
+            for t in mdl.set_t)
+        # CAREFUL HARDCODED FOR 0 TIME STEPS
+        def pipes_fix(k):
+            return ((m.P['ij', 'in', k, 0] + m.P['ji', 'in', k, 0])
+                    * regression_inst['a'])
+        def pipes_var(k):
+            return (regression_inst['b']
+                    * (m.lambda_['ij', k] + m.lambda_['ji', k]))
+        pipes = (sum(((pipes_fix(k) + pipes_var(k))
+                     * matrices['l_i'][k])
+                     for k in m.set_n_i)
+                     * annuity(economics.pipes_c_irr,
+                               economics.pipes_lifetime))
 
+        source = sum(m.P_source_inst[k]
+                     * economics.source_c_inv[k]
+                     * annuity(economics.source_c_irr[k],
+                               economics.source_lifetime[k])
+                     for k in m.set_n_p)
+
+        # @TODO Implement consumer-specific flh in the economic mode
+        if optimization_mode == "economic":
+            term4 = (sum(
+                sum(
+                    sum(m.lambda_['ij', sets['a_i_in'][j].item()]
+                        * matrices['q_c'][k, t]
+                        for k in sets['a_c_out'][j]
+                        if len(sets['a_i_in'][j]) > 0)
+                    + sum(
+                        (m.lambda_['ji', sets['a_i_out'][j].item()])
+                        * matrices['q_c'][k, t]
+                        for k in sets['a_c_out'][j]
+                        if len(sets['a_i_out'][j]) > 0)
+                        for j in mdl.set_n)
+                for t in mdl.set_t)
+                * economics.consumers_flh[0] * economics.heat_price * (-1))
+        else:
+            term4 = 0
+
+        return fuel + pipes + source + term4
+
+    mdl.obj = pyo.Objective(rule=objective_function,
+                              doc='Objective function')
