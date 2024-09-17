@@ -271,18 +271,14 @@ def model(matrices: dict,
                 * economics.source_flh[k]
                 for k in m.set_n_p)
             for t in mdl.set_t)
-        # CAREFUL HARDCODED FOR 0 TIME STEPS
-        def pipes_fix(k):
-            return ((m.P['ij', 'in', k, 0] + m.P['ji', 'in', k, 0])
-                    * regression_inst['a'])
-        def pipes_var(k):
-            return (regression_inst['b']
-                    * (m.lambda_['ij', k] + m.lambda_['ji', k]))
-        pipes = (sum(((pipes_fix(k) + pipes_var(k))
-                     * matrices['l_i'][k])
-                     for k in m.set_n_i)
-                     * annuity(economics.pipes_c_irr,
-                               economics.pipes_lifetime))
+
+        pipes = sum(
+            (
+                (m.P_cap[k] * regression_inst['a']
+                    + regression_inst['b'] * m.lambda_b[k]
+                 ) * annuity(economics.c_irr, economics.life_time) * matrices['l_i'][k]
+            ) for k in m.set_n_i
+        )
 
         source = sum(m.P_source_inst[k]
                      * economics.source_c_inv[k]
@@ -292,7 +288,7 @@ def model(matrices: dict,
 
         # @TODO Implement consumer-specific flh in the economic mode
         if optimization_mode == "economic":
-            term4 = (sum(
+            revenue = (sum(
                 sum(
                     sum(m.lambda_['ij', sets['a_i_in'][j].item()]
                         * matrices['q_c'][k, t]
@@ -307,9 +303,8 @@ def model(matrices: dict,
                 for t in mdl.set_t)
                 * economics.consumers_flh[0] * economics.heat_price * (-1))
         else:
-            term4 = 0
+            revenue = 0
 
-        return fuel + pipes + source + term4
+        return fuel + pipes + source + revenue
 
-    mdl.obj = pyo.Objective(rule=objective_function,
-                              doc='Objective function')
+    mdl.obj = pyo.Objective(rule=objective_function, doc='Objective function')

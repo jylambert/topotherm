@@ -158,6 +158,129 @@ def sts(model: pyo.ConcreteModel,
     return res
 
 
+def mts(model: pyo.ConcreteModel,
+        matrices: dict,
+        settings: Settings):
+    """Postprocessing for the mutiple time step model. This includes the
+    calculation of the diameter and velocity of the pipes, the elimination of
+    unused pipes and nodes.
+
+    Args:
+        model (pyo.ConcreteModel): solved pyomo model
+        matrices (dict): dict containing the matrices
+        settings (tt.settings.Settings): settings for the optimization
+
+    Returns:
+        _dict: containing the variables and postprocessed data
+    """
+    # Get the values from the model
+    p_ij = np.array(pyo.value(model.P['ij', 'in', :, :]))
+    p_ji = np.array(pyo.value(model.P['ji', 'in', :, :]))
+    p_cap = np.array(pyo.value(model.P_cap))
+
+    # flow direction, binary
+    lambda_ij = np.around(np.array(pyo.value(model.lambda_['ij', :, :])), 0)
+    lambda_ji = np.around(np.array(pyo.value(model.lambda_['ji', :, :])), 0)
+    lambda_b = np.around(np.array(pyo.value(model.lambda_b)), 0)
+
+    q_c_opt = np.zeros([matrices['a_c'].shape[1], len(model.set_t)])
+
+    # Exclude non-connected consumers in Q_c, only affects the economic case
+    # Check for consumers connected in direction ij
+    for d, e in model.cons:
+        if d == 'ij':
+            # edge in incidence matrix where pipe exits into node n (==-1)
+            a_i_idx = np.where(matrices['a_i'][:, e] == -1)
+            # location where a_i_idx is connected to a_c
+            a_c_idx = np.where(matrices['a_c'][a_i_idx[0], :][0] == 1)
+            if len(a_i_idx) != 1 or len(a_c_idx) != 1:
+                raise ValueError('Error in the incidence matrix!')
+            # assign the heat demand to the connected consumer if lambda is 1
+            q_c_opt[a_c_idx[0], :] = lambda_b[e] * matrices['q_c'][a_c_idx[0], :]
+        elif d == 'ji':
+            a_i_idx = np.where(matrices['a_i'][:, e] == 1)
+            a_c_idx = np.where(matrices['a_c'][a_i_idx[0], :][0] == 1)
+            if len(a_i_idx) != 1 or len(a_c_idx) != 1:
+                raise ValueError('Error in the incidence matrix!')
+            q_c_opt[a_c_idx[0], :] = lambda_b[e] * matrices['q_c'][a_c_idx[0], :]
+
+    # Remove nonzero elements row-wise
+    q_c_opt = q_c_opt[q_c_opt.any(axis=1)]
+
+    # Adaption of Incidence Matrix for further postprocessing
+    for q in model.set_n_i:
+        # if not active, all is 0
+        if lambda_b[q] == 0:
+            matrices['a_i'][:, q] = 0
+            matrices['l_i'][q] = 0
+        # if opposite direction operational, switch a_i with -1 and switch
+        # values lambda_ij for ji. This is necessary for the postprocessing.
+        elif (lambda_b[q] == 1) & (lambda_ji[q, 0] == 1):
+            matrices['a_i'][:, q] = matrices['a_i'][:, q] * (-1)
+            lambda_ij[q, np.where(lambda_ij[q, 1:] == 0)[0]] = 1
+            lambda_ji[q, np.where(lambda_ji[q, 1:] == 1)[0]] = 0
+
+
+    p_lin = p_cap  # Capacity of the pipes
+
+    # drop entries with 0 in the incidence matrix to reduce size
+    valid_columns = matrices['a_i'].any(axis=0)
+    valid_rows = matrices['a_i'].any(axis=1)
+
+    p_lin_opt = p_lin[valid_columns]
+    p_ij_opt = p_ij[valid_columns, :]
+    p_ji_opt = p_ji[valid_columns, :]
+    lambda_ij_opt = lambda_ij[valid_columns, :]
+    lambda_ji_opt = lambda_ji[valid_columns, :]
+    pos_opt = matrices['position'][valid_rows, :]
+    a_c_opt = matrices['a_c'][valid_rows, :]
+    a_p_opt = matrices['a_p'][valid_rows, :]
+    a_i_opt = matrices['a_i'][valid_rows, :][:, valid_columns]
+    l_i_opt = matrices['l_i'][valid_columns]
+
+    a_i_shape_opt = np.shape(a_i_opt)  # (rows 0, columns 1)
+    d_lin = np.zeros(a_i_shape_opt[1])  # Initialize linear diameters
+    v_lin = np.zeros(a_i_shape_opt[1])  # Initialize velocities
+    # Assign supply and return temperatures
+    supply_temp_opt = np.ones(a_i_shape_opt[1]) * settings.temperatures.supply
+    return_temp_opt = np.ones(a_i_shape_opt[1]) * settings.temperatures.return_
+
+    # Calculate the mass flow for each pipe with m cp deltaT = P
+    m_lin = (p_lin_opt * 1000
+             / (settings.water.heat_capacity_cp
+                * (supply_temp_opt - return_temp_opt)
+                ))
+
+    # Calculate the diameter and velocity for each pipe
+    for h in range(a_i_shape_opt[1]):
+        mass_lin = m_lin[h]
+        sol = root(lambda v: calc_diam_and_velocity(v, mass_lin, settings),
+                   (0.5, 0.02),
+                   method='lm')
+        if sol.success:
+            v_lin[h], d_lin[h] = sol.x
+        else:
+            print(h, 'failed to calculate diameter and velocity!')
+
+    res = dict(
+        a_i=a_i_opt,
+        a_p=a_p_opt,
+        a_c=a_c_opt,
+        q_c=q_c_opt,
+        l_i=l_i_opt,
+        lambda_ij_opt=lambda_ij_opt,
+        lambda_ji_opt=lambda_ji_opt,
+        d_i_0=d_lin,
+        m_i_0=m_lin,
+        position=pos_opt,
+        p=p_lin_opt,
+        p_ij=p_ij_opt,
+        p_ji=p_ji_opt
+    )
+
+    return res
+
+
 def to_networkx_graph(matrices):
     """Export the postprocessed, optimal district as a networkx graph. 
 

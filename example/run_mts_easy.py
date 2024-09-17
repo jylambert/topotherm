@@ -12,7 +12,6 @@ import pandas as pd
 import pyomo.environ as pyo
 
 import topotherm as tt
-from topotherm.settings import Optimization
 
 
 DATAPATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
@@ -20,7 +19,7 @@ OUTPUTPATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'results/m
 REGRESSION = 'regression.csv'  # regression coefficients for thermal capacity and heat losses
 TIMESERIES = 'timeseries.csv'  # timeseries for heat scaling
 PLOTS = True  # save plots of the district
-SOLVER = 'gurobi' # 'gurobi' or 'cbc'
+SOLVER = 'gurobi'  # 'gurobi' or 'cbc'
 
 
 def read_regression(path, i):
@@ -41,7 +40,8 @@ def read_regression(path, i):
     }
     return r_thermal_cap, r_heat_loss
 
-def main(filepath, outputpath, plots=True, solver='gurobi'):
+
+def main(filepath, outputpath, plots=True, solver='gurobi', mode='economic'):
     """Main function to run the optimization"""
     # Create output directory if it does not exist
     tt.utils.create_dir(outputpath)
@@ -61,10 +61,22 @@ def main(filepath, outputpath, plots=True, solver='gurobi'):
     # regression
     r_thermal_cap, r_heat_loss = read_regression(os.path.join(filepath, REGRESSION), 0)
 
-    model_sets = tt.model.create_sets(mat)
-    settings = Optimization()
-    model = tt.model.mts_easy(mat, model_sets, r_thermal_cap, r_heat_loss,
-                              economics=settings.economics, opt_mode="eco", flh_scaling=timeseries.sum())
+    # import settings
+    settings = tt.settings.load(os.path.join(filepath, 'config.yaml'))
+    print(settings)
+    # modify either in code or in the config file
+    settings.economics.source_c_inv = [0.]  # no investment costs for sources
+    settings.economics.source_flh = [2500., 2500.]  # full load hours
+    settings.economics.consumers_flh = [2500., 2500.]  # full load hours
+
+    model_sets = tt.sets.create(mat)
+    model = tt.multiple_timestep.model(
+        matrices=mat,
+        sets=model_sets,
+        regression_inst=r_thermal_cap,
+        regression_losses=r_heat_loss,
+        economics=settings.economics,
+        optimization_mode=mode)
 
     # Optimization initialization
     opt = pyo.SolverFactory(solver)
