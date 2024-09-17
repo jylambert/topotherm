@@ -176,12 +176,12 @@ def mts(model: pyo.ConcreteModel,
     # Get the values from the model
     p_ij = np.array(pyo.value(model.P['ij', 'in', :, :]))
     p_ji = np.array(pyo.value(model.P['ji', 'in', :, :]))
-    p_cap = np.array(pyo.value(model.P_cap))
+    p_cap = np.array(pyo.value(model.P_cap[:]))
 
     # flow direction, binary
     lambda_ij = np.around(np.array(pyo.value(model.lambda_['ij', :, :])), 0)
     lambda_ji = np.around(np.array(pyo.value(model.lambda_['ji', :, :])), 0)
-    lambda_b = np.around(np.array(pyo.value(model.lambda_b)), 0)
+    lambda_b = np.around(np.array(pyo.value(model.lambda_b[:])), 0)
 
     q_c_opt = np.zeros([matrices['a_c'].shape[1], len(model.set_t)])
 

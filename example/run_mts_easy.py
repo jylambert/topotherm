@@ -66,8 +66,8 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='economic'):
     print(settings)
     # modify either in code or in the config file
     settings.economics.source_c_inv = [0.]  # no investment costs for sources
-    settings.economics.source_flh = [2500., 2500.]  # full load hours
-    settings.economics.consumers_flh = [2500., 2500.]  # full load hours
+    settings.economics.source_flh = [2500.]  # full load hours
+    settings.economics.consumers_flh = [2500.]  # full load hours
 
     model_sets = tt.sets.create(mat)
     model = tt.multiple_timestep.model(
@@ -80,8 +80,8 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='economic'):
 
     # Optimization initialization
     opt = pyo.SolverFactory(solver)
-    opt.options['mipgap'] = settings.opt_settings.mip_gap
-    opt.options['timelimit'] = settings.opt_settings.time_limit
+    opt.options['mipgap'] = settings.solver.mip_gap
+    opt.options['timelimit'] = settings.solver.time_limit
     opt.options['logfile'] = os.path.join(outputpath, 'optimization.log')
 
     result = opt.solve(model, tee=True)
@@ -94,10 +94,9 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='economic'):
     dfsol = tt.utils.solver_to_df(result, model, solver=solver)
     dfsol.to_csv(os.path.join(outputpath, 'solver.csv'), sep=';')
 
-    opt_mats = tt.postprocessing.postprocess(model, mat, model_sets,
-                                             "mts",
-                                             t_return=settings.temperatures.return_,
-                                             t_supply=settings.temperatures.supply)
+    opt_mats = tt.postprocessing.mts(model=model,
+                                     matrices=mat,
+                                     settings=settings)
 
     # iterate over opt_mats and save each matrix as parquet file
     for key, value in opt_mats.items():
@@ -107,6 +106,7 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='economic'):
     if plots:
         f = tt.plotting.district(opt_mats, diameter=opt_mats['d_i_0'], isnot_init=True)
         f.savefig(os.path.join(outputpath, 'district_optimal.svg'), bbox_inches='tight')
+
 
 if __name__ == '__main__':
     main(filepath=DATAPATH, outputpath=OUTPUTPATH, plots=True)

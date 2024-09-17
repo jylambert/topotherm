@@ -100,6 +100,12 @@ def model(matrices: dict,
         doc='Heat power at the pipes',
         **pipe_power)
 
+    mdl.P_cap = pyo.Var(
+        mdl.set_n_i,
+        doc='Thermal capacity of each pipe',
+        **pipe_power
+    )
+
     # Binaries for the chosen direction of a pipe
     mdl.lambda_ = pyo.Var(
         mdl.dirs, mdl.set_n_i, mdl.set_t,
@@ -191,7 +197,7 @@ def model(matrices: dict,
         variable = (regression_losses['a']
                     * regression_inst['power_flow_max_partload']
                     * m.P[d, 'in', j, t])
-        fix = regression_losses['b'] * m.lambda_[d, j]
+        fix = regression_losses['b'] * m.lambda_[d, j, t]
         return flows - (variable + fix) * matrices['l_i'][j] == 0
 
     mdl.cons_power_balance_pipe = pyo.Constraint(
@@ -213,13 +219,13 @@ def model(matrices: dict,
         mdl.set_n_i, rule=power_max_p_built_const, doc='Maximum Powerflow constant i->j / j->i')
 
     def power_max_p_built(m, d, j, t):
-        return m.P[d, j, t] - m.P_cap[j] <= 0
+        return m.P[d, 'in', j, t] - m.P_cap[j] <= 0
     mdl.cons_power_max_P_built = pyo.Constraint(
-        mdl.set_n_i, mdl.set_t, rule=power_max_p_built,
+        mdl.dirs, mdl.set_n_i, mdl.set_t, rule=power_max_p_built,
         doc='Maximum Powerflow according to capacity i->j / j->i')
 
     def built_usage_mapping(m, d, j, t):
-        return m.lambda_[d, j, t] - m.lambda_built[j] <= 0
+        return m.lambda_[d, j, t] - m.lambda_b[j] <= 0
     mdl.cons_built_usage_mapping_help1 = pyo.Constraint(mdl.dirs, mdl.set_n_i, mdl.set_t,
                                                         rule=built_usage_mapping,
                                                         doc='Map lambda direction according to lambda_built')
@@ -250,7 +256,7 @@ def model(matrices: dict,
 
     if optimization_mode == "forced":
         def connection_to_consumer_built_fcd(m, j):
-            return m.lambda_built[j[1]] >= 1
+            return m.lambda_b[j[1]] >= 1
         mdl.cons_connection_forced = pyo.Constraint(
             mdl.cons, rule=connection_to_consumer_built_fcd,
             doc='The house connection has to be built to satisfy the demand')
@@ -276,7 +282,7 @@ def model(matrices: dict,
             (
                 (m.P_cap[k] * regression_inst['a']
                     + regression_inst['b'] * m.lambda_b[k]
-                 ) * annuity(economics.c_irr, economics.life_time) * matrices['l_i'][k]
+                 ) * annuity(economics.pipes_c_irr, economics.pipes_lifetime) * matrices['l_i'][k]
             ) for k in m.set_n_i
         )
 
@@ -290,12 +296,12 @@ def model(matrices: dict,
         if optimization_mode == "economic":
             revenue = (sum(
                 sum(
-                    sum(m.lambda_['ij', sets['a_i_in'][j].item()]
+                    sum(m.lambda_b[sets['a_i_in'][j].item()]
                         * matrices['q_c'][k, t]
                         for k in sets['a_c_out'][j]
                         if len(sets['a_i_in'][j]) > 0)
                     + sum(
-                        (m.lambda_['ji', sets['a_i_out'][j].item()])
+                        (m.lambda_b[sets['a_i_out'][j].item()])
                         * matrices['q_c'][k, t]
                         for k in sets['a_c_out'][j]
                         if len(sets['a_i_out'][j]) > 0)
@@ -308,3 +314,5 @@ def model(matrices: dict,
         return fuel + pipes + source + revenue
 
     mdl.obj = pyo.Objective(rule=objective_function, doc='Objective function')
+
+    return mdl
