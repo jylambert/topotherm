@@ -5,7 +5,7 @@ The module contains the following functions:
     * annuity: Calculate the annuity factor
     * model: Create the optimization model for the multiple time steps operation
 """
-
+import numpy as np
 import pyomo.environ as pyo
 
 from topotherm.settings import Economics
@@ -77,7 +77,7 @@ def model(matrices: dict,
                           doc='Number of consumers')
     mdl.set_n = pyo.Set(initialize=range(sets['a_i_shape'][0]),
                         doc='Nodes in supply/return line')
-    mdl.set_t = pyo.Set(initialize=[0],
+    mdl.set_t = pyo.Set(initialize=range(matrices['q_c'].shape[1]),
                         doc='Time steps')
     mdl.dirs = pyo.Set(initialize=['ij', 'ji'],
                        doc='Set of pipe directions.')
@@ -90,6 +90,11 @@ def model(matrices: dict,
                    [('ji', edge) for edge in sets['connection_c_ji']],
         dimen=2,
         doc='Pipes with consumer in both directions')
+
+    mdl.forced_edges = pyo.Set(
+        initialize=np.concatenate([sets['connection_c_ij'], sets['connection_c_ji']]),
+        doc='Pipes with a consumer in direction ij or ji'
+    )
 
     # Define variables
     pipe_power = {'bounds': (0, p_max_pipe_const),
@@ -229,7 +234,12 @@ def model(matrices: dict,
     mdl.cons_built_usage_mapping_help1 = pyo.Constraint(mdl.dirs, mdl.set_n_i, mdl.set_t,
                                                         rule=built_usage_mapping,
                                                         doc='Map lambda direction according to lambda_built')
+    def one_pipe(m, j, t):
+        return m.lambda_['ij', j, t] + m.lambda_['ji', j, t] <= 1
 
+    mdl.one_pipe = pyo.Constraint(mdl.set_n_i, mdl.set_t,
+                                    rule=one_pipe,
+                                    doc='Just one Direction for each pipe')
     def connection_to_consumer_eco(m, d, j, t):
         return m.lambda_[d, j, t] <= sets[f'lambda_c_{d}'][j]
 
@@ -256,9 +266,9 @@ def model(matrices: dict,
 
     if optimization_mode == "forced":
         def connection_to_consumer_built_fcd(m, j):
-            return m.lambda_b[j[1]] >= 1
+            return m.lambda_b[j] >= 1
         mdl.cons_connection_forced = pyo.Constraint(
-            mdl.cons, rule=connection_to_consumer_built_fcd,
+            mdl.forced_edges, rule=connection_to_consumer_built_fcd,
             doc='The house connection has to be built to satisfy the demand')
 
     if optimization_mode == "forced":

@@ -41,7 +41,7 @@ def read_regression(path, i):
     return r_thermal_cap, r_heat_loss
 
 
-def main(filepath, outputpath, plots=True, solver='gurobi', mode='economic'):
+def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
     """Main function to run the optimization"""
     # Create output directory if it does not exist
     tt.utils.create_dir(outputpath)
@@ -50,7 +50,7 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='economic'):
     mat = tt.fileio.load(filepath)
     # read in demand profile
     timeseries = pd.read_csv(os.path.join(filepath, TIMESERIES),
-                             sep=';', index_col=0, header=0).iloc[7:9, :].values.squeeze() # 4:9
+                             sep=';', index_col=0, header=0).iloc[7:9, :].values.squeeze() #4:9
     # create dummy profile, q_c should already contain the timeseries of all consumer demands
     mat['q_c'] = mat['q_c'] * timeseries  # convert to timeseries
     
@@ -109,5 +109,6 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='economic'):
 
 
 if __name__ == '__main__':
-    main(filepath=DATAPATH, outputpath=OUTPUTPATH, plots=True)
+    main(filepath=os.path.join(DATAPATH), outputpath=os.path.join(OUTPUTPATH),
+         plots=PLOTS, solver=SOLVER, mode='forced')
     print(f'Finished {OUTPUTPATH}')
