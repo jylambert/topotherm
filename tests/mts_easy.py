@@ -4,8 +4,6 @@ import pyomo.environ as pyo
 import pandas as pd
 
 import topotherm as tt
-from topotherm.settings import Optimization
-
 
 def read_regression(path, i):
     """Read the regression coefficients for the thermal capacity and heat
@@ -26,23 +24,42 @@ def read_regression(path, i):
     return r_thermal_cap, r_heat_loss
 
 
-def test_mtseasy_forced():
+def test_mtseasy_forced(request):
     """Main function to run the optimization"""
+    solver_name = request.config.getoption("--solver")
+    assert solver_name in ["scip", "gurobi", "cbc"], f"Unsupported solver: {solver_name}"
     # Load the district
     current_path = os.path.dirname(os.path.abspath(__file__))
     mat = tt.fileio.load(os.path.join(current_path, 'data'))
 
+    # read in demand profile
+    timeseries = pd.read_csv(os.path.join(current_path, 'data/timeseries.csv'),
+                             sep=';', index_col=0, header=0).iloc[7:9, :].values.squeeze() #4:9
+
+    # create dummy profile, q_c should already contain the timeseries of all consumer demands
+    mat['q_c'] = mat['q_c'] * timeseries  # convert to timeseries
     # regression
     r_thermal_cap, r_heat_loss = read_regression(
         os.path.join(current_path, 'data', 'regression.csv'), 0)
 
-    model_sets = tt.model.create_sets(mat)
-    settings = Optimization()
-    model = tt.model.mts_easy(mat, model_sets, r_thermal_cap, r_heat_loss,
-                              economics=settings.economics, opt_mode="forced", flh_scaling=1.9254)
+    # import settings
+    settings = tt.settings.Settings()
+    settings.economics.source_flh = [2500.]  # full load hours
+    settings.economics.consumers_flh = [2500.]  # full load hours
+
+    model_sets = tt.sets.create(mat)
+    model = tt.multiple_timestep.model(
+        matrices=mat,
+        sets=model_sets,
+        regression_inst=r_thermal_cap,
+        regression_losses=r_heat_loss,
+        economics=settings.economics,
+        optimization_mode="forced",
+        flh_scaling=1.9254)
+
 
     # Optimization initialization
-    opt = pyo.SolverFactory('scip')
+    opt = pyo.SolverFactory(solver_name)
     opt.options['mipgap'] = 0.01
     opt.options['timelimit'] = 3600
 
@@ -53,23 +70,41 @@ def test_mtseasy_forced():
     assert (abs(pyo.value(model.obj)) - 4.6259e+06) < 0.02 * 4.6259e+06
 
 
-def test_mtseasy_eco():
+def test_mtseasy_eco(request):
     """Main function to run the optimization"""
+    solver_name = request.config.getoption("--solver")
+    assert solver_name in ["scip", "gurobi", "cbc"], f"Unsupported solver: {solver_name}"
     # Load the district
     current_path = os.path.dirname(os.path.abspath(__file__))
     mat = tt.fileio.load(os.path.join(current_path, 'data'))
 
+    # read in demand profile
+    timeseries = pd.read_csv(os.path.join(current_path, 'data/timeseries.csv'),
+                             sep=';', index_col=0, header=0).iloc[7:9, :].values.squeeze() #4:9
+
+    # create dummy profile, q_c should already contain the timeseries of all consumer demands
+    mat['q_c'] = mat['q_c'] * timeseries  # convert to timeseries
     # regression
     r_thermal_cap, r_heat_loss = read_regression(
         os.path.join(current_path, 'data', 'regression.csv'), 0)
 
-    model_sets = tt.model.create_sets(mat)
-    settings = Optimization()
-    model = tt.model.mts_easy(mat, model_sets, r_thermal_cap, r_heat_loss, 
-                              economics=settings.economics, opt_mode="eco", flh_scaling=1.9254)
+    # import settings
+    settings = tt.settings.Settings()
+    settings.economics.source_flh = [2500.]  # full load hours
+    settings.economics.consumers_flh = [2500.]  # full load hours
+
+    model_sets = tt.sets.create(mat)
+    model = tt.multiple_timestep.model(
+        matrices=mat,
+        sets=model_sets,
+        regression_inst=r_thermal_cap,
+        regression_losses=r_heat_loss,
+        economics=tt.settings.Settings().economics,
+        optimization_mode="economic",
+        flh_scaling=1.9254)
 
     # Optimization initialization
-    opt = pyo.SolverFactory('scip')
+    opt = pyo.SolverFactory(solver_name)
     opt.options['mipgap'] = 0.01
     opt.options['timelimit'] = 3600
 

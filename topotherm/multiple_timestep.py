@@ -24,18 +24,16 @@ def annuity(c_i, n):
     a = ((1 + c_i) ** n * c_i) / ((1 + c_i) ** n - 1)
     return a
 
-# @TODO: a unidirectional flow formulation with multiple time step with
-# @TODO: topotherm sts)
-
 
 def model(matrices: dict,
           sets: dict,
           regression_inst: dict,
           regression_losses: dict,
           economics: Economics,
-          optimization_mode: str):
+          optimization_mode: str,
+          flh_scaling: float): # @TODO flh_scaling will be removed when consumer specific flh are implemented
     """Create the optimization model for the thermo-hydraulic coupled with
-    single time step operation.
+    multiple time step operation.
 
     Args:
         matrices (dict): Dictionary with the matrices of the district heating
@@ -64,13 +62,13 @@ def model(matrices: dict,
     mdl = pyo.ConcreteModel()
 
     # Big-M-Constraint for pipes
-    p_max_pipe_const = float(regression_inst['power_flow_max_kW'].max()) * 2
+    p_max_pipe_const = float(regression_inst['power_flow_max_kW'].max())
     # Big-M-Constraint for source
     p_max_source = matrices['q_c'].sum() * 2
 
     # Define index sets
     mdl.set_n_i = pyo.Set(initialize=range(sets['a_i_shape'][1]),
-                          doc='N° of Pipe connections supply/return line')
+                          doc='Number of pipe connections supply/return line')
     mdl.set_n_p = pyo.Set(initialize=range(sets['a_p_shape'][1]),
                           doc='Number of producers')
     mdl.set_n_c = pyo.Set(initialize=range(sets['a_c_shape'][1]),
@@ -94,6 +92,12 @@ def model(matrices: dict,
     mdl.forced_edges = pyo.Set(
         initialize=np.concatenate([sets['connection_c_ij'], sets['connection_c_ji']]),
         doc='Pipes with a consumer in direction ij or ji'
+    )
+
+    mdl.consumer_edges = pyo.Set(
+        initialize=[(i, np.where(matrices['a_c'][:, i] == 1)[0].item()) for i in range(sets['a_c_shape'][1])],
+        dimen=2,
+        doc='Assign to each consumer the corresponding pipe'
     )
 
     # Define variables
@@ -170,22 +174,17 @@ def model(matrices: dict,
             sink = sum(matrices['q_c'][k, t]
                        for k in sets['a_c_out'][j])
         elif optimization_mode == "economic":
-            sink = (
-                    sum(
-                        (m.lambda_['ij', sets['a_i_in'][j][0], t])
+            sink = sum(
+                    sum(m.lambda_b[j]
                         * matrices['q_c'][k, t]
-                        for k in sets['a_c_out'][j] if len(sets['a_i_in'][j]) > 0)
-                    + sum(
-                (m.lambda_['ji', sets['a_i_out'][j][0]], t)
-                * matrices['q_c'][k, t]
-                for k in sets['a_c_out'][j] if len(sets['a_i_out'][j]) > 0)
-            )
+                        for k, j in mdl.consumer_edges)
+                    for t in mdl.set_t)
         return node_to_pipe + pipe_to_node + sources + sink == 0
 
     mdl.cons_nodal_balance = pyo.Constraint(
         mdl.set_n, mdl.set_t,
         rule=nodal_power_balance,
-        doc='Nodal Power Balance for each time step')
+        doc='Nodal power balance for each time step')
 
     def power_balance_pipe(m, d, j, t):
         """Power balance for the pipes.
@@ -234,12 +233,14 @@ def model(matrices: dict,
     mdl.cons_built_usage_mapping_help1 = pyo.Constraint(mdl.dirs, mdl.set_n_i, mdl.set_t,
                                                         rule=built_usage_mapping,
                                                         doc='Map lambda direction according to lambda_built')
+
     def one_pipe(m, j, t):
         return m.lambda_['ij', j, t] + m.lambda_['ji', j, t] <= 1
 
     mdl.one_pipe = pyo.Constraint(mdl.set_n_i, mdl.set_t,
                                     rule=one_pipe,
                                     doc='Just one Direction for each pipe')
+
     def connection_to_consumer_eco(m, d, j, t):
         return m.lambda_[d, j, t] <= sets[f'lambda_c_{d}'][j]
 
@@ -248,14 +249,14 @@ def model(matrices: dict,
 
     if optimization_mode == "economic":
         msg_ = """Constraint if houses have their own connection-pipe
-            and set the direction (ij)"""
+            and set the direction (ij or ji)"""
         mdl.cons_connection_to_consumer = pyo.Constraint(
             mdl.cons, mdl.set_t,
             rule=connection_to_consumer_eco,
             doc=msg_)
     elif optimization_mode == "forced":
         msg_ = """Constraint if houses have their own connection-pipe
-            and set the direction (ij)"""
+            and set the direction (ij or ji)"""
         mdl.cons_connection_to_consumer = pyo.Constraint(
             mdl.cons, mdl.set_t,
             rule=connection_to_consumer_fcd,
@@ -284,7 +285,7 @@ def model(matrices: dict,
         fuel = sum(
             sum(m.P_source[k, t]
                 * economics.source_price[k]
-                * economics.source_flh[k]
+                * (economics.source_flh[k] / flh_scaling)
                 for k in m.set_n_p)
             for t in mdl.set_t)
 
@@ -304,20 +305,11 @@ def model(matrices: dict,
 
         # @TODO Implement consumer-specific flh in the economic mode
         if optimization_mode == "economic":
-            revenue = (sum(
-                sum(
-                    sum(m.lambda_b[sets['a_i_in'][j].item()]
+            revenue = sum(
+                    sum(m.lambda_b[j]
                         * matrices['q_c'][k, t]
-                        for k in sets['a_c_out'][j]
-                        if len(sets['a_i_in'][j]) > 0)
-                    + sum(
-                        (m.lambda_b[sets['a_i_out'][j].item()])
-                        * matrices['q_c'][k, t]
-                        for k in sets['a_c_out'][j]
-                        if len(sets['a_i_out'][j]) > 0)
-                        for j in mdl.set_n)
-                for t in mdl.set_t)
-                * economics.consumers_flh[0] * economics.heat_price * (-1))
+                        for k, j in mdl.consumer_edges)
+                    for t in mdl.set_t) * (economics.consumers_flh[0] / flh_scaling) * economics.heat_price * (-1)
         else:
             revenue = 0
 

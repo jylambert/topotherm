@@ -76,7 +76,8 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
         regression_inst=r_thermal_cap,
         regression_losses=r_heat_loss,
         economics=settings.economics,
-        optimization_mode=mode)
+        optimization_mode=mode,
+        flh_scaling=timeseries.sum())
 
     # Optimization initialization
     opt = pyo.SolverFactory(solver)

@@ -61,13 +61,13 @@ def model(matrices: dict,
     mdl = pyo.ConcreteModel()
 
     # Big-M-Constraint for pipes
-    p_max_pipe_const = float(regression_inst['power_flow_max_kW'].max())*2
+    p_max_pipe_const = float(regression_inst['power_flow_max_kW'].max())
     # Big-M-Constraint for source
     p_max_source = matrices['q_c'].sum()*2
 
     # Define index sets
     mdl.set_n_i = pyo.Set(initialize=range(sets['a_i_shape'][1]),
-                            doc='N° of Pipe connections supply/return line')
+                            doc='Number of pipe connections supply/return line')
     mdl.set_n_p = pyo.Set(initialize=range(sets['a_p_shape'][1]),
                             doc='Number of producers')
     mdl.set_n_c = pyo.Set(initialize=range(sets['a_c_shape'][1]),

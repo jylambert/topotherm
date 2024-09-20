@@ -174,16 +174,12 @@ def mts(model: pyo.ConcreteModel,
         _dict: containing the variables and postprocessed data
     """
     # Get the values from the model
-    #p_ij = np.reshape(np.array(pyo.value(model.P['ij', 'in', :, :])), (-1, matrices['q_c'].shape[1]))
     p_ij = np.reshape(np.array(pyo.value(model.P['ij', 'in', :, :])), (-1, matrices['q_c'].shape[1]))
-    #p_ji = np.array(pyo.value(model.P['ji', 'in', :, :]))
     p_ji = np.reshape(np.array(pyo.value(model.P['ji', 'in', :, :])), (-1, matrices['q_c'].shape[1]))
     p_cap = np.array(pyo.value(model.P_cap[:]))
 
     # flow direction, binary
-    #lambda_ij = np.around(np.array(pyo.value(model.lambda_['ij', :, :])), 0)
     lambda_ij = np.reshape(np.around(np.array(pyo.value(model.lambda_['ij', :, :])), 0), (-1, matrices['q_c'].shape[1]))
-    #lambda_ji = np.around(np.array(pyo.value(model.lambda_['ji', :, :])), 0)
     lambda_ji = np.reshape(np.around(np.array(pyo.value(model.lambda_['ji', :, :])), 0), (-1, matrices['q_c'].shape[1]))
     lambda_b = np.around(np.array(pyo.value(model.lambda_b[:])), 0)
 
