@@ -55,7 +55,7 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
     mat['q_c'] = mat['q_c'] * timeseries  # convert to timeseries
     
     if plots:
-        f = tt.plotting.district(mat, isnot_init=False) # Save initial District
+        f = tt.plotting.district(mat, isnot_init=False)  # Save initial District
         f.savefig(os.path.join(outputpath, 'district_initial.svg'), bbox_inches='tight')
 
     # regression
@@ -63,11 +63,14 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
 
     # import settings
     settings = tt.settings.load(os.path.join(filepath, 'config.yaml'))
-    print(settings)
     # modify either in code or in the config file
     settings.economics.source_c_inv = [0.]  # no investment costs for sources
     settings.economics.source_flh = [2500.]  # full load hours
     settings.economics.consumers_flh = [2500.]  # full load hours
+    settings.economics.pipes_lifetime = 40
+    settings.economics.source_lifetime = [40]
+    settings.temperatures.supply = 90
+    settings.economics.heat_price = 120e-3
 
     model_sets = tt.sets.create(mat)
     model = tt.multiple_timestep.model(
@@ -77,7 +80,11 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
         regression_losses=r_heat_loss,
         economics=settings.economics,
         optimization_mode=mode,
-        flh_scaling=timeseries.sum())
+        flh_scaling=1.9254) #timeseries.sum()
+    """model = tt.model_old.mts_easy_orig(
+        mat, model_sets, r_thermal_cap, r_heat_loss,
+        settings.economics, "eco", flh_scaling=1.9254)"""
+
 
     # Optimization initialization
     opt = pyo.SolverFactory(solver)
@@ -111,5 +118,5 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
 
 if __name__ == '__main__':
     main(filepath=os.path.join(DATAPATH), outputpath=os.path.join(OUTPUTPATH),
-         plots=PLOTS, solver=SOLVER, mode='forced')
+         plots=PLOTS, solver=SOLVER, mode='economic')
     print(f'Finished {OUTPUTPATH}')

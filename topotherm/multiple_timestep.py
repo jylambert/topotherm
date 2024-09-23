@@ -95,7 +95,9 @@ def model(matrices: dict,
     )
 
     mdl.consumer_edges = pyo.Set(
-        initialize=[(i, np.where(matrices['a_c'][:, i] == 1)[0].item()) for i in range(sets['a_c_shape'][1])],
+        initialize=[(i, np.where((matrices['a_i'][np.where(matrices['a_c'][:, i] == 1)[0].item(), :] == 1) |
+                                 (matrices['a_i'][np.where(matrices['a_c'][:, i] == 1)[0].item(), :] == -1)
+                                 )[0].item()) for i in range(sets['a_c_shape'][1])],
         dimen=2,
         doc='Assign to each consumer the corresponding pipe'
     )
@@ -174,11 +176,8 @@ def model(matrices: dict,
             sink = sum(matrices['q_c'][k, t]
                        for k in sets['a_c_out'][j])
         elif optimization_mode == "economic":
-            sink = sum(
-                    sum(m.lambda_b[j]
-                        * matrices['q_c'][k, t]
-                        for k, j in mdl.consumer_edges)
-                    for t in mdl.set_t)
+            sink = sum(m.lambda_b[k] for k in sets['a_c_out_edge'][j]) \
+                   * sum(matrices['q_c'][k, t] for k in sets['a_c_out'][j])
         return node_to_pipe + pipe_to_node + sources + sink == 0
 
     mdl.cons_nodal_balance = pyo.Constraint(

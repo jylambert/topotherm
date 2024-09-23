@@ -3,6 +3,7 @@ and constraints.
 """
 import numpy as np
 
+
 def create(matrices):
     """Create sets for the optimization. The sets are used to define the
     variables and constraints.
@@ -25,13 +26,13 @@ def create(matrices):
 
     s['connection_c_ij'] = np.where(
         matrices['a_i'][consumers, :].sum(axis=0) == -1
-        )[0]
+    )[0]
     s['lambda_c_ij'] = np.zeros(s['a_i_shape'][1])
     s['lambda_c_ij'][s['connection_c_ij']] = 1
 
     s['connection_c_ji'] = np.where(
         matrices['a_i'][consumers, :].sum(axis=0) == 1
-        )[0]
+    )[0]
     s['lambda_c_ji'] = np.zeros(s['a_i_shape'][1])
     s['lambda_c_ji'][s['connection_c_ji']] = 1
 
@@ -47,6 +48,12 @@ def create(matrices):
         s['a_p_in'][i] = np.where(matrices['a_p'][i, :] == -1)[0]
 
     s['a_c_out'] = {}
+    s['a_c_out_edge'] = {}
     for i in range(s['a_c_shape'][0]):
         s['a_c_out'][i] = np.where(matrices['a_c'][i, :] == 1)[0]
+        if matrices['a_c'][i, :].any() == 1:
+            s['a_c_out_edge'][i] = np.where((matrices['a_i'][i, :] == 1) | (matrices['a_i'][i, :] == -1))[0]
+        else:
+            s['a_c_out_edge'][i] = []
+
     return s
