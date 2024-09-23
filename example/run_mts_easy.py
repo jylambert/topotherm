@@ -80,7 +80,7 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
         regression_losses=r_heat_loss,
         economics=settings.economics,
         optimization_mode=mode,
-        flh_scaling=1.9254) #timeseries.sum()
+        flh_scaling=timeseries.sum())
     """model = tt.model_old.mts_easy_orig(
         mat, model_sets, r_thermal_cap, r_heat_loss,
         settings.economics, "eco", flh_scaling=1.9254)"""
