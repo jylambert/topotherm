@@ -227,6 +227,7 @@ def sts_orig(matrices, sets, regression_caps, regression_losses,
         return m.lambda_dir_1[j] + m.lambda_dir_2[j] <= 1
     model.one_pipe = pyo.Constraint(model.set_n_i, rule=one_pipe,
                                     doc='Just one Direction for each pipe')
+
     # @TODO: Develop total energy conservation equation for the eco mode (testing needed if beneficial)
     if opt_mode == "forced":
         def total_energy_cons(m, t):
@@ -272,7 +273,7 @@ def sts_orig(matrices, sets, regression_caps, regression_losses,
 # @TODO: discuss with jerry simplification strategies, since both models share a lot of equations.
 # @TODO: change the flh_scaling somehow
 # @TODO: implement existing pipes and sources
-def mts_easy(matrices, sets, regression_caps, regression_losses,
+def mts_easy_orig(matrices, sets, regression_caps, regression_losses,
              economics: Economics, opt_mode: str, flh_scaling: float):
     """Create the optimization model for the thermo-hydraulic coupled with multiple time 
     step operation. The model is based on the STS model and implements a simplified themal
@@ -294,7 +295,7 @@ def mts_easy(matrices, sets, regression_caps, regression_losses,
 
     p_max_pipe_const = float(regression_caps['power_flow_max_kW'])  # Big-M-Constraint for pipes
     p_max_source = matrices['q_c'].sum()*2  # Big-M-Constraint for source
-    model.flh = economics.flh / flh_scaling
+    model.flh = economics.consumers_flh[0] / flh_scaling
 
     # Define index sets
     model.set_n_i = pyo.Set(initialize=range(sets['a_i_shape'][1]),
@@ -479,18 +480,18 @@ def mts_easy(matrices, sets, regression_caps, regression_losses,
 
     def objective_function(m):
         term1 = sum(
-            sum(m.P_source[k, t] * economics.source_price * model.flh for k in m.set_n_p)
+            sum(m.P_source[k, t] * economics.source_price[k] * model.flh for k in m.set_n_p)
             for t in model.set_t
                 )
         term2 = sum(
             (
                 (m.P_cap[k] * regression_caps['a']
                     + regression_caps['b'] * m.lambda_built[k]
-                 ) * annuity(economics.c_irr, economics.life_time) * matrices['l_i'][k]
+                 ) * annuity(economics.pipes_c_irr, economics.pipes_lifetime) * matrices['l_i'][k]
             ) for k in m.set_n_i
         )
-        term3 = sum(m.P_source_cap[k] * economics.c_inv_source[k]
-                    * annuity(economics.c_irr, economics.life_time) for k in m.set_n_p)
+        term3 = sum(m.P_source_cap[k] * economics.source_c_inv[k]
+                    * annuity(economics.source_c_irr[k], economics.source_lifetime[k]) for k in m.set_n_p)
 
         if opt_mode == "eco":
             term4 = sum(sum(

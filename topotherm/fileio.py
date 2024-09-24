@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 
 
+# @TODO: Insert into the load function consumer specific flh
 def load(path):
     """Read the input data from the given path and return the matrices A_i,
     A_p, A_c, Heat Demand, Length of edges, and positions.
