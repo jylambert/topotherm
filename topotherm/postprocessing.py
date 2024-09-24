@@ -1,8 +1,14 @@
-"""Postprocessing of the results from the optimization. This includes the calculation of the
-diameter and mass flow of the pipes, the elimination of unused pipes and nodes.
+"""Postprocessing of the results from the optimization. This includes the 
+calculation of the diameter and mass flow of the pipes, the elimination of
+unused pipes and nodes.
 
 This module includes the following functions:
-    * sts: Postprocessing for the STS model
+    * calc_diam_and_velocity: Equations for the calculation of the diameter and
+    velocity of the pipes depending on the mass flow and the power of the pipes
+    * sts: Postprocessing for the single time step model
+    * to_networkx_graph: Export the postprocessed, optimal district as a
+    networkx graph
+    * mts: Postprocessing for the multiple time step model
 """
 
 from typing import Tuple
@@ -58,7 +64,7 @@ def sts(model: pyo.ConcreteModel,
         settings (tt.settings.Settings): settings for the optimization
     
     Returns:
-        _dict: containing the variables and postprocessed data
+        res: containing the variables and postprocessed data
     """
     # Get the values from the model
     p_ij = np.array(pyo.value(model.P['ij', 'in', :, :]))
@@ -296,7 +302,8 @@ def to_networkx_graph(matrices):
         - m_i_0 (mass flow of the optimal pipes)
         - p (Power of the optimal pipes)
         
-    Returns: Figure of the district
+    Returns:
+        G: networkx graph
     """
     G = nx.DiGraph()
     s = np.array([0, 0, 0])
