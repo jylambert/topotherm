@@ -27,10 +27,10 @@ def annuity(c_i, n):
 
 def model(matrices: dict,
           sets: dict,
-         regression_inst: dict,
-         regression_losses: dict,
-         economics: Economics,
-         optimization_mode: str):
+          regression_inst: dict,
+          regression_losses: dict,
+          economics: Economics,
+          optimization_mode: str):
     """Create the optimization model for the thermo-hydraulic coupled with
     single time step operation. 
 
@@ -62,8 +62,9 @@ def model(matrices: dict,
 
     # Big-M-Constraint for pipes
     p_max_pipe_const = float(regression_inst['power_flow_max_kW'].max())
+
     # Big-M-Constraint for source
-    p_max_source = matrices['q_c'].sum()*2
+    p_max_source = matrices['q_c'].sum() * 2
 
     # Define index sets
     mdl.set_n_i = pyo.Set(initialize=range(sets['a_i_shape'][1]),
@@ -84,7 +85,7 @@ def model(matrices: dict,
     # Define the combined set for pipes with consumers in both directions
     mdl.cons = pyo.Set(
         initialize=[('ij', edge) for edge in sets['connection_c_ij']] +
-                    [('ji', edge) for edge in sets['connection_c_ji']],
+                   [('ji', edge) for edge in sets['connection_c_ji']],
         dimen=2,
         doc='Pipes with consumer in both directions')
 
@@ -104,19 +105,24 @@ def model(matrices: dict,
         domain=pyo.Binary,
         doc='Binary direction decisions')
 
-    # Thermal power of the source
+    # Bounds for source variables
     source_power = {'bounds': (0, p_max_source),
                     'domain': pyo.PositiveReals,
                     'initialize': p_max_source}
+
+    # Definition of thermal power for each time step and each source
     mdl.P_source = pyo.Var(
         mdl.set_n_p, mdl.set_t,
         doc='Thermal power of the source',
         **source_power)
+
+    # Definition of thermal capacity of each source
     mdl.P_source_inst = pyo.Var(
         mdl.set_n_p,
         doc='Thermal capacity of the heat source',
         **source_power)
 
+    # Definition of constraints
     def heat_source_inst(m, j, t):
         """Never exceed the installed capacity of the heat source."""
         return m.P_source[j, t] <= m.P_source_inst[j]
@@ -136,17 +142,17 @@ def model(matrices: dict,
         Energy balance system: out - in = 0
         """
         pipe_to_node = sum(m.P['ji', 'in', k, t]
-                      - m.P['ij', 'out', k, t]
-                      for k in sets['a_i_in'][j])
+                           - m.P['ij', 'out', k, t]
+                           for k in sets['a_i_in'][j])
         node_to_pipe = sum(m.P['ij', 'in', k, t]
-                                    - m.P['ji', 'out', k, t]
-                                    for k in sets['a_i_out'][j])
+                           - m.P['ji', 'out', k, t]
+                           for k in sets['a_i_out'][j])
         sources = sum(- m.P_source[k, t]
                       for k in sets['a_p_in'][j])
         sink = 0
         if optimization_mode == "forced":
             sink = sum(matrices['q_c'][k, t]
-                        for k in sets['a_c_out'][j])
+                       for k in sets['a_c_out'][j])
         elif optimization_mode == "economic":
             sink = (
                 sum(
@@ -177,9 +183,7 @@ def model(matrices: dict,
         # flows into and out of pipe
         flows = m.P[d, 'in', j, t] - m.P[d, 'out', j, t]
         # thermal losses calculation
-        variable = (regression_losses['a']
-                * regression_inst['power_flow_max_partload']
-                * m.P[d, 'in', j, t])
+        variable = regression_losses['a'] * m.P[d, 'in', j, t]
         fix = regression_losses['b'] * m.lambda_[d, j]
         return flows - (variable + fix) * matrices['l_i'][j] == 0
 
@@ -192,6 +196,7 @@ def model(matrices: dict,
         lhs = m.P[d, 'in', j, t] - p_max_pipe_const * m.lambda_[d, j]
         rhs = 0
         return lhs <= rhs
+
     mdl.cons_power_bigm_P = pyo.Constraint(
         mdl.dirs, mdl.set_n_i, mdl.set_t,
         rule=power_bigm_P, doc='Big-M constraint for power flow')
@@ -216,9 +221,6 @@ def model(matrices: dict,
             mdl.cons,
             rule=connection_to_consumer_fcd,
             doc=msg_)
-    else:
-        raise NotImplementedError(
-            "Optimization mode %s not implemented" % optimization_mode)
 
     def one_pipe(m, j):
         return m.lambda_['ij', j] + m.lambda_['ji', j] <= 1
@@ -249,48 +251,53 @@ def model(matrices: dict,
         fuel = sum(
             sum(m.P_source[k, t]
                 * economics.source_price[k]
-                * economics.source_flh[k]
+                * matrices['flh_source'][k, t]
                 for k in m.set_n_p)
             for t in mdl.set_t)
+
         # CAREFUL HARDCODED FOR 0 TIME STEPS
         def pipes_fix(k):
             return ((m.P['ij', 'in', k, 0] + m.P['ji', 'in', k, 0])
                     * regression_inst['a'])
+
         def pipes_var(k):
             return (regression_inst['b']
                     * (m.lambda_['ij', k] + m.lambda_['ji', k]))
+
         pipes = (sum(((pipes_fix(k) + pipes_var(k))
                      * matrices['l_i'][k])
                      for k in m.set_n_i)
-                     * annuity(economics.pipes_c_irr,
-                               economics.pipes_lifetime))
+                 * annuity(economics.pipes_c_irr,
+                           economics.pipes_lifetime))
+
         source = sum(m.P_source_inst[k]
                      * economics.source_c_inv[k]
                      * annuity(economics.source_c_irr[k],
                                economics.source_lifetime[k])
                      for k in m.set_n_p)
 
-        # @TODO Implement consumer-specific flh in the economic mode
         if optimization_mode == "economic":
             revenue = (sum(
                 sum(
                     sum(m.lambda_['ij', sets['a_i_in'][j].item()]
+                        * matrices['flh_consumer'][k, t]
                         * matrices['q_c'][k, t]
                         for k in sets['a_c_out'][j]
                         if len(sets['a_i_in'][j]) > 0)
                     + sum(
                         (m.lambda_['ji', sets['a_i_out'][j].item()])
+                        * matrices['flh_consumer'][k, t]
                         * matrices['q_c'][k, t]
                         for k in sets['a_c_out'][j]
                         if len(sets['a_i_out'][j]) > 0)
-                        for j in mdl.set_n)
+                    for j in mdl.set_n)
                 for t in mdl.set_t)
-                * economics.consumers_flh[0] * economics.heat_price * (-1))
+                       * economics.heat_price * (-1))
         else:
             revenue = 0
 
         return fuel + pipes + source + revenue
 
     mdl.obj = pyo.Objective(rule=objective_function,
-                              doc='Objective function')
+                            doc='Objective function')
     return mdl

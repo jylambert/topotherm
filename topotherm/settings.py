@@ -109,9 +109,9 @@ class Solver(BaseModel):
 class Economics(BaseModel):
     """Economic properties for the optimization problem. Used for the
     optimization model."""
-    source_flh: List[float] = Field(
-        default_factory=lambda: [1500.],
-        description="Full load hours of sources in h/y")
+    #source_flh: List[float] = Field(
+    #    default_factory=lambda: [1500.],
+    #    description="Full load hours of sources in h/y")
     source_price: List[float] = Field(
         default_factory=lambda: [80e-3],
         description="Price for heat production at supply in €/kW")
@@ -127,39 +127,39 @@ class Economics(BaseModel):
 
     pipes_c_irr: float = Field(0.08,
                                description="Interest rate for pipes")
-    consumers_flh: List[float] = Field(
-        default_factory=lambda: [1500.],
-        description="Full load hours of consumers in h/y")
+    #consumers_flh: List[float] = Field(
+    #    default_factory=lambda: [1500.],
+    #    description="Full load hours of consumers in h/y")
     heat_price: float = Field(120e-3,
                               description="Selling price for heat in €/kW")
     pipes_lifetime: float = Field(
         50.0,
         description="Lifetime for piping investments in years")
 
-    @model_validator(mode='after')
-    def check_len(self) -> Self:
-        """Check if the length of source_flh, source_price, source_c_inv,
-        source_c_irr and source_lifetime is consistent with the defined
-        number of sources.
-        """
-        if len(self.source_flh) != len(self.source_price):
-            raise ValueError(
-                f"""Length of source_flh {len(self.source_flh)} is not equal
-                to source_price {len(self.source_price)}""")
-        if len(self.source_flh) != len(self.source_c_inv):
-            raise ValueError(
-                f"""Length of source_flh {len(self.source_flh)} is not equal
-                to c_inv_source {len(self.source_flh)}""")
-        if len(self.source_flh) != len(self.source_lifetime):
-            raise ValueError(
-                f"""Length of source_flh {len(self.source_flh)} is not equal
-                to source_lifetime {len(self.source_lifetime)}""")
-        if len(self.source_flh) != len(self.source_c_irr):
-            raise ValueError(
-                f"""Length of source_flh {len(self.source_flh)} is not equal
-                to source_c_irr {len(self.source_c_irr)}""")
-
-        return self
+    # @model_validator(mode='after')
+    # def check_len(self) -> Self:
+    #    """Check if the length of source_flh, source_price, source_c_inv,
+    #    source_c_irr and source_lifetime is consistent with the defined
+    #    number of sources.
+    #    """
+    #    if len(self.source_flh) != len(self.source_price):
+    #        raise ValueError(
+    #            f"""Length of source_flh {len(self.source_flh)} is not equal
+    #            to source_price {len(self.source_price)}""")
+    #    if len(self.source_flh) != len(self.source_c_inv):
+    #        raise ValueError(
+    #            f"""Length of source_flh {len(self.source_flh)} is not equal
+    #            to c_inv_source {len(self.source_flh)}""")
+    #    if len(self.source_flh) != len(self.source_lifetime):
+    #        raise ValueError(
+    #            f"""Length of source_flh {len(self.source_flh)} is not equal
+    #            to source_lifetime {len(self.source_lifetime)}""")
+    #    if len(self.source_flh) != len(self.source_c_irr):
+    #        raise ValueError(
+    #            f"""Length of source_flh {len(self.source_flh)} is not equal
+    #            to source_c_irr {len(self.source_c_irr)}""")
+    #
+    #    return self
 
 
 class Settings(BaseModel):

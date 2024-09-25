@@ -44,10 +44,13 @@ def load(path):
     q_c = (pd.read_parquet(
         os.path.join(path, 'Q_c.parquet')
         ).to_numpy().astype(float)) / 1000  # Data is in W, optimization in kW
+    flh_consumer = pd.read_parquet(os.path.join(path, 'flh_consumer.parquet')).to_numpy()
+    flh_source = pd.read_parquet(os.path.join(path, 'flh_source.parquet')).to_numpy()
     position = pd.read_parquet(
         os.path.join(path, 'rel_positions.parquet')
         ).iloc[:,  [-2,-1]].to_numpy().astype(float)
 
+    # @TODO Implement real warnings/errors and implement checks for full load hours
     if (a_i.sum(axis=0).sum() != 0) | (np.abs(a_i).sum(axis=0).sum()/2 != np.shape(a_i)[1]):
         print("Warning: The structure of A_i is not correct!")
     elif (-a_p.sum(axis=0).sum() != np.shape(a_p)[1]) | (np.abs(a_p).sum(axis=0).sum() != np.shape(a_p)[1]):
@@ -77,6 +80,8 @@ def load(path):
     r['a_p'] = a_p
     r['a_c'] = a_c
     r['q_c'] = q_c
+    r['flh_consumer'] = flh_consumer
+    r['flh_source'] = flh_source
     r['l_i'] = length
     r['position'] = position
     return r
