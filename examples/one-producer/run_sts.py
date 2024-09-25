@@ -15,7 +15,7 @@ import pyomo.environ as pyo
 import topotherm as tt
 
 
-DATAPATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
+DATAPATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data_sts')
 OUTPUTPATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                           'results', 'sts_forced')
 
@@ -64,11 +64,9 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='economic'):
 
     # import settings
     settings = tt.settings.load(os.path.join(filepath, 'config.yaml'))
-    print(settings)
+
     # modify either in code or in the config file
     settings.economics.source_c_inv = [0.]  # no investment costs for sources
-    settings.economics.source_flh = [2500.]  # full load hours
-    settings.economics.consumers_flh = [2500.]  # full load hours
 
     model_sets = tt.sets.create(mat)
     model = tt.single_timestep.model(
@@ -84,7 +82,6 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='economic'):
     opt.options['mipgap'] = settings.solver.mip_gap
     opt.options['timelimit'] = settings.solver.time_limit
     opt.options['logfile'] = os.path.join(outputpath, 'optimization.log')
-    #opt.options['Seed'] = 56324978
 
     result = opt.solve(model, tee=True)
 
@@ -115,5 +112,5 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='economic'):
 
 if __name__ == '__main__':
     main(filepath=os.path.join(DATAPATH), outputpath=os.path.join(OUTPUTPATH),
-         plots=PLOTS, solver=SOLVER, mode='forced')
+         plots=PLOTS, solver=SOLVER, mode='economic')
     print(f'Finished {OUTPUTPATH}')
