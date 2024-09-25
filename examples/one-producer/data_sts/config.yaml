@@ -25,12 +25,10 @@ solver:
   time_limit: 10000
 
 economics:
-  #source_flh: [2500]  # h/y
   source_c_inv: [0]  # Investment costs for each source
   source_c_irr: [0.08]  # Interest rate for each source
   source_lifetime: [40.]  # years for source investments
   source_price: [80e-3]  # Price for heat production at supply in €/kW
-  #consumer_flh: 2500  # h/y
   heat_price: 120e-3  # Selling Price for heat in €/kW
   pipes_c_irr: 0.08  # Interest rate
   pipes_lifetime: 40.  # years for piping investments

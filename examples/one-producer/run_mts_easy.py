@@ -14,7 +14,7 @@ import pyomo.environ as pyo
 import topotherm as tt
 
 
-DATAPATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
+DATAPATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data_mts')
 OUTPUTPATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'results/mts_eco_easy/')
 REGRESSION = 'regression.csv'  # regression coefficients for thermal capacity and heat losses
 TIMESERIES = 'timeseries.csv'  # timeseries for heat scaling
@@ -29,7 +29,7 @@ def read_regression(path, i):
     # read df and force floats
     df = pd.read_csv(path, sep=',', index_col=0, header=0, dtype=float)
     r_thermal_cap = {
-        "power_flow_max_kW" : df.loc[i, "power_flow_max_kW"],
+        "power_flow_max_kW": df.loc[i, "power_flow_max_kW"],
         "a": df.loc[i, "capacity_a"],
         "b": df.loc[i, "capacity_b"],
         "power_flow_max_partload": df.loc[i, "power_flow_max_partload"]
@@ -48,12 +48,7 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
 
     # Load the district
     mat = tt.fileio.load(filepath)
-    # read in demand profile
-    timeseries = pd.read_csv(os.path.join(filepath, TIMESERIES),
-                             sep=';', index_col=0, header=0).iloc[7:9, :].values.squeeze() #4:9
-    # create dummy profile, q_c should already contain the timeseries of all consumer demands
-    mat['q_c'] = mat['q_c'] * timeseries  # convert to timeseries
-    
+
     if plots:
         f = tt.plotting.district(mat, isnot_init=False)  # Save initial District
         f.savefig(os.path.join(outputpath, 'district_initial.svg'), bbox_inches='tight')
@@ -65,8 +60,6 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
     settings = tt.settings.load(os.path.join(filepath, 'config.yaml'))
     # modify either in code or in the config file
     settings.economics.source_c_inv = [0.]  # no investment costs for sources
-    settings.economics.source_flh = [2500.]  # full load hours
-    settings.economics.consumers_flh = [2500.]  # full load hours
     settings.economics.pipes_lifetime = 40
     settings.economics.source_lifetime = [40]
     settings.temperatures.supply = 90
@@ -79,11 +72,7 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
         regression_inst=r_thermal_cap,
         regression_losses=r_heat_loss,
         economics=settings.economics,
-        optimization_mode=mode,
-        flh_scaling=timeseries.sum())
-    """model = tt.model_old.mts_easy_orig(
-        mat, model_sets, r_thermal_cap, r_heat_loss,
-        settings.economics, "eco", flh_scaling=1.9254)"""
+        optimization_mode=mode)
 
 
     # Optimization initialization

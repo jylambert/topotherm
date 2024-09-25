@@ -30,8 +30,7 @@ def model(matrices: dict,
           regression_inst: dict,
           regression_losses: dict,
           economics: Economics,
-          optimization_mode: str,
-          flh_scaling: float): # @TODO flh_scaling will be removed when consumer specific flh are implemented
+          optimization_mode: str):
     """Create the optimization model for the thermo-hydraulic coupled with
     multiple time step operation.
 
@@ -260,9 +259,6 @@ def model(matrices: dict,
             mdl.cons, mdl.set_t,
             rule=connection_to_consumer_fcd,
             doc=msg_)
-    else:
-        raise NotImplementedError(
-            "Optimization mode %s not implemented" % optimization_mode)
 
     if optimization_mode == "forced":
         def connection_to_consumer_built_fcd(m, j):
@@ -284,7 +280,7 @@ def model(matrices: dict,
         fuel = sum(
             sum(m.P_source[k, t]
                 * economics.source_price[k]
-                * (economics.source_flh[k] / flh_scaling)
+                * matrices['flh_source'][k, t]
                 for k in m.set_n_p)
             for t in mdl.set_t)
 
@@ -302,13 +298,13 @@ def model(matrices: dict,
                                economics.source_lifetime[k])
                      for k in m.set_n_p)
 
-        # @TODO Implement consumer-specific flh in the economic mode
         if optimization_mode == "economic":
             revenue = sum(
                     sum(m.lambda_b[j]
+                        * matrices['flh_consumer'][k, t]
                         * matrices['q_c'][k, t]
                         for k, j in mdl.consumer_edges)
-                    for t in mdl.set_t) * (economics.consumers_flh[0] / flh_scaling) * economics.heat_price * (-1)
+                    for t in mdl.set_t) * economics.heat_price * (-1)
         else:
             revenue = 0
 
