@@ -92,11 +92,10 @@ This can also be done with venv or equivalent.
 
 We recommend to install the dependencies with anaconda or mamba:
 
-```conda
+```mamba
 cd topotherm
-conda create -n topotherm python
-conda activate topotherm
-pip install -e .
+mamba env create -f environment.yml -n topotherm
+mamba activate topotherm
 ```
 
 ## Solver
@@ -112,9 +111,9 @@ the documentation [here](https://support.gurobi.com/hc/en-us/articles/3600442902
 You can try the code on smaller benchmarks with several open source solvers,
 such as SCIP. Other popular open-source options are COIN-OR's cbc or HiGHS.
 
-```conda
-conda activate topotherm
-conda install -c conda-forge pyscipopt
+```mamba
+mamba activate topotherm
+mamba install -c conda-forge pyscipopt
 ```
 
 ## Usage
@@ -137,6 +136,7 @@ changes, please open an issue first to discuss what you would like to change.
 To run the tests, use pytest.
 
 ```Python
+pip install .[dev]
 pytest tests
 ```
 

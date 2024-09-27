@@ -1,0 +1,58 @@
+[build-system]
+requires = ["setuptools >= 64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+
+name = "topotherm"
+version = "0.2.0"
+description = "A package to design district heating networks"
+readme = "README.md"
+
+authors = [
+    { name = "Jerry Lambert", email = "jerry.lambert@tum.de"},
+    { name = "Amedeo Ceruti", email = "amedeo.ceruti@tum.de"}
+]
+
+classifiers=[
+        "License :: OSI Approved :: MIT License",
+        "Programming Language :: Python :: 3",
+        "Topic :: Scientific/Engineering :: District Heating",
+    ]
+
+keywords = [
+    "district heating",
+    "optimization",
+    "Linear Programming",
+    "Mixed Integer Linear Programming"
+    ]
+
+license = {file = "LICENSE"}
+
+requires-python = ">=3.9"
+dependencies = [
+    "numpy",
+    "pandas",
+    "scipy",
+    "networkx",
+    "matplotlib",
+    "pyomo > 6.0",
+    "pyarrow >= 14.0.1",
+    "Pillow >= 10.2.0",
+    "pyyaml",
+    "pydantic",
+]
+
+[tool.setuptools]
+packages = { find = { where = ["topotherm"], exclude = ["tests", "docs"] } }
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+]
+docs = [
+    "sphinx",
+    "sphinx-rtd-theme",
+    "sphinx-autodoc",
+    "sphinx-viewcode"
+]

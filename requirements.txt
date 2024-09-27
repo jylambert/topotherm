@@ -1,9 +1,9 @@
-numpy<2.0
+numpy
 pandas
 scipy
 networkx
 matplotlib
-pyomo
+pyomo>6.0
 pyarrow>=14.0.1
 Pillow>=10.2.0
 pytest

@@ -2,6 +2,7 @@ import os
 
 import pyomo.environ as pyo
 import pandas as pd
+from pytest import approx
 
 import topotherm as tt
 
@@ -54,7 +55,8 @@ def test_sts_forced(request):
     assert result.solver.status == pyo.SolverStatus.ok
     # assert that the objective value is less than 2% away from the expected
     # value
-    assert (abs(pyo.value(model.obj)) - 4.6259e+06) < 0.02 * 4.6259e+06
+    assert abs(pyo.value(model.obj)) == approx(4.6259e+06, rel=0.02)
+    # assert (abs(pyo.value(model.obj)) - 4.6259e+06) < 0.02 * 4.6259e+06
 
 
 def test_sts_eco(request):
@@ -86,4 +88,5 @@ def test_sts_eco(request):
 
     result = opt.solve(model, tee=True)
     assert result.solver.status == pyo.SolverStatus.ok
-    assert (abs(pyo.value(model.obj)) - 4.01854e+04) < 0.02 * 4.01854e+04
+    assert abs(pyo.value(model.obj)) == approx(4.01854e+04, rel=0.02)
+    # assert (abs(pyo.value(model.obj)) - 4.01854e+04) < 0.02 * 4.01854e+04

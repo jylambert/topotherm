@@ -1,17 +1,9 @@
-name: topotherm
+name: topotherm>
 channels:
-  - defaults
   - conda-forge
+  - defaults
 dependencies:
   - python>=3.9
-  - numpy<2.0
-  - pandas
-  - scipy
-  - networkx
-  - matplotlib
-  - pyomo
-  - pyarrow>=14.0.1
-  - Pillow>=10.2.0
-  - pytest
-  - pydantic
-  - pyyaml
+  - pip
+  - pip:
+    - -r requirements.txt
