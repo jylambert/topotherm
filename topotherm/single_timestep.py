@@ -49,7 +49,8 @@ def model(matrices: dict,
             economic or 'forced' for forced operation
 
     Returns:
-        mdl (pyomo.environ.ConcreteModel): pyomo model
+        pyomo.environ.ConcreteModel: pyomo model of the single time step
+        formulation
     """
     # @TODO: Look with Amedeo if q_c can be adapted to dimensionless vector,
     # (in theory it is possible to do

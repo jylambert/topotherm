@@ -16,4 +16,3 @@ documentation for details.
    :caption: Contents:
 
    modules.rst
-   topotherm.rst
