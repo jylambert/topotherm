@@ -30,22 +30,18 @@ def test_mtseasy_forced(request):
     assert solver_name in ["scip", "gurobi", "cbc"], f"Unsupported solver: {solver_name}"
     # Load the district
     current_path = os.path.dirname(os.path.abspath(__file__))
-    mat = tt.fileio.load(os.path.join(current_path, 'data'))
+    mat = tt.fileio.load(os.path.join(current_path, 'data_mts'))
 
-    # read in demand profile
-    timeseries = pd.read_csv(os.path.join(current_path, 'data/timeseries.csv'),
-                             sep=';', index_col=0, header=0).iloc[7:9, :].values.squeeze() #4:9
-
-    # create dummy profile, q_c should already contain the timeseries of all consumer demands
-    mat['q_c'] = mat['q_c'] * timeseries  # convert to timeseries
     # regression
     r_thermal_cap, r_heat_loss = read_regression(
-        os.path.join(current_path, 'data', 'regression.csv'), 0)
+        os.path.join(current_path, 'data_mts', 'regression.csv'), 0)
 
     # import settings
-    settings = tt.settings.Settings()
-    settings.economics.source_flh = [2500.]  # full load hours
-    settings.economics.consumers_flh = [2500.]  # full load hours
+    settings = tt.settings.load(os.path.join(current_path, 'data_mts', 'config.yaml'))
+
+    # modify either in code or in the config file
+    settings.economics.source_c_inv = [0.]  # no investment costs for sources
+    settings.temperatures.supply = 90
 
     model_sets = tt.sets.create(mat)
     model = tt.multiple_timestep.model(
@@ -54,8 +50,7 @@ def test_mtseasy_forced(request):
         regression_inst=r_thermal_cap,
         regression_losses=r_heat_loss,
         economics=settings.economics,
-        optimization_mode="forced",
-        flh_scaling=1.9254)
+        optimization_mode="forced")
 
 
     # Optimization initialization
@@ -76,22 +71,18 @@ def test_mtseasy_eco(request):
     assert solver_name in ["scip", "gurobi", "cbc"], f"Unsupported solver: {solver_name}"
     # Load the district
     current_path = os.path.dirname(os.path.abspath(__file__))
-    mat = tt.fileio.load(os.path.join(current_path, 'data'))
+    mat = tt.fileio.load(os.path.join(current_path, 'data_mts'))
 
-    # read in demand profile
-    timeseries = pd.read_csv(os.path.join(current_path, 'data/timeseries.csv'),
-                             sep=';', index_col=0, header=0).iloc[7:9, :].values.squeeze() #4:9
-
-    # create dummy profile, q_c should already contain the timeseries of all consumer demands
-    mat['q_c'] = mat['q_c'] * timeseries  # convert to timeseries
     # regression
     r_thermal_cap, r_heat_loss = read_regression(
-        os.path.join(current_path, 'data', 'regression.csv'), 0)
+        os.path.join(current_path, 'data_mts', 'regression.csv'), 0)
 
     # import settings
-    settings = tt.settings.Settings()
-    settings.economics.source_flh = [2500.]  # full load hours
-    settings.economics.consumers_flh = [2500.]  # full load hours
+    settings = tt.settings.load(os.path.join(current_path, 'data_mts', 'config.yaml'))
+
+    # modify either in code or in the config file
+    settings.economics.source_c_inv = [0.]  # no investment costs for sources
+    settings.temperatures.supply = 90
 
     model_sets = tt.sets.create(mat)
     model = tt.multiple_timestep.model(
@@ -99,9 +90,8 @@ def test_mtseasy_eco(request):
         sets=model_sets,
         regression_inst=r_thermal_cap,
         regression_losses=r_heat_loss,
-        economics=tt.settings.Settings().economics,
-        optimization_mode="economic",
-        flh_scaling=1.9254)
+        economics=settings.economics,
+        optimization_mode="economic")
 
     # Optimization initialization
     opt = pyo.SolverFactory(solver_name)

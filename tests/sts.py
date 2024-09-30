@@ -31,11 +31,18 @@ def test_sts_forced(request):
     assert solver_name in ["scip", "gurobi", "cbc"], f"Unsupported solver: {solver_name}"
     # Load the district
     current_path = os.path.dirname(os.path.abspath(__file__))
-    mat = tt.fileio.load(os.path.join(current_path, 'data'))
+    mat = tt.fileio.load(os.path.join(current_path, 'data_sts'))
 
     # regression
     r_thermal_cap, r_heat_loss = read_regression(
-        os.path.join(current_path, 'data', 'regression.csv'), 0)
+        os.path.join(current_path, 'data_sts', 'regression.csv'), 0)
+
+    # import settings
+    settings = tt.settings.load(os.path.join(current_path, 'data_sts', 'config.yaml'))
+
+    # modify either in code or in the config file
+    settings.economics.source_c_inv = [0.]  # no investment costs for sources
+    settings.temperatures.supply = 90
 
     model_sets = tt.sets.create(mat)
     model = tt.single_timestep.model(
@@ -43,7 +50,7 @@ def test_sts_forced(request):
         sets=model_sets,
         regression_inst=r_thermal_cap,
         regression_losses=r_heat_loss,
-        economics=tt.settings.Settings().economics,
+        economics=settings.economics,
         optimization_mode="forced")
 
     # Optimization initialization
@@ -66,11 +73,18 @@ def test_sts_eco(request):
 
     # Load the district
     current_path = os.path.dirname(os.path.abspath(__file__))
-    mat = tt.fileio.load(os.path.join(current_path, 'data'))
+    mat = tt.fileio.load(os.path.join(current_path, 'data_sts'))
 
     # regression
     r_thermal_cap, r_heat_loss = read_regression(
-        os.path.join(current_path, 'data', 'regression.csv'), 0)
+        os.path.join(current_path, 'data_sts', 'regression.csv'), 0)
+
+    # import settings
+    settings = tt.settings.load(os.path.join(current_path, 'data_sts', 'config.yaml'))
+
+    # modify either in code or in the config file
+    settings.economics.source_c_inv = [0.]  # no investment costs for sources
+    settings.temperatures.supply = 90
 
     model_sets = tt.sets.create(mat)
     model = tt.single_timestep.model(
@@ -78,7 +92,7 @@ def test_sts_eco(request):
         sets=model_sets,
         regression_inst=r_thermal_cap,
         regression_losses=r_heat_loss,
-        economics=tt.settings.Settings().economics,
+        economics=settings.economics,
         optimization_mode="economic")
 
     # Optimization initialization
