@@ -37,13 +37,20 @@ def test_sts_forced(request):
     r_thermal_cap, r_heat_loss = read_regression(
         os.path.join(current_path, 'data_sts', 'regression.csv'), 0)
 
+    # import settings
+    settings = tt.settings.load(os.path.join(current_path, 'data_sts', 'config.yaml'))
+
+    # modify either in code or in the config file
+    settings.economics.source_c_inv = [0.]  # no investment costs for sources
+    settings.temperatures.supply = 90
+
     model_sets = tt.sets.create(mat)
     model = tt.single_timestep.model(
         matrices=mat,
         sets=model_sets,
         regression_inst=r_thermal_cap,
         regression_losses=r_heat_loss,
-        economics=tt.settings.Settings().economics,
+        economics=settings.economics,
         optimization_mode="forced")
 
     # Optimization initialization
@@ -72,13 +79,20 @@ def test_sts_eco(request):
     r_thermal_cap, r_heat_loss = read_regression(
         os.path.join(current_path, 'data_sts', 'regression.csv'), 0)
 
+    # import settings
+    settings = tt.settings.load(os.path.join(current_path, 'data_sts', 'config.yaml'))
+
+    # modify either in code or in the config file
+    settings.economics.source_c_inv = [0.]  # no investment costs for sources
+    settings.temperatures.supply = 90
+
     model_sets = tt.sets.create(mat)
     model = tt.single_timestep.model(
         matrices=mat,
         sets=model_sets,
         regression_inst=r_thermal_cap,
         regression_losses=r_heat_loss,
-        economics=tt.settings.Settings().economics,
+        economics=settings.economics,
         optimization_mode="economic")
 
     # Optimization initialization

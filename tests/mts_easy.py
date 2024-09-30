@@ -37,12 +37,11 @@ def test_mtseasy_forced(request):
         os.path.join(current_path, 'data_mts', 'regression.csv'), 0)
 
     # import settings
-    settings = tt.settings.Settings()
+    settings = tt.settings.load(os.path.join(current_path, 'data_mts', 'config.yaml'))
 
+    # modify either in code or in the config file
     settings.economics.source_c_inv = [0.]  # no investment costs for sources
-    settings.economics.pipes_lifetime = 40
-    settings.economics.source_lifetime = [40]
-    settings.economics.heat_price = 120e-3
+    settings.temperatures.supply = 90
 
     model_sets = tt.sets.create(mat)
     model = tt.multiple_timestep.model(
@@ -79,12 +78,11 @@ def test_mtseasy_eco(request):
         os.path.join(current_path, 'data_mts', 'regression.csv'), 0)
 
     # import settings
-    settings = tt.settings.Settings()
+    settings = tt.settings.load(os.path.join(current_path, 'data_mts', 'config.yaml'))
 
+    # modify either in code or in the config file
     settings.economics.source_c_inv = [0.]  # no investment costs for sources
-    settings.economics.pipes_lifetime = 40
-    settings.economics.source_lifetime = [40]
-    settings.economics.heat_price = 120e-3
+    settings.temperatures.supply = 90
 
     model_sets = tt.sets.create(mat)
     model = tt.multiple_timestep.model(
