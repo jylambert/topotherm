@@ -31,11 +31,11 @@ def test_sts_forced(request):
     assert solver_name in ["scip", "gurobi", "cbc"], f"Unsupported solver: {solver_name}"
     # Load the district
     current_path = os.path.dirname(os.path.abspath(__file__))
-    mat = tt.fileio.load(os.path.join(current_path, 'data'))
+    mat = tt.fileio.load(os.path.join(current_path, 'data_sts'))
 
     # regression
     r_thermal_cap, r_heat_loss = read_regression(
-        os.path.join(current_path, 'data', 'regression.csv'), 0)
+        os.path.join(current_path, 'data_sts', 'regression.csv'), 0)
 
     model_sets = tt.sets.create(mat)
     model = tt.single_timestep.model(
@@ -66,11 +66,11 @@ def test_sts_eco(request):
 
     # Load the district
     current_path = os.path.dirname(os.path.abspath(__file__))
-    mat = tt.fileio.load(os.path.join(current_path, 'data'))
+    mat = tt.fileio.load(os.path.join(current_path, 'data_sts'))
 
     # regression
     r_thermal_cap, r_heat_loss = read_regression(
-        os.path.join(current_path, 'data', 'regression.csv'), 0)
+        os.path.join(current_path, 'data_sts', 'regression.csv'), 0)
 
     model_sets = tt.sets.create(mat)
     model = tt.single_timestep.model(
