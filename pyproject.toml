@@ -44,7 +44,7 @@ dependencies = [
 ]
 
 [tool.setuptools]
-packages = { find = { where = ["topotherm"], exclude = ["tests", "docs"] } }
+packages = ["topotherm"]
 
 [project.optional-dependencies]
 dev = [
