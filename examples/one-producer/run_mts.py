@@ -14,8 +14,10 @@ import pyomo.environ as pyo
 import topotherm as tt
 
 
-DATAPATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data_mts')
-OUTPUTPATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'results/mts_eco_easy/')
+DATAPATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                        'data_mts')
+OUTPUTPATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                          'results/mts_eco_easy/')
 REGRESSION = 'regression.csv'  # regression coefficients for thermal capacity and heat losses
 TIMESERIES = 'timeseries.csv'  # timeseries for heat scaling
 PLOTS = True  # save plots of the district
@@ -51,10 +53,12 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
 
     if plots:
         f = tt.plotting.district(mat, isnot_init=False)  # Save initial District
-        f.savefig(os.path.join(outputpath, 'district_initial.svg'), bbox_inches='tight')
+        f.savefig(os.path.join(outputpath, 'district_initial.svg'),
+                  bbox_inches='tight')
 
     # regression
-    r_thermal_cap, r_heat_loss = read_regression(os.path.join(filepath, REGRESSION), 0)
+    r_thermal_cap, r_heat_loss = read_regression(
+        os.path.join(filepath, REGRESSION), 0)
 
     # import settings
     settings = tt.settings.load(os.path.join(filepath, 'config.yaml'))
@@ -98,8 +102,11 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
 
     # Save figure optimized districts
     if plots:
-        f = tt.plotting.district(opt_mats, diameter=opt_mats['d_i_0'], isnot_init=True)
-        f.savefig(os.path.join(outputpath, 'district_optimal.svg'), bbox_inches='tight')
+        f = tt.plotting.district(opt_mats,
+                                 diameter=opt_mats['d_i_0'],
+                                 isnot_init=True)
+        f.savefig(os.path.join(outputpath, 'district_optimal.svg'),
+                  bbox_inches='tight')
 
 
 if __name__ == '__main__':
