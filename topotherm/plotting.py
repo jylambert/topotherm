@@ -33,7 +33,7 @@ def district(matrices, diameter=[0], isnot_init=False):
             G.add_node(q, color='LightBlue', label='Consumer')
         elif ges[q] == 0:
             G.add_node(q, color='LightGrey', label='Internal Node')
-        if ges[q] == -1:
+        if ges[q] <= -1:
             G.add_node(q, color='Orange', label='Heat Source')
 
     # edge_labels = dict()
@@ -52,11 +52,9 @@ def district(matrices, diameter=[0], isnot_init=False):
         # Get the node colors from the color attribute
     node_colors = [G.nodes[node]['color'] for node in G.nodes()]
     node_label = [G.nodes[node]['label'] for node in G.nodes()]
-    # edge_length = [G.edges[edge]['len'] for edge in G.edges()]
 
     cm = 1 / 2.54
     # dhn topology plot
-    #fig0, ax = plt.subplots(figsize=(3*30 * cm, 3*20 * cm), layout='constrained')
     fig0, ax = plt.subplots(figsize=(2*90 * cm, 2*60 * cm), layout='constrained')
     if isnot_init:
         nx.draw_networkx_nodes(G, matrices['position'], node_color=node_colors, node_size=55, ax=ax)

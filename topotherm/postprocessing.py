@@ -107,8 +107,8 @@ def sts(model: pyo.ConcreteModel,
         # values lambda_ij for ji. This is necessary for the postprocessing.
         elif lambda_ji[q] == 1:
             matrices['a_i'][:, q] = matrices['a_i'][:, q] * (-1)
-            lambda_ij[q] = 1    # @TODO: For sts this can be removed
-            lambda_ji[q] = 0    # @TODO: For sts this can be removed
+            lambda_ij[q] = 1
+            lambda_ji[q] = 0
 
     p_lin = p_ij + p_ji  # Power of the pipes
 
@@ -145,7 +145,7 @@ def sts(model: pyo.ConcreteModel,
         if sol.success:
             v_lin[h], d_lin[h] = sol.x
         else:
-            print(h, 'failed to calculate diameter and velocity!')
+            print(h, 'Warning: Failed to calculate diameter and velocity!')
 
     res = dict(
         a_i=a_i_opt,
@@ -153,8 +153,8 @@ def sts(model: pyo.ConcreteModel,
         a_c=a_c_opt,
         q_c=q_c_opt,
         l_i=l_i_opt,
-        lambda_ij_opt=lambda_ij,  #@TODO: Remove lambda_ij_opt and lambda_ji_opt? -> lambda_ij_opt should only
-        lambda_ji_opt=lambda_ji,  #@TODO: contain 1 and lamdba_ji_opt only 0 (for sts!).
+        lambda_ij_opt=lambda_ij,
+        lambda_ji_opt=lambda_ji,
         d_i_0=d_lin,
         m_i_0=m_lin,
         position=pos_opt,
@@ -247,6 +247,7 @@ def mts(model: pyo.ConcreteModel,
     a_i_shape_opt = np.shape(a_i_opt)  # (rows 0, columns 1)
     d_lin = np.zeros(a_i_shape_opt[1])  # Initialize linear diameters
     v_lin = np.zeros(a_i_shape_opt[1])  # Initialize velocities
+
     # Assign supply and return temperatures
     supply_temp_opt = np.ones(a_i_shape_opt[1]) * settings.temperatures.supply
     return_temp_opt = np.ones(a_i_shape_opt[1]) * settings.temperatures.return_
@@ -266,7 +267,7 @@ def mts(model: pyo.ConcreteModel,
         if sol.success:
             v_lin[h], d_lin[h] = sol.x
         else:
-            print(h, 'failed to calculate diameter and velocity!')
+            print(h, 'Warning: Failed to calculate diameter and velocity!')
 
     res = dict(
         a_i=a_i_opt,
@@ -306,7 +307,6 @@ def to_networkx_graph(matrices):
         G: networkx graph
     """
     G = nx.DiGraph()
-    s = np.array([0, 0, 0])
 
     # Add the nodes to the graph
     sums = matrices['a_c'].sum(axis=1)
@@ -321,7 +321,7 @@ def to_networkx_graph(matrices):
             G.add_node(q, color='Red', type='consumer', x=x, y=y)
         elif ges[q] == 0:
             G.add_node(q, color='Green', type='internal', x=x, y=y)
-        if ges[q] == -1:
+        if ges[q] <= -1:
             G.add_node(q, color='Orange', type='source', x=x, y=y)
 
     # edge_labels = dict()
