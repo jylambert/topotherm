@@ -247,57 +247,64 @@ def model(matrices: dict,
             mdl.set_t, rule=total_energy_cons,
             doc='Total energy conservation')
 
-    def objective_function(m):
-        fuel = sum(
-            sum(m.P_source[k, t]
-                * economics.source_price[k]
-                * matrices['flh_source'][k, t]
-                for k in m.set_n_p)
-            for t in mdl.set_t)
-
-        # CAREFUL HARDCODED FOR 0 TIME STEPS
-        def pipes_fix(k):
-            return ((m.P['ij', 'in', k, 0] + m.P['ji', 'in', k, 0])
-                    * regression_inst['a'])
-
-        def pipes_var(k):
-            return (regression_inst['b']
-                    * (m.lambda_['ij', k] + m.lambda_['ji', k]))
-
-        pipes = (sum(((pipes_fix(k) + pipes_var(k))
-                     * matrices['l_i'][k])
-                     for k in m.set_n_i)
-                 * annuity(economics.pipes_c_irr,
-                           economics.pipes_lifetime))
-
-        source = sum(m.P_source_inst[k]
-                     * economics.source_c_inv[k]
-                     * annuity(economics.source_c_irr[k],
-                               economics.source_lifetime[k])
-                     for k in m.set_n_p)
-
-        if optimization_mode == "economic":
-            revenue = (sum(
+    mdl.revenue = pyo.Var(doc='Revenue')
+    mdl.revenue_constr = pyo.Constraint(
+        expr=mdl.revenue == (
+            sum(
                 sum(
-                    sum(m.lambda_['ij', sets['a_i_in'][j].item()]
+                    sum(mdl.lambda_['ij', sets['a_i_in'][j].item()]
                         * matrices['flh_consumer'][k, t]
                         * matrices['q_c'][k, t]
                         for k in sets['a_c_out'][j]
                         if len(sets['a_i_in'][j]) > 0)
                     + sum(
-                        (m.lambda_['ji', sets['a_i_out'][j].item()])
+                        (mdl.lambda_['ji', sets['a_i_out'][j].item()])
                         * matrices['flh_consumer'][k, t]
                         * matrices['q_c'][k, t]
                         for k in sets['a_c_out'][j]
                         if len(sets['a_i_out'][j]) > 0)
                     for j in mdl.set_n)
-                for t in mdl.set_t)
-                       * economics.heat_price * (-1))
-        else:
-            revenue = 0
+                for t in mdl.set_t) * economics.heat_price * (-1)),
+        doc='Revenue constraint')
+    
+    mdl.opex_source = pyo.Var(doc='OPEX Source')
+    mdl.opex_source_constr = pyo.Constraint(
+        expr=mdl.opex_source == sum(
+            sum(mdl.P_source[k, t]
+                * economics.source_price[k]
+                * matrices['flh_source'][k, t]
+                for k in mdl.set_n_p)
+            for t in mdl.set_t),
+        doc='OPEX Source constraint')
+    
+    mdl.capex_pipes = pyo.Var(doc='CAPEX Pipe')
 
-        return fuel + pipes + source + revenue
+    # CAREFUL HARDCODED FOR 0 TIME STEPS
+    def pipes_fix(k):
+        return ((mdl.P['ij', 'in', k, 0] + mdl.P['ji', 'in', k, 0])
+                * regression_inst['a'])
 
-    mdl.obj = pyo.Objective(rule=objective_function,
-                            doc='Objective function')
+    def pipes_var(k):
+        return (regression_inst['b']
+                * (mdl.lambda_['ij', k] + mdl.lambda_['ji', k]))
+
+    mdl.capex_pipe_constr = pyo.Constraint(
+        expr=mdl.capex_pipes == (sum(
+            (pipes_fix(k) + pipes_var(k)) * matrices['l_i'][k]
+            for k in mdl.set_n_i)
+            * annuity(economics.pipes_c_irr, economics.pipes_lifetime)),
+        doc='CAPEX Pipe constraint')
+
+    mdl.capex_source = pyo.Var(doc='CAPEX Source')
+    mdl.capex_source_constr = pyo.Constraint(
+        expr=mdl.capex_source == sum(mdl.P_source_inst[k]
+                     * economics.source_c_inv[k]
+                     * annuity(economics.source_c_irr[k],
+                               economics.source_lifetime[k])
+                     for k in mdl.set_n_p),
+        doc='CAPEX Source constraint')
+
+    mdl.obj = pyo.Objective(
+        expr=mdl.capex_source + mdl.capex_pipes + mdl.opex_source + mdl.revenue,
+        doc='Objective function')
     return mdl
