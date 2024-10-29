@@ -69,11 +69,15 @@ def sts(model: pyo.ConcreteModel,
     # Get the values from the model
     p_ij = np.array(pyo.value(model.P['ij', 'in', :, :]))
     p_ji = np.array(pyo.value(model.P['ji', 'in', :, :]))
+    p_source_inst = np.array(pyo.value(model.P_source_inst[:]))
+    p_source = np.array(pyo.value(model.P_source[:, :]))
+
     # flow direction, binary
     lambda_ij = np.around(np.array(pyo.value(model.lambda_['ij', :])), 0)
     lambda_ji = np.around(np.array(pyo.value(model.lambda_['ji', :])), 0)
 
     q_c_opt = np.zeros([matrices['a_c'].shape[1], len(model.set_t)])
+    flh_c_opt = np.zeros([matrices['a_c'].shape[1], len(model.set_t)])
 
     # Exclude non-connected consumers in Q_c, only affects the economic case
     # Check for consumers connected in direction ij
@@ -87,15 +91,29 @@ def sts(model: pyo.ConcreteModel,
                 raise ValueError('Error in the incidence matrix!')
             # assign the heat demand to the connected consumer if lambda is 1
             q_c_opt[a_c_idx[0], :] = lambda_ij[e] * matrices['q_c'][a_c_idx[0], :]
+            flh_c_opt[a_c_idx[0], :] = lambda_ij[e] * matrices['flh_consumer'][a_c_idx[0], :]
         elif d == 'ji':
             a_i_idx = np.where(matrices['a_i'][:, e] == 1)
             a_c_idx = np.where(matrices['a_c'][a_i_idx[0], :][0] == 1)
             if len(a_i_idx) != 1 or len(a_c_idx) != 1:
                 raise ValueError('Error in the incidence matrix!')
             q_c_opt[a_c_idx[0], :] = lambda_ji[e] * matrices['q_c'][a_c_idx[0], :]
+            flh_c_opt[a_c_idx[0], :] = lambda_ji[e] * matrices['flh_consumer'][a_c_idx[0], :]
 
     # Remove nonzero elements row-wise
     q_c_opt = q_c_opt[q_c_opt.any(axis=1)]
+    flh_c_opt = np.zeros([matrices['a_c'].shape[1], len(model.set_t)])
+
+    # Postprocessing producers
+    if np.shape(matrices['a_p'])[1] == 1:
+        p_source_inst_opt = p_source_inst
+        p_source_opt = p_source
+        flh_s_opt = matrices['flh_source']
+    else:
+        valid_sources = p_source_inst.any(axis=1)
+        p_source_inst_opt = p_source_inst[valid_sources]
+        p_source_opt = p_source[valid_sources, :]
+        flh_s_opt = matrices['flh_source'][valid_sources, :]
 
     # Adaption of Incidence Matrix for further postprocessing
     for q, _ in enumerate(lambda_ij):
@@ -107,8 +125,6 @@ def sts(model: pyo.ConcreteModel,
         # values lambda_ij for ji. This is necessary for the postprocessing.
         elif lambda_ji[q] == 1:
             matrices['a_i'][:, q] = matrices['a_i'][:, q] * (-1)
-            lambda_ij[q] = 1
-            lambda_ji[q] = 0
 
     p_lin = p_ij + p_ji  # Power of the pipes
 
@@ -123,9 +139,10 @@ def sts(model: pyo.ConcreteModel,
     a_i_opt = matrices['a_i'][valid_rows, :][:, valid_columns]
     l_i_opt = matrices['l_i'][valid_columns]
 
-    a_i_shape_opt = np.shape(a_i_opt)  # (rows 0, columns 1)
+    a_i_shape_opt = np.shape(a_i_opt)   # (rows 0, columns 1)
     d_lin = np.zeros(a_i_shape_opt[1])  # Initialize linear diameters
     v_lin = np.zeros(a_i_shape_opt[1])  # Initialize velocities
+
     # Assign supply and return temperatures
     supply_temp_opt = np.ones(a_i_shape_opt[1]) * settings.temperatures.supply
     return_temp_opt = np.ones(a_i_shape_opt[1]) * settings.temperatures.return_
@@ -153,12 +170,14 @@ def sts(model: pyo.ConcreteModel,
         a_c=a_c_opt,
         q_c=q_c_opt,
         l_i=l_i_opt,
-        lambda_ij_opt=lambda_ij,
-        lambda_ji_opt=lambda_ji,
         d_i_0=d_lin,
         m_i_0=m_lin,
         position=pos_opt,
-        p=p_lin_opt
+        p=p_lin_opt,
+        flh_c_opt=flh_c_opt,
+        flh_s_opt=flh_s_opt,
+        p_s_inst_opt=p_source_inst_opt,
+        p_s_opt=p_source_opt
     )
 
     return res
@@ -183,6 +202,8 @@ def mts(model: pyo.ConcreteModel,
     p_ij = np.reshape(np.array(pyo.value(model.P['ij', 'in', :, :])), (-1, matrices['q_c'].shape[1]))
     p_ji = np.reshape(np.array(pyo.value(model.P['ji', 'in', :, :])), (-1, matrices['q_c'].shape[1]))
     p_cap = np.array(pyo.value(model.P_cap[:]))
+    p_source_inst = np.array(pyo.value(model.P_source_inst[:]))
+    p_source = np.array(pyo.value(model.P_source[:, :]))
 
     # flow direction, binary
     lambda_ij = np.reshape(np.around(np.array(pyo.value(model.lambda_['ij', :, :])), 0), (-1, matrices['q_c'].shape[1]))
@@ -190,6 +211,7 @@ def mts(model: pyo.ConcreteModel,
     lambda_b = np.around(np.array(pyo.value(model.lambda_b[:])), 0)
 
     q_c_opt = np.zeros([matrices['a_c'].shape[1], len(model.set_t)])
+    flh_c_opt = np.zeros([matrices['a_c'].shape[1], len(model.set_t)])
 
     # Exclude non-connected consumers in Q_c, only affects the economic case
     # Check for consumers connected in direction ij
@@ -203,15 +225,29 @@ def mts(model: pyo.ConcreteModel,
                 raise ValueError('Error in the incidence matrix!')
             # assign the heat demand to the connected consumer if lambda is 1
             q_c_opt[a_c_idx[0], :] = lambda_b[e] * matrices['q_c'][a_c_idx[0], :]
+            flh_c_opt[a_c_idx[0], :] = lambda_b[e] * matrices['flh_consumer'][a_c_idx[0], :]
         elif d == 'ji':
             a_i_idx = np.where(matrices['a_i'][:, e] == 1)
             a_c_idx = np.where(matrices['a_c'][a_i_idx[0], :][0] == 1)
             if len(a_i_idx) != 1 or len(a_c_idx) != 1:
                 raise ValueError('Error in the incidence matrix!')
             q_c_opt[a_c_idx[0], :] = lambda_b[e] * matrices['q_c'][a_c_idx[0], :]
+            flh_c_opt[a_c_idx[0], :] = lambda_b[e] * matrices['flh_consumer'][a_c_idx[0], :]
 
     # Remove nonzero elements row-wise
     q_c_opt = q_c_opt[q_c_opt.any(axis=1)]
+    flh_c_opt = flh_c_opt[flh_c_opt.any(axis=1)]
+
+    # Postprocessing producers
+    if np.shape(matrices['a_p'])[1] == 1:
+        p_source_inst_opt = p_source_inst
+        p_source_opt = p_source
+        flh_s_opt = matrices['flh_source']
+    else:
+        valid_sources = p_source_inst.any(axis=1)
+        p_source_inst_opt = p_source_inst[valid_sources]
+        p_source_opt = p_source[valid_sources, :]
+        flh_s_opt = matrices['flh_source'][valid_sources, :]
 
     # Adaption of Incidence Matrix for further postprocessing
     for q in model.set_n_i:
@@ -282,7 +318,11 @@ def mts(model: pyo.ConcreteModel,
         position=pos_opt,
         p=p_lin_opt,
         p_ij=p_ij_opt,
-        p_ji=p_ji_opt
+        p_ji=p_ji_opt,
+        flh_c_opt=flh_c_opt,
+        flh_s_opt=flh_s_opt,
+        p_s_inst_opt=p_source_inst_opt,
+        p_s_opt=p_source_opt
     )
 
     return res
