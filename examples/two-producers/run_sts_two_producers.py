@@ -79,7 +79,6 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
     opt.options['mipgap'] = settings.solver.mip_gap
     opt.options['timelimit'] = settings.solver.time_limit
     opt.options['logfile'] = os.path.join(outputpath, 'optimization.log')
-    #opt.options['Seed'] = 56324978
 
     # Solve the optimization problem
     result = opt.solve(model, tee=True)
