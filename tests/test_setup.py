@@ -2,6 +2,7 @@
 
 from pytest import approx
 
+
 def test_import():
     import topotherm
 

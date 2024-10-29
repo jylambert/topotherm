@@ -62,7 +62,7 @@ def test_sts_forced(request):
     assert result.solver.status == pyo.SolverStatus.ok
     # assert that the objective value is less than 2% away from the expected
     # value
-    assert abs(pyo.value(model.obj)) == approx(519676.4358105995, rel=0.02)
+    assert pyo.value(model.obj) == approx(519676.4358105995, rel=0.02)
 
 
 def test_sts_eco(request):
@@ -101,5 +101,5 @@ def test_sts_eco(request):
 
     result = opt.solve(model, tee=True)
     assert result.solver.status == pyo.SolverStatus.ok
-    assert abs(pyo.value(model.obj)) == approx(4.01854e+04, rel=0.02)
+    assert pyo.value(model.obj) == approx(-4.01854e+04, rel=0.02)
     # assert (abs(pyo.value(model.obj)) - 4.01854e+04) < 0.02 * 4.01854e+04

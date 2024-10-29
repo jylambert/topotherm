@@ -17,7 +17,7 @@ import topotherm as tt
 DATAPATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                         'data_mts')
 OUTPUTPATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                          'results/mts_eco_easy/')
+                          'results/mts_eco/')
 REGRESSION = 'regression.csv'  # regression coefficients for thermal capacity and heat losses
 TIMESERIES = 'timeseries.csv'  # timeseries for heat scaling
 PLOTS = True  # save plots of the district
@@ -110,6 +110,9 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
 
 
 if __name__ == '__main__':
-    main(filepath=os.path.join(DATAPATH), outputpath=os.path.join(OUTPUTPATH),
-         plots=PLOTS, solver=SOLVER, mode='economic')
+    main(filepath=os.path.join(DATAPATH),
+         outputpath=os.path.join(OUTPUTPATH),
+         plots=PLOTS,
+         solver=SOLVER,
+         mode='forced')
     print(f'Finished {OUTPUTPATH}')
