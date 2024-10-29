@@ -247,7 +247,7 @@ def model(matrices: dict,
             mdl.set_t, rule=total_energy_cons,
             doc='Total energy conservation')
 
-    mdl.revenue = pyo.Var(doc='Revenue')
+    mdl.revenue = pyo.Var(doc='Revenue', domain=pyo.NegativeReals)
     mdl.revenue_constr = pyo.Constraint(
         expr=mdl.revenue == (
             sum(
@@ -267,7 +267,7 @@ def model(matrices: dict,
                 for t in mdl.set_t) * economics.heat_price * (-1)),
         doc='Revenue constraint')
     
-    mdl.opex_source = pyo.Var(doc='OPEX Source')
+    mdl.opex_source = pyo.Var(doc='OPEX Source', domain=pyo.PositiveReals)
     mdl.opex_source_constr = pyo.Constraint(
         expr=mdl.opex_source == sum(
             sum(mdl.P_source[k, t]
@@ -277,7 +277,7 @@ def model(matrices: dict,
             for t in mdl.set_t),
         doc='OPEX Source constraint')
     
-    mdl.capex_pipes = pyo.Var(doc='CAPEX Pipe')
+    mdl.capex_pipes = pyo.Var(doc='CAPEX Pipe', domain=pyo.PositiveReals)
 
     # CAREFUL HARDCODED FOR 0 TIME STEPS
     def pipes_fix(k):
@@ -289,19 +289,18 @@ def model(matrices: dict,
                 * (mdl.lambda_['ij', k] + mdl.lambda_['ji', k]))
 
     mdl.capex_pipe_constr = pyo.Constraint(
-        expr=mdl.capex_pipes == (sum(
+        expr=mdl.capex_pipes == sum(
             (pipes_fix(k) + pipes_var(k)) * matrices['l_i'][k]
             for k in mdl.set_n_i)
-            * annuity(economics.pipes_c_irr, economics.pipes_lifetime)),
+            * annuity(economics.pipes_c_irr, economics.pipes_lifetime),
         doc='CAPEX Pipe constraint')
 
-    mdl.capex_source = pyo.Var(doc='CAPEX Source')
+    mdl.capex_source = pyo.Var(doc='CAPEX Source', domain=pyo.PositiveReals)
     mdl.capex_source_constr = pyo.Constraint(
-        expr=mdl.capex_source == sum(mdl.P_source_inst[k]
-                     * economics.source_c_inv[k]
-                     * annuity(economics.source_c_irr[k],
-                               economics.source_lifetime[k])
-                     for k in mdl.set_n_p),
+        expr=mdl.capex_source == sum(
+            mdl.P_source_inst[k] * economics.source_c_inv[k]
+            * annuity(economics.source_c_irr[k], economics.source_lifetime[k])
+            for k in mdl.set_n_p),
         doc='CAPEX Source constraint')
 
     mdl.obj = pyo.Objective(

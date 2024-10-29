@@ -34,6 +34,7 @@ def test_regression():
     # heat loss regression
     r_heat_loss = precalc.regression_heat_losses(
         settings, thermal_capacity=r_thermal_cap)
+
     # assert that each params item is within 1% of the expected value
     assert r_heat_loss['a'] == approx(4.348000e-07, rel=0.01)
     assert r_heat_loss['b'] == approx(0.02189, rel=0.01)

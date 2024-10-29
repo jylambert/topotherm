@@ -1,9 +1,13 @@
+"""Test the multiple timestep optimization model."""
+
 import os
 
 import pyomo.environ as pyo
 import pandas as pd
+from pytest import approx
 
 import topotherm as tt
+
 
 def read_regression(path, i):
     """Read the regression coefficients for the thermal capacity and heat
@@ -24,7 +28,7 @@ def read_regression(path, i):
     return r_thermal_cap, r_heat_loss
 
 
-def test_mtseasy_forced(request):
+def test_mts_forced(request):
     """Main function to run the optimization"""
     solver_name = request.config.getoption("--solver")
     assert solver_name in ["scip", "gurobi", "cbc"], f"Unsupported solver: {solver_name}"
@@ -62,10 +66,10 @@ def test_mtseasy_forced(request):
     assert result.solver.status == pyo.SolverStatus.ok
     # assert that the objective value is less than 2% away from the expected
     # value
-    assert (abs(pyo.value(model.obj)) - 4.6259e+06) < 0.02 * 4.6259e+06
+    assert abs(pyo.value(model.obj)) == approx(519676.4358105995, rel=0.02)
 
 
-def test_mtseasy_eco(request):
+def test_mts_eco(request):
     """Main function to run the optimization"""
     solver_name = request.config.getoption("--solver")
     assert solver_name in ["scip", "gurobi", "cbc"], f"Unsupported solver: {solver_name}"
@@ -100,4 +104,5 @@ def test_mtseasy_eco(request):
 
     result = opt.solve(model, tee=True)
     assert result.solver.status == pyo.SolverStatus.ok
-    assert (abs(pyo.value(model.obj)) - 4.01854e+04) < 0.02 * 4.01854e+04
+    assert pyo.value(model.obj) == approx(-39212.8646266408, rel=0.02)
+    # assert (abs(pyo.value(model.obj)) - 4.01854e+04) < 0.02 * 4.01854e+04

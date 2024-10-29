@@ -3,7 +3,8 @@ district heating network design.
 
 The module contains the following functions:
     * annuity: Calculate the annuity factor
-    * model: Create the optimization model for the multiple time steps operation
+    * model: Create the optimization model for the multiple time steps
+    operation
 """
 import numpy as np
 import pyomo.environ as pyo
@@ -260,56 +261,63 @@ def model(matrices: dict,
             rule=connection_to_consumer_fcd,
             doc=msg_)
 
-    if optimization_mode == "forced":
         def connection_to_consumer_built_fcd(m, j):
             return m.lambda_b[j] >= 1
         mdl.cons_connection_forced = pyo.Constraint(
-            mdl.forced_edges, rule=connection_to_consumer_built_fcd,
+            mdl.forced_edges,
+            rule=connection_to_consumer_built_fcd,
             doc='The house connection has to be built to satisfy the demand')
 
-    if optimization_mode == "forced":
         def total_energy_conservation(m, t):
             return sum(m.P_source[k, t] for k in m.set_n_p) \
                 - sum(m.P['ij', 'in', k, t] - m.P['ij', 'out', k, t] for k in m.set_n_i) \
                 - sum(m.P['ji', 'in', k, t] - m.P['ji', 'out', k, t] for k in m.set_n_i) \
                 - sum(matrices['q_c'][k, t] for k in m.set_n_c) == 0
-        mdl.cons_total_energy_cons = pyo.Constraint(mdl.set_t, rule=total_energy_conservation,
-                                                    doc='Total energy conservation')
+        mdl.cons_total_energy_cons = pyo.Constraint(
+            mdl.set_t,
+            rule=total_energy_conservation,
+            doc='Total energy conservation')
 
-    def objective_function(m):
-        fuel = sum(
-            sum(m.P_source[k, t]
+    mdl.revenue = pyo.Var(doc='Revenue', domain=pyo.NegativeReals)
+    mdl.revenue_constr = pyo.Constraint(
+        expr=mdl.revenue == sum(
+            sum(mdl.lambda_b[j] * matrices['flh_consumer'][k, t]
+                * matrices['q_c'][k, t] for k, j in mdl.consumer_edges)
+                for t in mdl.set_t) * economics.heat_price * (-1),
+        doc='Revenue constraint')
+    
+    mdl.opex_source = pyo.Var(doc='OPEX Source', domain=pyo.PositiveReals)
+    mdl.opex_source_constr = pyo.Constraint(
+        expr=mdl.opex_source == sum(
+            sum(mdl.P_source[k, t]
                 * economics.source_price[k]
                 * matrices['flh_source'][k, t]
-                for k in m.set_n_p)
-            for t in mdl.set_t)
+                for k in mdl.set_n_p)
+            for t in mdl.set_t),
+        doc='OPEX Source constraint')
+    
+    mdl.capex_pipes = pyo.Var(doc='CAPEX Pipe', domain=pyo.PositiveReals)
+    pipes = sum(
+        ((mdl.P_cap[k] * regression_inst['a']
+          + regression_inst['b'] * mdl.lambda_b[k])
+          * annuity(economics.pipes_c_irr, economics.pipes_lifetime)
+          * matrices['l_i'][k]) for k in mdl.set_n_i)
 
-        pipes = sum(
-            (
-                (m.P_cap[k] * regression_inst['a']
-                    + regression_inst['b'] * m.lambda_b[k]
-                 ) * annuity(economics.pipes_c_irr, economics.pipes_lifetime) * matrices['l_i'][k]
-            ) for k in m.set_n_i
-        )
+    mdl.capex_pipe_constr = pyo.Constraint(
+        expr=mdl.capex_pipes == pipes,
+        doc='CAPEX Pipe constraint')
 
-        source = sum(m.P_source_inst[k]
+    mdl.capex_source = pyo.Var(doc='CAPEX Source', domain=pyo.PositiveReals)
+    mdl.capex_source_constr = pyo.Constraint(
+        expr=mdl.capex_source == sum(mdl.P_source_inst[k]
                      * economics.source_c_inv[k]
                      * annuity(economics.source_c_irr[k],
                                economics.source_lifetime[k])
-                     for k in m.set_n_p)
+                     for k in mdl.set_n_p),
+        doc='CAPEX Source constraint')
 
-        if optimization_mode == "economic":
-            revenue = sum(
-                    sum(m.lambda_b[j]
-                        * matrices['flh_consumer'][k, t]
-                        * matrices['q_c'][k, t]
-                        for k, j in mdl.consumer_edges)
-                    for t in mdl.set_t) * economics.heat_price * (-1)
-        else:
-            revenue = 0
-
-        return fuel + pipes + source + revenue
-
-    mdl.obj = pyo.Objective(rule=objective_function, doc='Objective function')
+    mdl.obj = pyo.Objective(
+        expr=mdl.capex_source + mdl.capex_pipes + mdl.opex_source + mdl.revenue,
+        doc='Objective function')
 
     return mdl
