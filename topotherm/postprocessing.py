@@ -110,12 +110,12 @@ def sts(model: pyo.ConcreteModel,
         p_source_opt = p_source
         flh_s_opt = matrices['flh_source']
     else:
-        valid_sources = p_source_inst.any(axis=1)
-        p_source_inst_opt = p_source_inst[valid_sources]
-        p_source_opt = p_source[valid_sources, :]
-        flh_s_opt = matrices['flh_source'][valid_sources, :]
+        # clean up the sources to exclude 0 power sources
+        p_source_inst_opt = p_source_inst[p_source_inst != 0]
+        p_source_opt = p_source[p_source_inst != 0]
+        flh_s_opt = matrices['flh_source'][p_source_inst != 0, :]
 
-    # Adaption of Incidence Matrix for further postprocessing
+    # Adjust Incidence Matrix for further postprocessing
     for q, _ in enumerate(lambda_ij):
         # if not active, all is 0
         if lambda_ij[q] == 0 and lambda_ji[q] == 0:
