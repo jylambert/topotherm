@@ -157,7 +157,10 @@ In the topotherm root directory run:
 
 Then make the hmtl documentation files: ::
 
-```make html```
+```
+cd docs
+make html
+```
 
 The documentation is located under docs/build/html.
 
