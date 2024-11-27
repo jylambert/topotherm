@@ -5,7 +5,7 @@ Activate the topotherm environment: ::
 
  conda activate topotherm
 
-Then, install the optional requirments if needed ::
+Then, install the optional requirements if needed ::
 
  pip install sphinx sphinx-rtd-theme or pip install .[docs]
 
