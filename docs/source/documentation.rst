@@ -13,7 +13,7 @@ In the topotherm root directory run: ::
 
  sphinx-apidoc -o docs/source/ .
 
-Then make the hmtl documentation files: ::
+Then make the hmtl documentation files: :: 
 
  make html
 

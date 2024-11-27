@@ -15,6 +15,7 @@ and mulitple time steps.
    install
    solver
    usage
+   methodology 
    documentation
    topotherm
    :maxdepth: 2
