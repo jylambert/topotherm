@@ -10,7 +10,7 @@ with a package manager such as Anaconda, or directly with Python. ::
 Python
 ---------
 
-This can also be done with venv or equivalent. ::
+This can also be done with venv or equivalent. :: 
  
    Python
    cd topotherm
