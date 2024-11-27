@@ -53,6 +53,4 @@ dev = [
 docs = [
     "sphinx",
     "sphinx-rtd-theme",
-    "sphinx-autodoc",
-    "sphinx-viewcode"
 ]
