@@ -12,7 +12,7 @@ import pyomo.environ as pyo
 from topotherm.settings import Economics
 
 
-def annuity(c_i, n):
+def annuity(c_i: float, n: float) -> float:
     """Calculate the annuity factor.
 
     Args:
@@ -31,7 +31,7 @@ def model(matrices: dict,
           regression_inst: dict,
           regression_losses: dict,
           economics: Economics,
-          optimization_mode: str):
+          optimization_mode: str) -> pyo.ConcreteModel:
     """Create the optimization model for the thermo-hydraulic coupled with
     multiple time step operation.
 
@@ -50,9 +50,8 @@ def model(matrices: dict,
             economic or 'forced' for forced operation
 
     Returns:
-        mdl (pyomo.environ.ConcreteModel): pyomo model
+        pyomo.environ.ConcreteModel: multiple time step optimization model
     """
-
     # Check if the optimization mode is implemented
     if optimization_mode not in ['economic', 'forced']:
         raise NotImplementedError(

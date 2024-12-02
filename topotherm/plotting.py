@@ -1,21 +1,32 @@
-# -*- coding: utf-8 -*-
+"""Sone standard plotting functions for the district heating network."""
+
 import networkx as nx
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.lines import Line2D
 
 
-def district(matrices, diameter=[0], isnot_init=False):
-    """Input: matrices: a dict containíng the following keys:
-        - a_i (internal matrix)
-        - a_p (producer matrix)
-        - a_c (consumer matrix)
-        - length (of the pipes)
-        - positions (positions of the nodes)
-    diameter (inner diameter of the pipes), default = 0.
-    isnot_init (either True or False, for plot before or after the optimization)
+def district(matrices: dict,
+             diameter: list[float] = [0],
+             isnot_init: bool = False) -> plt.Figure:
+    """Plot the district heating network with the given matrices.
     
-    Returns: Figure of the district
+    Args:
+        matrices (dict): Dictionary with the matrices of the district heating
+            network with keys:
+                * a_i: Incidence matrix with rows: nodes, columns: edges.
+                * a_p: Adjacency matrix for the producers: rows: nodes, columns:
+                    supply ids.
+                * a_c: Adjacency matrix for the consumers: rows: nodes, columns:
+                    consumer ids.
+                * l_i: Length of edges
+                * position: x, y coordinates of the nodes in the network.
+        diameter (list[float]): Inner diameter of the pipes, default = [0]
+        isnot_init (bool): Either True or False, for plot before or after the
+            optimization, default = False.
+
+    Returns:
+        plt.Figure: Figure of the district
     """
     G = nx.DiGraph()
     s = np.array([0, 0, 0])
@@ -36,7 +47,6 @@ def district(matrices, diameter=[0], isnot_init=False):
         if ges[q] <= -1:
             G.add_node(q, color='Orange', label='Heat Source')
 
-    # edge_labels = dict()
     # Add the edges to the graph
     for k in range(matrices['a_i'].shape[1]):
         for q in range(matrices['a_i'].shape[0]):
@@ -55,22 +65,44 @@ def district(matrices, diameter=[0], isnot_init=False):
 
     cm = 1 / 2.54
     # dhn topology plot
-    fig0, ax = plt.subplots(figsize=(2*90 * cm, 2*60 * cm), layout='constrained')
+    fig0, ax = plt.subplots(figsize=(2*90 * cm, 2*60 * cm),
+                            layout='constrained')
     if isnot_init:
-        nx.draw_networkx_nodes(G, matrices['position'], node_color=node_colors, node_size=55, ax=ax)
+        nx.draw_networkx_nodes(G, matrices['position'],
+                               node_color=node_colors,
+                               node_size=55,
+                               ax=ax)
         for edge in G.edges(data='weight'):
-            nx.draw_networkx_edges(G, matrices['position'], edgelist=[edge], width=edge[2], ax=ax, arrows=False)
+            nx.draw_networkx_edges(G, matrices['position'],
+                                   edgelist=[edge],
+                                   width=edge[2],
+                                   ax=ax,
+                                   arrows=False)
     else:
         nx.draw(G, matrices['position'], node_color=node_colors, node_size=55, with_labels=False, ax=ax, width=2.5, label=node_label)
 
     legend_elements = [
-        Line2D([0], [0], marker='o', color='w', label='Consumer', markerfacecolor='LightBlue', markersize=15),
-        Line2D([0], [0], marker='o', color='w', label='Internal Node', markerfacecolor='LightGrey', markersize=15),
-        Line2D([0], [0], marker='o', color='w', label='Heat Source', markerfacecolor='Orange', markersize=15)
+        Line2D([0], [0],
+               marker='o',
+               color='w',
+               label='Consumer',
+               markerfacecolor='LightBlue',
+               markersize=15),
+        Line2D([0], [0],
+               marker='o',
+               color='w',
+               label='Internal Node',
+               markerfacecolor='LightGrey',
+               markersize=15),
+        Line2D([0], [0],
+               marker='o',
+               color='w',
+               label='Heat Source',
+               markerfacecolor='Orange',
+               markersize=15)
     ]
     plt.legend(handles=legend_elements, loc='best', frameon=False, fontsize=22)
     plt.box(False)
-
     return fig0
 
 

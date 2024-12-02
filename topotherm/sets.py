@@ -1,19 +1,44 @@
 """Create sets for the optimization. The sets are used to define the variables
 and constraints.
 """
+
 import numpy as np
 
 
 def create(matrices):
     """Create sets for the optimization. The sets are used to define the
-    variables and constraints.
+    variables and constraints. Depending on the matrices, the sets are
+    calculated with the defined directions (i -> j as a reference).
 
     Args:
         matrices (dict): Dictionary with the matrices of the district heating
-        network with keys a_i, a_p, a_c.
+        network with keys:
+            * a_i: Incidence matrix with rows: nodes, columns: edges.
+            * a_p: Adjacency matrix for the producers: rows: nodes, columns:
+                supply ids.
+            * a_c: Adjacency matrix for the consumers: rows: nodes, columns:
+                consumer ids.
 
     Returns:
-        s: dictionary with the sets for the optimization
+        dict: sets for the optimization.
+            * connection_c_ij: Consumers connected to the network in direction
+                i -> j
+            * lambda_c_ij: Binary vector with 1 where consumers are connected
+                to the network in direction i -> j
+            * connection_c_ji: Consumers connected to the network in direction
+                j -> i
+            * lambda_c_ji: Binary vector with 1 where consumers are connected
+                to the network in direction j -> i
+            * a_i_out: Dictionary with the outgoing pipes for each node (
+                direction i -> j is 1)
+            * a_i_in: Dictionary with the ingoing pipes for each node
+                (direction i -> j ingoing is -1)
+            * a_p_in: Dictionary with the ingoing pipes for each producer
+                (direction i -> j ingoing is -1)
+            * a_c_out: Dictionary with the outgoing pipes for each consumer
+                (direction i -> j is 1)
+            * a_c_out_edge: Dictionary with the outgoing pipes for each consumer
+                with the edge pipes
     """
     s = {}
     # Shapes of matrices
@@ -52,7 +77,10 @@ def create(matrices):
     for i in range(s['a_c_shape'][0]):
         s['a_c_out'][i] = np.where(matrices['a_c'][i, :] == 1)[0]
         if matrices['a_c'][i, :].any() == 1:
-            s['a_c_out_edge'][i] = np.where((matrices['a_i'][i, :] == 1) | (matrices['a_i'][i, :] == -1))[0]
+            s['a_c_out_edge'][i] = np.where(
+                (matrices['a_i'][i, :] == 1)
+                | (matrices['a_i'][i, :] == -1)
+                )[0]
         else:
             s['a_c_out_edge'][i] = []
 

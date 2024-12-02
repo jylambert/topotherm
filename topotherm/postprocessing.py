@@ -53,10 +53,10 @@ def calc_diam_and_velocity(
 
 def sts(model: pyo.ConcreteModel,
         matrices: dict,
-        settings: Settings):
+        settings: Settings) -> dict:
     """Postprocessing for the single time step model. This includes the
     calculation of the diameter and velocity of the pipes, the elimination of
-    unused pipes and nodes.
+    unused pipes and nodes. Drops unused pipes and nodes.
 
     Args:
         model (pyo.ConcreteModel): solved pyomo model
@@ -64,7 +64,7 @@ def sts(model: pyo.ConcreteModel,
         settings (tt.settings.Settings): settings for the optimization
     
     Returns:
-        res: containing the variables and postprocessed data
+        dict: Optimal variables and postprocessed data
     """
     # Get the values from the model
     p_ij = np.array(pyo.value(model.P['ij', 'in', :, :]))
@@ -185,10 +185,10 @@ def sts(model: pyo.ConcreteModel,
 
 def mts(model: pyo.ConcreteModel,
         matrices: dict,
-        settings: Settings):
+        settings: Settings) -> dict:
     """Postprocessing for the multiple time step model. This includes the
     calculation of the diameter and velocity of the pipes, the elimination of
-    unused pipes and nodes.
+    unused pipes and nodes. Drops unused pipes and nodes.
 
     Args:
         model (pyo.ConcreteModel): solved pyomo model
@@ -196,7 +196,7 @@ def mts(model: pyo.ConcreteModel,
         settings (tt.settings.Settings): settings for the optimization
 
     Returns:
-        _dict: containing the variables and postprocessed data
+        dict: Optimal variables and postprocessed data
     """
     # Get the values from the model
     p_ij = np.reshape(np.array(pyo.value(model.P['ij', 'in', :, :])), (-1, matrices['q_c'].shape[1]))
@@ -328,8 +328,10 @@ def mts(model: pyo.ConcreteModel,
     return res
 
 
-def to_networkx_graph(matrices):
-    """Export the postprocessed, optimal district as a networkx graph. 
+def to_networkx_graph(matrices: dict) -> nx.DiGraph:
+    """Export the postprocessed, optimal district as a networkx graph.
+    Includes the nodes and edges of the district, their length, installed
+    diameter and power.
 
     Args:
         matrices: a dict containing the following keys:
@@ -344,7 +346,7 @@ def to_networkx_graph(matrices):
         - p (Power of the optimal pipes)
         
     Returns:
-        G: networkx graph
+        nx.DiGraph: networkx graph
     """
     G = nx.DiGraph()
 
@@ -370,7 +372,7 @@ def to_networkx_graph(matrices):
         s = (np.where(matrices['a_i'][:, k] == 1)[0][0],
              np.where(matrices['a_i'][:, k] == -1)[0][0])   
         G.add_edge(s[0], s[1],
-                   weight=matrices['l_i'][k].item(),
+                   weight=matrices['l_i'][k].item(),  # important: float
                    d=matrices['d_i_0'][k],
                    p=matrices['p'][k])
 
