@@ -45,6 +45,7 @@ might have to be rewritten (utils.py)
   - [Usage](#usage)
   - [Contribute](#contribute)
   - [Tests](#tests)
+  - [Docs](#docs)
   - [License](#license)
 
 ## Description
@@ -139,6 +140,29 @@ To run the tests, use pytest.
 pip install .[dev]
 pytest tests
 ```
+
+## Docs
+
+Activate the topotherm environment:
+
+```conda activate topotherm```
+
+Then, install the optional requirements:
+
+```pip install .[docs]```
+
+In the topotherm root directory run:
+
+```sphinx-apidoc -o docs/source/ .```
+
+Then make the hmtl documentation files: ::
+
+```
+cd docs
+make html
+```
+
+The documentation is located under docs/build/html.
 
 ## License
 
