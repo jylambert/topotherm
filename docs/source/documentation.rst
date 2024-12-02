@@ -5,7 +5,7 @@ Activate the topotherm environment: ::
 
  conda activate topotherm
 
-Then, install the optional requirments if needed ::
+Then, install the optional requirements if needed ::
 
  pip install sphinx sphinx-rtd-theme or pip install .[docs]
 
@@ -15,6 +15,7 @@ In the topotherm root directory run: ::
 
 Then make the hmtl documentation files: :: 
 
+ cd docs
  make html
 
 The documentation is located under docs/build/html

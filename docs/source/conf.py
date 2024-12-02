@@ -10,8 +10,8 @@
 import sys 
 
 project = 'Topotherm'
-copyright = '2024, Amedeo'
-author = 'Amedeo'
+copyright = '2024, Lambert, Jerry and Ceruti, Amedeo'
+author = 'Jerry Lambert & Amedeo Ceruti'
 release = '0.2.0'
 
 # -- General configuration ---------------------------------------------------
