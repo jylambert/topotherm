@@ -67,7 +67,6 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='economic'):
 
     # modify either in code or in the config file
     settings.economics.source_c_inv = [0.]  # no investment costs for sources
-    settings.temperatures.supply = 90
 
     model_sets = tt.sets.create(mat)
     model = tt.single_timestep.model(
@@ -109,7 +108,6 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='economic'):
                                     isnot_init=True)
         f.savefig(os.path.join(outputpath, 'district_optimal.svg'),
                     bbox_inches='tight')
-
 
 if __name__ == '__main__':
     main(filepath=os.path.join(DATAPATH), outputpath=os.path.join(OUTPUTPATH),

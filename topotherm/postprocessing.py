@@ -358,11 +358,11 @@ def to_networkx_graph(matrices):
     for q in range(matrices['a_c'].shape[0]):
         x, y = matrices['position'][q, 0], matrices['position'][q, 1]
         if ges[q] == 1:
-            G.add_node(q, color='Red', type='consumer', x=x, y=y)
+            G.add_node(q, color='Red', type_='consumer', x=x, y=y)
         elif ges[q] == 0:
-            G.add_node(q, color='Green', type='internal', x=x, y=y)
+            G.add_node(q, color='Green', type_='internal', x=x, y=y)
         if ges[q] <= -1:
-            G.add_node(q, color='Orange', type='source', x=x, y=y)
+            G.add_node(q, color='Orange', type_='source', x=x, y=y)
 
     # edge_labels = dict()
     # Add the edges to the graph
@@ -370,7 +370,7 @@ def to_networkx_graph(matrices):
         s = (np.where(matrices['a_i'][:, k] == 1)[0][0],
              np.where(matrices['a_i'][:, k] == -1)[0][0])   
         G.add_edge(s[0], s[1],
-                   weight=matrices['l_i'][k],
+                   weight=matrices['l_i'][k].item(),
                    d=matrices['d_i_0'][k],
                    p=matrices['p'][k])
 
