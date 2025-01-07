@@ -150,6 +150,8 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
     nx.draw_networkx_labels(network, pos=node_pos, labels=node_id, ax=ax)#
     nx.draw_networkx_edge_labels(network, pos=node_pos, edge_labels=edges_label, ax=ax)
 
+    nx.to_numpy_array(network)
+
     fig.show()
     plt.pause(120)
     fig.savefig(os.path.join(outputpath, 'networkx.svg'), bbox_inches='tight')
