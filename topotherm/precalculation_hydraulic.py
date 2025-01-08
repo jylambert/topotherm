@@ -58,7 +58,7 @@ def max_flow_velocity(vel_init: float,
                       diameter: float,
                       roughness: float,
                       max_spec_pressure_loss: float,
-                      water_parameters: Settings.water) -> float:
+                      water_parameters: Settings) -> float:
     """Calculates the maximal flow velocity in the pipe, based on the maximal
     specific pressure loss. Inputs must be non-negative reals.
 
