@@ -3,12 +3,11 @@ calculation of the diameter and mass flow of the pipes, the elimination of
 unused pipes and nodes.
 
 This module includes the following functions:
-    * calc_diam_and_velocity: Equations for the calculation of the diameter and
-    velocity of the pipes depending on the mass flow and the power of the pipes
+    * calc_diam_and_velocity: Equations for the calculation of the diameter and velocity of the pipes depending on the mass flow and the power of the pipes
     * sts: Postprocessing for the single time step model
-    * to_networkx_graph: Export the postprocessed, optimal district as a
-    networkx graph
+    * to_networkx_graph: Export the postprocessed, optimal district as a networkx graph
     * mts: Postprocessing for the multiple time step model
+
 """
 
 from typing import Tuple

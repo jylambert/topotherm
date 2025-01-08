@@ -14,15 +14,12 @@ def create(matrices):
         matrices (dict): Dictionary with the matrices of the district heating
         network with keys:
             * a_i: Incidence matrix with rows: nodes, columns: edges.
-            * a_p: Adjacency matrix for the producers: rows: nodes, columns:
-                supply ids.
-            * a_c: Adjacency matrix for the consumers: rows: nodes, columns:
-                consumer ids.
+            * a_p: Adjacency matrix for the producers: rows: nodes, columns: supply ids.
+            * a_c: Adjacency matrix for the consumers: rows: nodes, columns: consumer ids.
 
     Returns:
         dict: sets for the optimization.
-            * connection_c_ij: Consumers connected to the network in direction
-                i -> j
+            * connection_c_ij: Consumers connected to the network in direction i -> j
             * lambda_c_ij: Binary vector with 1 where consumers are connected
                 to the network in direction i -> j
             * connection_c_ji: Consumers connected to the network in direction

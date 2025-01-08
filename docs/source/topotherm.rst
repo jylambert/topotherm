@@ -10,14 +10,6 @@ topotherm.fileio module
    :undoc-members:
    :show-inheritance:
 
-topotherm.model\_old module
----------------------------
-
-.. automodule:: topotherm.model_old
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 topotherm.multiple\_timestep module
 -----------------------------------
 
@@ -82,3 +74,42 @@ topotherm.utils module
    :undoc-members:
    :show-inheritance:
 
+tests.conftest module
+---------------------
+
+.. automodule:: tests.conftest
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+tests.hydraulics module
+-----------------------
+
+.. automodule:: tests.hydraulics
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+tests.mts module
+----------------
+
+.. automodule:: tests.mts
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+tests.sts module
+----------------
+
+.. automodule:: tests.sts
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+tests.test_setup module
+-----------------------
+
+.. automodule:: tests.test_setup
+   :members:
+   :undoc-members:
+   :show-inheritance:

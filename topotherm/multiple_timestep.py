@@ -3,9 +3,9 @@ district heating network design.
 
 The module contains the following functions:
     * annuity: Calculate the annuity factor
-    * model: Create the optimization model for the multiple time steps
-    operation
+    * model: Create the optimization model for the multiple time steps operation
 """
+
 import numpy as np
 import pyomo.environ as pyo
 

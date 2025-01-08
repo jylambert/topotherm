@@ -15,12 +15,11 @@ def district(matrices: dict,
         matrices (dict): Dictionary with the matrices of the district heating
             network with keys:
                 * a_i: Incidence matrix with rows: nodes, columns: edges.
-                * a_p: Adjacency matrix for the producers: rows: nodes, columns:
-                    supply ids.
-                * a_c: Adjacency matrix for the consumers: rows: nodes, columns:
-                    consumer ids.
+                * a_p: Adjacency matrix for the producers: rows: nodes, columns: supply ids.
+                * a_c: Adjacency matrix for the consumers: rows: nodes, columns: consumer ids.
                 * l_i: Length of edges
                 * position: x, y coordinates of the nodes in the network.
+
         diameter (list[float]): Inner diameter of the pipes, default = [0]
         isnot_init (bool): Either True or False, for plot before or after the
             optimization, default = False.

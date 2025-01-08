@@ -1,28 +1,20 @@
 Usage
 ========
 
-Generate the input incidence matrices for the district with .parquet format (see example).
-Then, modify and run the either one of the three scripts in that folder. ::
+Getting started
+------------------------
 
- bash
- cd example
+Run the examples from the command line by navigating to the root directory and running the following command. ::
+
+ cd examples/one-producer
  python run_sts.py
-
-
-Contribute
-------------
-
-Pull requests and any feedback regarding the code are very welcome. For major
-changes, please open an issue first to discuss what you would like to change.
 
 Tests 
 ------
 
 To run the tests, use pytest. ::
 
- Python
  pytest tests
-
 
 Example of results
 ----------------------
@@ -38,5 +30,3 @@ License
 ----------
 
 [MIT](https://en.wikipedia.org/wiki/MIT_License), see LICENSE file.
-
-
