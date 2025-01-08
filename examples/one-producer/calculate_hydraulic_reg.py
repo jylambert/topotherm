@@ -1,9 +1,9 @@
 import pandas as pd
 
 from topotherm import precalculation_hydraulic as precalc
-from topotherm.settings import Regression
+from topotherm.settings import Settings
 
-settings = Regression()
+settings = Settings()
 settings.temperatures.ambient = -20
 settings.temperatures.supply = 90
 settings.temperatures.return_ = 55
