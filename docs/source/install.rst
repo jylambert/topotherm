@@ -36,4 +36,4 @@ such as SCIP. Other popular open-source options are COIN-OR's cbc or HiGHS. ::
 
  conda activate topotherm
  conda install -c conda-forge pyscipopt
- 
+

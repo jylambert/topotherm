@@ -11,6 +11,7 @@ network design model which scales well into larger districts for single
 and mulitple time steps.
 
 .. toctree::   
+
    :maxdepth: 2
    :caption: Contents:
 
@@ -20,7 +21,6 @@ and mulitple time steps.
    methodology 
    documentation
    topotherm
-
 
 Indices and tables
 ==================
