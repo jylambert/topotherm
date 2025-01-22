@@ -1,6 +1,9 @@
 Documentation
 =========
 
+Compiling from Source
+---------------------
+
 Activate the topotherm environment: ::
 
  conda activate topotherm

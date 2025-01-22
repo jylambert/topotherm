@@ -10,14 +10,6 @@ topotherm.fileio module
    :undoc-members:
    :show-inheritance:
 
-topotherm.model\_old module
----------------------------
-
-.. automodule:: topotherm.model_old
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 topotherm.multiple\_timestep module
 -----------------------------------
 
@@ -81,4 +73,3 @@ topotherm.utils module
    :members:
    :undoc-members:
    :show-inheritance:
-

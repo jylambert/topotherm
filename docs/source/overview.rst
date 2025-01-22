@@ -20,9 +20,9 @@ Features
 * Greenfield optimization
 * Existing network in development.
 * Forced and economic expansion of the district heating network to consumers.
-* Supports all solvers of pyomo, but the output helper functions in utils.py
-   * might have to be rewritten (utils.py)
-* Plotting functions included
+* Supports all solvers of pyomo with the helper functions in utils.py.
+* Plotting functions included.
+
 
 Description
 ------------
@@ -42,16 +42,13 @@ How to cite
 
 > Lambert, Jerry and Ceruti, Amedeo and Spliethoff, Hartmut, Benchmark of Mixed-Integer Linear Programming Formulations for District Heating Network Design. Energy, Volume 308, 2024, 132885, ISSN 0360-5442, https://doi.org/10.1016/j.energy.2024.132885
 
-Getting Started
-----------------
-
-This repository needs a PC capable to run python and its standard libraries.
-
 Requirements
 ---------------
 
-* Anaconda, mamba or venv
+This repository needs a PC capable to run python and its standard libraries. The package can be managed with pip or conda.
 
+Contributing
+--------------
 
-
-
+Pull requests and any feedback regarding the code are very welcome. For major
+changes, please open an issue first to discuss what you would like to change.

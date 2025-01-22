@@ -43,7 +43,12 @@ An iterative calculation (using SciPy) is performed to determine the maximum vel
 .. math:: 
   
   v_{max} = \sqrt{\frac{2 \cdot \Delta p_{max} \cdot d}{f \cdot \rho}}
-After calculating the maximum speed the maximum flow rate can be calculated using (𝑚̇  = 𝜌 ⋅ 𝑣 ⋅ 𝑑² ⋅ 𝜋∕4)   
+
+After calculating the maximum speed the maximum flow rate can be calculated using:
+
+.. math.:
+  \dot{m} = \tho \cdot v \cdot d^2 \cdot \pi/4
+
 
 To model the thermal behavior of an insulated pipe buried underground the temperature difference 𝛩 between the water temperature in the pipe and the outside temperature is introduced:
 
@@ -218,7 +223,8 @@ If the direction 𝑖𝑗 is not used,the first equation ensures that the heat l
   
   \sum_{p \in \mathcal{A}_{p}} \dot{Q}_p[t] - \sum_{ij \in \mathcal{A}_{int}} \left( \dot{Q}_{\text{loss},ji}[t] + \dot{Q}_{\text{loss},ji}[t] \right) - \sum_{c \in \mathcal{A}_{c}} \dot{Q}_c[t] = 0 \qquad \forall t \in \mathcal{T}
 
-* The thermal power of the source ̇ 𝑄𝑝,𝑡 is limited by the optimal installed thermal power ̇ 𝑄inst𝑝. 
+* The thermal power of the source ̇ 𝑄𝑝,𝑡 is limited by the optimal installed thermal power ̇ 𝑄inst𝑝-.
+
 
 .. math::
   
