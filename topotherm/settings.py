@@ -104,6 +104,8 @@ class Solver(BaseModel):
         10000,
         description="Time limit for the optimization in seconds")
     log: str = Field("solver.log", description="Log file for the solver")
+    # @TODO: add more solver options, pass them to the solver flexibly
+    
 
 # @TODO: remove flh from setting and incorporate into fileio when modelling consumer specific flh
 class Economics(BaseModel):
@@ -114,7 +116,7 @@ class Economics(BaseModel):
     #    description="Full load hours of sources in h/y")
     source_price: List[float] = Field(
         default_factory=lambda: [80e-3],
-        description="Price for heat production at supply in €/kW")
+        description="Variable price for one kW of heat production at supply in €/kW")
     source_c_inv: List[float] = Field(
         default_factory=lambda: [0.],
         description="Investment costs for each source in €/kW")
@@ -124,6 +126,9 @@ class Economics(BaseModel):
     source_lifetime: List[float] = Field(
         default_factory=lambda: [20.],
         description="Lifetime for source investments in years")
+    source_max_power: List[float] = Field(
+        default_factory=lambda: [1e6],
+        description="Maximum installed power for sources in kW")
 
     pipes_c_irr: float = Field(0.08,
                                description="Interest rate for pipes")
