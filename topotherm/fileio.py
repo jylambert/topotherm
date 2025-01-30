@@ -1,24 +1,35 @@
-# -*- coding: utf-8 -*-
+"""Module for reading and writing input and output data for the optimization
+problem.
+
+The input data has to be stored in parquet files and read with the function
+`load`.
+"""
+
 import os
 
 import numpy as np
 import pandas as pd
 
 
-# @TODO: Insert into the load function consumer specific flh
-def load(path):
-    """Read the input data from the given path and return the matrices A_i,
-    A_p, A_c, Heat Demand, Length of edges, and positions.
+def load(path: str or os.PathLike) -> dict:
+    """Read the input data from the given path and return the matrices
+        * A_i: Incidence matrix for the pipes with rows: nodes, columns: edges.
+        * A_p: Adjacency matrix for the producers with rows: nodes, columns:
+            supply ids.
+        * A_c: Adjacency matrix for the consumers with rows: nodes, columns:
+            consumer ids.
+        * Q_c: Heat demand of the consumers in W.
+        * L_i: Length of edges
+        * rel_positions: x, y coordinates of the nodes in the network.
     
     Args:
         path (str or os.path): Path to the input data.
     
     Returns:
-        r (dict): Matrices stored in keys 'a_i', 'a_p', 'a_c', 'q_c', 'l_i',
-            and 'position'.
+        dict: Matrices stored in keys `a_i`, `a_p`, `a_c`, `q_c`, `l_i`,
+            and `position`.
     """
-
-    def duplicate_columns(data, minoccur=2):
+    def duplicate_columns(data: np.ndarray, minoccur: int = 2) -> list:
         """Find duplicate columns in a numpy array.
         
         Args:
@@ -27,7 +38,7 @@ def load(path):
                 duplicate.
         
         Returns:
-            result (list): List of indices of duplicate columns.
+            list: List of indices of duplicate columns.
         """
         ind = np.lexsort(data)
         diff = np.any(data.T[ind[1:]] != data.T[ind[:-1]], axis=1)
@@ -36,6 +47,7 @@ def load(path):
         result = [group for group in result if len(group) >= minoccur]
         return result
 
+    # Read the matrices as parquet files
     a_i = pd.read_parquet(os.path.join(path, 'A_i.parquet')).to_numpy()
     a_p = pd.read_parquet(os.path.join(path, 'A_p.parquet')).to_numpy()
     a_c = pd.read_parquet(os.path.join(path, 'A_c.parquet')).to_numpy()

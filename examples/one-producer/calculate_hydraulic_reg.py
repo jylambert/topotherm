@@ -24,13 +24,16 @@ print(variable_feed_temp)
 # thermal capacity regression and max power as well as part loads
 r_thermal_cap = precalc.regression_thermal_capacity(settings)
 # heat loss regression
-r_heat_loss = precalc.regression_heat_losses(settings, thermal_capacity=r_thermal_cap)
+r_heat_loss = precalc.regression_heat_losses(settings,
+                                             thermal_capacity=r_thermal_cap)
 
 # Save regression coefficients to csv file
-df_cap = pd.DataFrame({key: r_thermal_cap[key] for key in ["a", "b", "r2"]}, index=[0])
+df_cap = pd.DataFrame({key: r_thermal_cap[key] for key in ["a", "b", "r2"]},
+                      index=[0])
 print('Regression coefficients for thermal capacity:')
 print(df_cap)
 
-df_loss = pd.DataFrame({key: r_heat_loss[key] for key in ["a", "b", "r2"]}, index=[0])
+df_loss = pd.DataFrame({key: r_heat_loss[key] for key in ["a", "b", "r2"]},
+                       index=[0])
 print('Regression coefficients for heat losses:')
 print(df_loss)
