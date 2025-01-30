@@ -88,7 +88,7 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
     dfres.to_csv(os.path.join(outputpath, 'results.csv'), sep=';')
 
     # save solver results
-    dfsol = tt.utils.solver_to_df(result, model, solver=solver)
+    dfsol = tt.utils.solver_to_df(result, model)
     dfsol.to_csv(os.path.join(outputpath, 'solver.csv'), sep=';')
 
     # Postprocessing of the optimization results
