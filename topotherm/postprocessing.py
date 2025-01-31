@@ -18,6 +18,7 @@ import pyomo.environ as pyo
 from scipy.optimize import root
 import networkx as nx
 
+
 from topotherm.settings import Settings
 
 
@@ -53,7 +54,8 @@ def calc_diam_and_velocity(
 
 def sts(model: pyo.ConcreteModel,
         matrices: dict,
-        settings: Settings):
+        settings: Settings,
+        p_div=np.zeros(5)):
     """Postprocessing for the single time step model. This includes the
     calculation of the diameter and velocity of the pipes, the elimination of
     unused pipes and nodes.
@@ -62,6 +64,7 @@ def sts(model: pyo.ConcreteModel,
         model (pyo.ConcreteModel): solved pyomo model
         matrices (dict): dict containing the matrices
         settings (tt.settings.Settings): settings for the optimization
+        p_div (np.array): modified power values
     
     Returns:
         res: containing the variables and postprocessed data
@@ -79,9 +82,10 @@ def sts(model: pyo.ConcreteModel,
     q_c_opt = np.zeros([matrices['a_c'].shape[1], len(model.set_t)])
     flh_c_opt = np.zeros([matrices['a_c'].shape[1], len(model.set_t)])
 
+    if all(p_div)==0: # No need to remove consumers in second run-through 
     # Exclude non-connected consumers in Q_c, only affects the economic case
     # Check for consumers connected in direction ij
-    for d, e in model.cons:
+     for d, e in model.cons:
         if d == 'ij':
             # edge in incidence matrix where pipe exits into node n (==-1)
             a_i_idx = np.where(matrices['a_i'][:, e] == -1)
@@ -126,18 +130,33 @@ def sts(model: pyo.ConcreteModel,
         elif lambda_ji[q] == 1:
             matrices['a_i'][:, q] = matrices['a_i'][:, q] * (-1)
 
+   
     p_lin = p_ij + p_ji  # Power of the pipes
 
     # drop entries with 0 in the incidence matrix to reduce size
     valid_columns = matrices['a_i'].any(axis=0)
     valid_rows = matrices['a_i'].any(axis=1)
-
-    p_lin_opt = p_lin[valid_columns]
+    
+    if all(p_div) == 0: # use modified power values in the second run through
+     p_lin_opt = p_lin[valid_columns]
+    else:
+     p_lin_opt = p_div   
     pos_opt = matrices['position'][valid_rows, :]
     a_c_opt = matrices['a_c'][valid_rows, :]
     a_p_opt = matrices['a_p'][valid_rows, :]
     a_i_opt = matrices['a_i'][valid_rows, :][:, valid_columns]
     l_i_opt = matrices['l_i'][valid_columns]
+
+    # Generate pipe names based on incidence matrix
+    pipe_names = []
+    for col in range(a_i_opt.shape[1]):
+        start_node = np.where(a_i_opt[:, col] == 1)[0]
+        end_node = np.where(a_i_opt[:, col] == -1)[0]
+        if start_node.size > 0 and end_node.size > 0:
+            pipe_name = f"{start_node[0]}, {end_node[0]}"
+        pipe_names.append(pipe_name)
+
+    p_lin_with_names = np.column_stack((pipe_names, p_lin_opt))
 
     a_i_shape_opt = np.shape(a_i_opt)   # (rows 0, columns 1)
     d_lin = np.zeros(a_i_shape_opt[1])  # Initialize linear diameters
@@ -174,6 +193,7 @@ def sts(model: pyo.ConcreteModel,
         m_i_0=m_lin,
         position=pos_opt,
         p=p_lin_opt,
+        p_n=p_lin_with_names,
         flh_c_opt=flh_c_opt,
         flh_s_opt=flh_s_opt,
         p_s_inst_opt=p_source_inst_opt,
@@ -358,11 +378,11 @@ def to_networkx_graph(matrices):
     for q in range(matrices['a_c'].shape[0]):
         x, y = matrices['position'][q, 0], matrices['position'][q, 1]
         if ges[q] == 1:
-            G.add_node(q, color='Red', type='consumer', x=x, y=y)
+            G.add_node(q, color='Red', type_='consumer', x=x, y=y)
         elif ges[q] == 0:
-            G.add_node(q, color='Green', type='internal', x=x, y=y)
+            G.add_node(q, color='Green', type_='internal', x=x, y=y)
         if ges[q] <= -1:
-            G.add_node(q, color='Orange', type='source', x=x, y=y)
+            G.add_node(q, color='Orange', type_='source', x=x, y=y)
 
     # edge_labels = dict()
     # Add the edges to the graph
@@ -370,10 +390,13 @@ def to_networkx_graph(matrices):
         s = (np.where(matrices['a_i'][:, k] == 1)[0][0],
              np.where(matrices['a_i'][:, k] == -1)[0][0])   
         G.add_edge(s[0], s[1],
-                   weight=matrices['l_i'][k],
+                   weight=matrices['l_i'][k].item(),
                    d=matrices['d_i_0'][k],
                    p=matrices['p'][k])
+                  
+        
 
     # drop all edges with p=0
     G.remove_edges_from([(u, v) for u, v, d in G.edges(data=True) if d['p'] == 0])
     return G
+

@@ -67,8 +67,6 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
     settings = tt.settings.load(os.path.join(filepath, 'config.yaml'))
     print(settings)
     settings.economics.source_c_inv = [0.]  # no investment costs for sources
-    settings.economics.source_flh = [2500.]  # full load hours
-    settings.economics.consumers_flh = [2500.]  # full load hours
 
     model_sets = tt.sets.create(mat)
     model = tt.single_timestep.model(
@@ -118,11 +116,6 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
 
     network = tt.postprocessing.to_networkx_graph(opt_mats)
 
-    print(len(network.edges))
-    print(mat['a_i'].shape[1])
-    print(len(network.nodes))
-    print(mat['a_i'].shape[0])
-
     fig, ax = plt.subplots(figsize=(20, 20), layout='constrained')
     node_colors = []
     node_label = []
@@ -133,7 +126,7 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
 
     for node in network.nodes(data=True):
         node_colors.append(node[1]['color'])
-        node_label.append(node[1]['type'])
+        node_label.append(node[1]['type_'])
         node_id[node[0]] = str(node[0])
         node_pos.append([node[1]['x'], node[1]['y']])
 
@@ -145,13 +138,14 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
                             edgelist=network.edges, width=edges_p, ax=ax,
                             label=edges_label, alpha=0.3, edge_color='grey')
     nx.draw_networkx_nodes(network, pos=node_pos, node_color=node_colors,
-                            ax=ax, label=node)
+                            ax=ax, label=node_label)
 
     nx.draw_networkx_labels(network, pos=node_pos, labels=node_id, ax=ax)#
     nx.draw_networkx_edge_labels(network, pos=node_pos, edge_labels=edges_label, ax=ax)
+    adjancency = nx.to_numpy_array(network, weight=None)
+    print(adjancency)
 
     fig.show()
-    plt.pause(120)
     fig.savefig(os.path.join(outputpath, 'networkx.svg'), bbox_inches='tight')
     # close all figures
     plt.close('all')
