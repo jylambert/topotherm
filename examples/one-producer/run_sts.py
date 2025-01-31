@@ -92,7 +92,7 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='economic'):
     dfres.to_csv(os.path.join(outputpath, 'results.csv'), sep=';')
 
     # save solver results
-    dfsol = tt.utils.solver_to_df(result, model, solver=solver)
+    dfsol = tt.utils.solver_to_df(result, model)
     dfsol.to_csv(os.path.join(outputpath, 'solver.csv'), sep=';')
 
     opt_mats = tt.postprocessing.sts(
@@ -170,7 +170,6 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='economic'):
     fig.savefig(os.path.join(outputpath, 'networkx.svg'), bbox_inches='tight')
     # close all figures
     plt.close('all')
-
 
 if __name__ == '__main__':
     main(filepath=os.path.join(DATAPATH), outputpath=os.path.join(OUTPUTPATH),

@@ -110,6 +110,10 @@ def model(matrices: dict,
                     'domain': pyo.PositiveReals,
                     'initialize': p_max_source}
 
+    # def ub_power(model, i):
+    #     """Upper bound for the power of the source."""
+    #     return (0, economics.source_max_power[i])
+
     # Definition of thermal power for each time step and each source
     mdl.P_source = pyo.Var(
         mdl.set_n_p, mdl.set_t,
@@ -120,7 +124,9 @@ def model(matrices: dict,
     mdl.P_source_inst = pyo.Var(
         mdl.set_n_p,
         doc='Thermal capacity of the heat source',
-        **source_power)
+        domain=pyo.PositiveReals,
+        bounds=lambda m, i: (0, economics.source_max_power[i]),
+        initialize=lambda m, i: economics.source_max_power[i])
 
     # Definition of constraints
     def heat_source_inst(m, j, t):
@@ -150,6 +156,8 @@ def model(matrices: dict,
         sources = sum(- m.P_source[k, t]
                       for k in sets['a_p_in'][j])
         sink = 0
+        if len(sets['a_i_in'][j]) == 0 and len(sets['a_i_out'][j]) == 0:
+            raise ValueError("Node %s is not connected. Check preprocessing." % j)
         if optimization_mode == "forced":
             sink = sum(matrices['q_c'][k, t]
                        for k in sets['a_c_out'][j])
@@ -164,7 +172,8 @@ def model(matrices: dict,
                     * matrices['q_c'][k, t]
                     for k in sets['a_c_out'][j] if len(sets['a_i_out'][j]) > 0)
                 )
-        return node_to_pipe + pipe_to_node + sources + sink == 0
+        expr = (node_to_pipe + pipe_to_node + sources + sink == 0)
+        return expr
 
     mdl.cons_nodal_balance = pyo.Constraint(
         mdl.set_n, mdl.set_t,
@@ -276,7 +285,7 @@ def model(matrices: dict,
                 for k in mdl.set_n_p)
             for t in mdl.set_t),
         doc='OPEX Source constraint')
-    
+
     mdl.capex_pipes = pyo.Var(doc='CAPEX Pipe', domain=pyo.PositiveReals)
 
     # CAREFUL HARDCODED FOR 0 TIME STEPS

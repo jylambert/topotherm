@@ -5,7 +5,6 @@ import os
 import warnings
 
 from typing import List, Union
-from typing_extensions import Self
 
 from pydantic import BaseModel, Field, model_validator
 import yaml
@@ -13,19 +12,18 @@ import yaml
 
 class Water(BaseModel):
     """Water properties for the linearization of piping."""
-    dynamic_viscosity: float = Field(4.041e-4,
-                                     description="Dynamic viscosity at 70°C and 1 bar")
-    density: float = Field(977.76,
-                           description="Density at 70°C and 1 bar")
-    heat_capacity_cp: float = Field(4.187e3,
-                                    description="Heat capacity at constant pressure")
+    dynamic_viscosity: float = Field(
+        4.041e-4, description="Dynamic viscosity at 70°C and 1 bar")
+    density: float = Field(
+        977.76, description="Density at 70°C and 1 bar")
+    heat_capacity_cp: float = Field(
+        4.187e3, description="Heat capacity at constant pressure")
 
 
 class Ground(BaseModel):
     """Ground properties for the linearization of piping."""
     thermal_conductivity: float = Field(
-        2.4,
-        description="Thermal conductivity of the ground")
+        2.4, description="Thermal conductivity of the ground")
 
 
 class Temperatures(BaseModel):
@@ -47,6 +45,7 @@ class Piping(BaseModel):
             ],
         description="List of all inner diameters of the available pipe sizes"
     )
+
     outer_diameter: List[float] = Field(
         default_factory=lambda: [
             0.09, 0.09, 0.11, 0.11,
@@ -56,6 +55,7 @@ class Piping(BaseModel):
             ],
         description="List of all outer diameters of the available pipe sizes"
     )
+
     cost: List[float] = Field(
         default_factory=lambda: [
             390, 400, 430, 464,
@@ -65,16 +65,15 @@ class Piping(BaseModel):
             ],
         description="Cost of pipes"
     )
-    number_diameters: int = Field(15,
-                                 description="Number of discrete diameters")
+
+    number_diameters: int = Field(
+        15, description="Number of discrete diameters")
     max_pr_loss: float = Field(
-        250.,
-        description="Assumed pressure loss in Pa per meter")
-    roughness: float = Field(0.05e-3,
-                             description="Pipe roughness factor")
+        250., description="Assumed pressure loss in Pa per meter")
+    roughness: float = Field(
+        0.05e-3, description="Pipe roughness factor")
     thermal_conductivity: float = Field(
-        0.024,
-        description="Pipe thermal conductivity in W/mK")
+        0.024, description="Pipe thermal conductivity in W/mK")
 
     @model_validator(mode='after')
     def check_length(self):
@@ -101,20 +100,19 @@ class Solver(BaseModel):
     optimization model."""
     mip_gap: float = Field(1e-4, description="MIP gap")
     time_limit: int = Field(
-        10000,
-        description="Time limit for the optimization in seconds")
+        10000, description="Time limit for the optimization in seconds")
     log: str = Field("solver.log", description="Log file for the solver")
+    # @TODO: add more solver options, pass them to the solver flexibly
+    
+
 
 # @TODO: remove flh from setting and incorporate into fileio when modelling consumer specific flh
 class Economics(BaseModel):
     """Economic properties for the optimization problem. Used for the
     optimization model."""
-    #source_flh: List[float] = Field(
-    #    default_factory=lambda: [1500.],
-    #    description="Full load hours of sources in h/y")
     source_price: List[float] = Field(
         default_factory=lambda: [80e-3],
-        description="Price for heat production at supply in €/kW")
+        description="Variable price for one kW of heat production at supply in €/kW")
     source_c_inv: List[float] = Field(
         default_factory=lambda: [0.],
         description="Investment costs for each source in €/kW")
@@ -124,42 +122,16 @@ class Economics(BaseModel):
     source_lifetime: List[float] = Field(
         default_factory=lambda: [20.],
         description="Lifetime for source investments in years")
+    source_max_power: List[float] = Field(
+        default_factory=lambda: [1e6],
+        description="Maximum installed power for sources in kW")
 
-    pipes_c_irr: float = Field(0.08,
-                               description="Interest rate for pipes")
-    #consumers_flh: List[float] = Field(
-    #    default_factory=lambda: [1500.],
-    #    description="Full load hours of consumers in h/y")
-    heat_price: float = Field(120e-3,
-                              description="Selling price for heat in €/kW")
+    pipes_c_irr: float = Field(
+        0.08, description="Interest rate for pipes")
+    heat_price: float = Field(
+        120e-3, description="Selling price for heat in €/kW")
     pipes_lifetime: float = Field(
-        50.0,
-        description="Lifetime for piping investments in years")
-
-    # @model_validator(mode='after')
-    # def check_len(self) -> Self:
-    #    """Check if the length of source_flh, source_price, source_c_inv,
-    #    source_c_irr and source_lifetime is consistent with the defined
-    #    number of sources.
-    #    """
-    #    if len(self.source_flh) != len(self.source_price):
-    #        raise ValueError(
-    #            f"""Length of source_flh {len(self.source_flh)} is not equal
-    #            to source_price {len(self.source_price)}""")
-    #    if len(self.source_flh) != len(self.source_c_inv):
-    #        raise ValueError(
-    #            f"""Length of source_flh {len(self.source_flh)} is not equal
-    #            to c_inv_source {len(self.source_flh)}""")
-    #    if len(self.source_flh) != len(self.source_lifetime):
-    #        raise ValueError(
-    #            f"""Length of source_flh {len(self.source_flh)} is not equal
-    #            to source_lifetime {len(self.source_lifetime)}""")
-    #    if len(self.source_flh) != len(self.source_c_irr):
-    #        raise ValueError(
-    #            f"""Length of source_flh {len(self.source_flh)} is not equal
-    #            to source_c_irr {len(self.source_c_irr)}""")
-    #
-    #    return self
+        50.0, description="Lifetime for piping investments in years")
 
 
 class Settings(BaseModel):
@@ -178,7 +150,7 @@ class Settings(BaseModel):
                 temperatures: Temperatures = Temperatures(),
                 piping: Piping = Piping(),
                 solver: Solver = Solver(),
-                economics: Economics = Economics()):
+                economics: Economics = Economics()) -> None:
         super().__init__(water=water,
                         ground=ground,
                         temperatures=temperatures,

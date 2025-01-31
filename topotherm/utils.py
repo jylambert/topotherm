@@ -26,7 +26,7 @@ def create_dir(path: str) -> None:
     return
 
 
-def solver_to_df(result, model, solver):
+def solver_to_df(result, model):
     """Returns solver results in a dataframe. This needs to be adapted to the
     solver output (gurobi vs cplex have different naming conventions)"""
 
@@ -35,33 +35,18 @@ def solver_to_df(result, model, solver):
 
     dfslvr = pd.DataFrame()
     slvr_res = result['Solver'][0]
-    if solver == "cplex":
+    try:
         dfslvr.loc['Termination condition', 0] = slvr_res['Termination condition']
         dfslvr.loc['Termination condition', 'unit'] = '-'
-        #dfslvr.loc['Time', 0] = slvr_res['User time']
-        #dfslvr.loc['Time', 'unit'] = 's'
-        dfslvr.loc['Objective', 0] = result['Solution'][0]['Objective']['obj']['Value']
-        dfslvr.loc['Objective', 'unit'] = '-'
-    elif solver == "gurobi":
-        dfslvr.loc['Termination condition', 0] = slvr_res['Termination condition']
-        dfslvr.loc['Termination condition', 'unit'] = '-'
-        dfslvr.loc['Wall time', 0] = slvr_res['Wall time']
-        dfslvr.loc['Wall time', 'unit'] = 's'
-        #dfslvr.loc['Time', 0] = slvr_res['Time']
-        #dfslvr.loc['Time', 'unit'] = 's'
+        dfslvr.loc['User Time', 0] = slvr_res['User time']
+        dfslvr.loc['User Time', 'unit'] = 's'
+        dfslvr.loc['Wall Time', 0] = slvr_res['Wall time']
+        dfslvr.loc['Wall Time', 'unit'] = 's'
         dfslvr.loc['Objective', 0] = pyo.value(model.obj)
-        dfslvr.loc['Objective', 'unit'] = '-'
-    elif solver == "scip":
-        dfslvr.loc['Termination condition', 0] = slvr_res['Termination condition']
-        dfslvr.loc['Termination condition', 'unit'] = '-'
-        dfslvr.loc['Termination messag', 0] = slvr_res['Termination condition']
-        dfslvr.loc['Termination messag', 'unit'] = '-'
-        dfslvr.loc['Time', 0] = slvr_res['Wallclock time']
-        dfslvr.loc['Time', 'unit'] = 's'
-        dfslvr.loc['Objective', 0] = pyo.value(model.obj)
-        dfslvr.loc['Objective', 'unit'] = '-'
-    else:
-        raise NotImplementedError(f"Solver {solver} not implemented")
+        dfslvr.loc['Objective', 'unit'] = 'eur/y'
+    except KeyError:
+        print('Solver output not as expected. Check the solver output.')
+        return slvr_res
     return dfslvr
 
 
