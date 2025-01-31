@@ -145,6 +145,8 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
     adjancency = nx.to_numpy_array(network, weight=None)
     print(adjancency)
 
+    nx.to_numpy_array(network)
+
     fig.show()
     fig.savefig(os.path.join(outputpath, 'networkx.svg'), bbox_inches='tight')
     # close all figures
