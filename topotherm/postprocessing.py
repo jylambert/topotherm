@@ -12,11 +12,13 @@ This module includes the following functions:
 
 from typing import Tuple
 import os
+import os
 
 import numpy as np
 import pyomo.environ as pyo
 from scipy.optimize import root
 import networkx as nx
+import pandas as pd
 import pandas as pd
 
 from topotherm.settings import Settings
@@ -130,15 +132,20 @@ def sts(model: pyo.ConcreteModel,
         elif lambda_ji[q] == 1:
             matrices['a_i'][:, q] = matrices['a_i'][:, q] * (-1)
 
+
     p_lin = p_ij + p_ji  # Power of the pipes
 
     # drop entries with 0 in the incidence matrix to reduce size
     valid_columns = matrices['a_i'].any(axis=0)
     valid_rows = matrices['a_i'].any(axis=1)
 
+
     if all(p_div) == 0: # use modified power values in the second run through
         p_lin_opt = p_lin[valid_columns]
+        p_lin_opt = p_lin[valid_columns]
     else:
+        p_lin_opt = p_div
+
         p_lin_opt = p_div
 
     pos_opt = matrices['position'][valid_rows, :]
@@ -343,6 +350,7 @@ def to_networkx_graph(matrices: dict) -> nx.DiGraph:
 
     Args:
         matrices: a dict containing the optimal matrix as output by topotherm.postprocessing.sts
+        matrices: a dict containing the optimal matrix as output by topotherm.postprocessing.sts
         
     Returns:
         nx.DiGraph: networkx graph
@@ -352,6 +360,7 @@ def to_networkx_graph(matrices: dict) -> nx.DiGraph:
     # Add the nodes to the graph
     sums = matrices['a_c'].sum(axis=1)
     prod = matrices['a_p'].T.sum(axis=0)
+    ges = (sums + prod).flatten()
     ges = (sums + prod).flatten()
 
     positions = matrices['position']  # Avoid redundant indexing
