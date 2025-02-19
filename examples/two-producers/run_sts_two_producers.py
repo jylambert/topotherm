@@ -97,6 +97,8 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
         model=model,
         matrices=mat,
         settings=settings)
+    
+    node_data, edge_data = tt.postprocessing.to_dataframe(opt_mats, mat)
 
     # iterate over opt_mats and save each matrix as parquet file
     for key, value in opt_mats.items():
@@ -117,14 +119,14 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
     network_diversity=tt.diversity.get_diversity_factor(network)
 
     # calculate updated power values
-    p_div=tt.diversity.compare(opt_mats["p_n"],network_diversity)
+    p_div=tt.diversity.compare(edge_data[['Name', 'power']],network_diversity)
 
     # run postprocessing again with new power values 
     opt_mats_div = tt.postprocessing.sts(
         model=model,
         matrices=mat,
         settings=settings,
-        p_div=p_div)
+        p_div=p_div['revised power'].values)
     
     # create new networkx object with updated values
     diversity_graph = tt.postprocessing.to_networkx_graph(opt_mats_div)

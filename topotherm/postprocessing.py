@@ -11,12 +11,13 @@ This module includes the following functions:
 """
 
 from typing import Tuple
+import os
 
 import numpy as np
 import pyomo.environ as pyo
 from scipy.optimize import root
 import networkx as nx
-
+import pandas as pd
 
 from topotherm.settings import Settings
 
@@ -129,33 +130,22 @@ def sts(model: pyo.ConcreteModel,
         elif lambda_ji[q] == 1:
             matrices['a_i'][:, q] = matrices['a_i'][:, q] * (-1)
 
-   
     p_lin = p_ij + p_ji  # Power of the pipes
 
     # drop entries with 0 in the incidence matrix to reduce size
     valid_columns = matrices['a_i'].any(axis=0)
     valid_rows = matrices['a_i'].any(axis=1)
-    
+
     if all(p_div) == 0: # use modified power values in the second run through
-     p_lin_opt = p_lin[valid_columns]
+        p_lin_opt = p_lin[valid_columns]
     else:
-     p_lin_opt = p_div   
+        p_lin_opt = p_div
+
     pos_opt = matrices['position'][valid_rows, :]
     a_c_opt = matrices['a_c'][valid_rows, :]
     a_p_opt = matrices['a_p'][valid_rows, :]
     a_i_opt = matrices['a_i'][valid_rows, :][:, valid_columns]
     l_i_opt = matrices['l_i'][valid_columns]
-
-    # Generate pipe names based on incidence matrix
-    pipe_names = []
-    for col in range(a_i_opt.shape[1]):
-        start_node = np.where(a_i_opt[:, col] == 1)[0]
-        end_node = np.where(a_i_opt[:, col] == -1)[0]
-        if start_node.size > 0 and end_node.size > 0:
-            pipe_name = f"{start_node[0]}, {end_node[0]}"
-        pipe_names.append(pipe_name)
-
-    p_lin_with_names = np.column_stack((pipe_names, p_lin_opt))
 
     a_i_shape_opt = np.shape(a_i_opt)   # (rows 0, columns 1)
     d_lin = np.zeros(a_i_shape_opt[1])  # Initialize linear diameters
@@ -192,7 +182,6 @@ def sts(model: pyo.ConcreteModel,
         m_i_0=m_lin,
         position=pos_opt,
         p=p_lin_opt,
-        p_n=p_lin_with_names,
         flh_c_opt=flh_c_opt,
         flh_s_opt=flh_s_opt,
         p_s_inst_opt=p_source_inst_opt,
@@ -353,16 +342,7 @@ def to_networkx_graph(matrices: dict) -> nx.DiGraph:
     diameter and power.
 
     Args:
-        matrices: a dict containing the following keys:
-        - a_i (internal matrix)
-        - a_p (producer matrix)
-        - a_c (consumer matrix)
-        - q_c (heat demand of the connected consumers)
-        - l_i (of the pipes)
-        - position (positions of the nodes)
-        - d_i_0 (diameters of the optimal pipes)
-        - m_i_0 (mass flow of the optimal pipes)
-        - p (Power of the optimal pipes)
+        matrices: a dict containing the optimal matrix as output by topotherm.postprocessing.sts
         
     Returns:
         nx.DiGraph: networkx graph
@@ -372,32 +352,90 @@ def to_networkx_graph(matrices: dict) -> nx.DiGraph:
     # Add the nodes to the graph
     sums = matrices['a_c'].sum(axis=1)
     prod = matrices['a_p'].T.sum(axis=0)
-    ges = sums + prod
+    ges = (sums + prod).flatten()
 
-    ges = np.array(ges).flatten()
+    positions = matrices['position']  # Avoid redundant indexing
+    colors = np.where(ges == 1, 'Red', np.where(ges == 0, 'Green', np.where(ges <= -1, 'Orange', None)))
+    types = np.where(ges == 1, 'consumer', np.where(ges == 0, 'internal', np.where(ges <= -1, 'source', None)))
 
-    for q in range(matrices['a_c'].shape[0]):
-        x, y = matrices['position'][q, 0], matrices['position'][q, 1]
-        if ges[q] == 1:
-            G.add_node(q, color='Red', type_='consumer', x=x, y=y)
-        elif ges[q] == 0:
-            G.add_node(q, color='Green', type_='internal', x=x, y=y)
-        if ges[q] <= -1:
-            G.add_node(q, color='Orange', type_='source', x=x, y=y)
+    for q in range(len(ges)):
+        if colors[q]:  # Skip nodes that don't match any category
+            G.add_node(q, color=colors[q], type_=types[q], x=positions[q, 0], y=positions[q, 1])
 
-    # edge_labels = dict()
-    # Add the edges to the graph
-    for k in range(matrices['a_i'].shape[1]):
-        s = (np.where(matrices['a_i'][:, k] == 1)[0][0],
-             np.where(matrices['a_i'][:, k] == -1)[0][0])   
-        G.add_edge(s[0], s[1],
-                   weight=matrices['l_i'][k].item(),  # important: float
-                   d=matrices['d_i_0'][k],
-                   p=matrices['p'][k])
-                  
-        
+    sources = np.argmax(matrices['a_i'] == 1, axis=0)  # First occurrence of 1 in each column
+    targets = np.argmax(matrices['a_i'] == -1, axis=0)  # First occurrence of -1 in each column
 
-    # drop all edges with p=0
-    G.remove_edges_from([(u, v) for u, v, d in G.edges(data=True) if d['p'] == 0])
+    edges = np.column_stack((sources, targets, matrices['l_i'].flatten(), matrices['d_i_0'].flatten(), matrices['p'].flatten()))
+
+    for u, v, weight, d, p in edges:
+        if p != 0:  # Directly avoid edges with p=0
+            G.add_edge(u.astype(int), v.astype(int), weight=weight, d=d, p=p)
+
     return G
 
+def to_dataframe(matrices_optimal: dict,
+                 matrices_init: dict) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """Export the postprocessed, optimal district as a pandas DataFrame.
+    Includes the nodes and edges of the district, their length, installed
+    diameter and power.
+
+    Args:
+        matrices_optimal: solved and cleaned matrices as output by topotherm.postprocessing.sts
+        matrices_init: original matrices as output by topotherm.fileio.load
+    
+    Returns:
+        (pd.DataFrame, pd.DataFrame): pandas DataFrames of nodes and edges respectively
+    """
+    # Create a DataFrame for the nodes
+    nodes = pd.DataFrame(index=range(matrices_optimal['a_i'].shape[0]),
+                         columns=['type_', 'x', 'y'])
+    # Calculate the sum of matrices
+    sum_ac = matrices_optimal['a_c'].sum(axis=1)
+    sum_ap = matrices_optimal['a_p'].T.sum(axis=0)
+    total_sum = np.array(sum_ac + sum_ap).flatten()
+
+    # Assign types based on the sum
+    nodes['type_'] = ['consumer' if x == 1 else 'internal' if x == 0 else 'source' for x in total_sum]
+    nodes['x'] = matrices_optimal['position'][:, 0]
+    nodes['y'] = matrices_optimal['position'][:, 1]
+    nodes['demand'] = pd.NA
+    nodes['total_installed_power'] = pd.NA
+
+    # TODO: inherit in some way the consumer and producer id so that you don't have to search for it
+    # in the original matrices, reducing the need to import them.
+    sources_nodes = nodes.type_ == 'source'
+    positions_sources = nodes.loc[sources_nodes, ['x', 'y']].values
+    original_source_nodes = np.all(matrices_init['position'] == positions_sources, axis=1).squeeze()
+    original_source_prods = np.where(matrices_init['a_p'][original_source_nodes, :] == -1)[1]
+    # assume that we want to write out the total sum of installed power for each source
+    # inherent limitation of the dataframe structure, only one dimensional data possible
+    nodes.loc[sources_nodes, 'total_installed_power'] = matrices_optimal['p_s_inst_opt'][original_source_prods].sum()
+
+    consumer_nodes = nodes[nodes.type_ == 'consumer'].index
+    positions_consumers = nodes.loc[consumer_nodes, ['x', 'y']].values
+    matches =  np.all(matrices_init['position'][:, None, :] == positions_consumers[None, :, :], axis=2)
+    original_consumer_nodes = np.where(matches)[0]  
+    original_consumer_edges = np.where(matrices_init['a_c'][original_consumer_nodes, :] == 1)[1]
+    nodes.loc[consumer_nodes, 'demand'] = matrices_init['q_c'][original_consumer_edges].squeeze()
+    if abs(nodes.demand.sum() - matrices_optimal['q_c'].sum()) > 1e-3:
+        raise ValueError(f'Error in the incidence matrix! Demand {nodes.demand.sum() * 1e3} != total demand {matrices_optimal["q_c"].sum()}')
+
+    # Create a DataFrame for the edges
+    edges = pd.DataFrame()
+    edges['start_node'] = np.argmax(matrices_optimal['a_i'] == 1, axis=0)
+    edges['end_node'] = np.argmax(matrices_optimal['a_i'] == -1, axis=0)
+    edges['Name'] = edges['start_node'].astype(str) + ', ' + edges['end_node'].astype(str)
+    edges['x_start'] = matrices_optimal['position'][edges['start_node'], 0]
+    edges['y_start'] = matrices_optimal['position'][edges['start_node'], 1]
+    edges['x_end'] = matrices_optimal['position'][edges['end_node'], 0]
+    edges['y_end'] = matrices_optimal['position'][edges['end_node'], 1]
+    edges['length'] = matrices_optimal['l_i']
+    edges['diameter'] = matrices_optimal['d_i_0']
+    edges['power'] = matrices_optimal['p']
+    edges.loc[:, 'to_consumer'] = edges['end_node'].map(nodes['type_']).eq('consumer')
+    edges.loc[:, 'from_consumer'] = edges['start_node'].map(nodes['type_']).eq('consumer')
+    if edges.to_consumer.sum() + edges.from_consumer.sum() != len(matrices_optimal['q_c']):
+        raise ValueError(f'Error in the incidence matrix! To consumer {edges.to_consumer.sum()} + from_consumer {edges.from_consumer.sum()} != total consumers {len(matrices_optimal["q_c"])}')
+    if edges.from_consumer.sum() > 0:
+        raise ValueError(f'Error in the incidence matrix! From consumer {edges.from_consumer.sum()} is not 0 for single time steps')
+    return nodes, edges

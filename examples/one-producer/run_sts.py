@@ -100,8 +100,8 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='economic'):
         matrices=mat,
         settings=settings)
     
+    node_data, edge_data = tt.postprocessing.to_dataframe(opt_mats, mat)
 
-    
     # iterate over opt_mats and save each matrix as parquet file
     for key, value in opt_mats.items():
         pd.DataFrame(value).to_parquet(os.path.join(outputpath, key + '.parquet'))
@@ -121,14 +121,14 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='economic'):
     network_diversity=tt.diversity.get_diversity_factor(network)
 
     # calculate updated power values
-    p_div=tt.diversity.compare(opt_mats["p_n"],network_diversity)
+    p_div=tt.diversity.compare(edge_data[['Name', 'power']],network_diversity)
 
     # run postprocessing again with new power values 
     opt_mats_div = tt.postprocessing.sts(
         model=model,
         matrices=mat,
         settings=settings,
-        p_div=p_div)
+        p_div=p_div['revised power'].values)
     
     # create new networkx object with updated values
     diversity_graph = tt.postprocessing.to_networkx_graph(opt_mats_div)
@@ -150,10 +150,10 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='economic'):
         node_label.append(node[1]['type_'])
         node_id[node[0]] = str(node[0])
         node_pos.append([node[1]['x'], node[1]['y']])
-
+   
     for edge in network.edges(data=True):
         edges_p.append(edge[2]['p'])
-        edges_label[(edge[0], edge[1])] = str(edge[0]) + ' -> ' + str(edge[1])
+        edges_label[(int(edge[0])), int(edge[1])] = str(edge[0]) + ' -> ' + str(edge[1])
 
     nx.draw_networkx_edges(network, pos=node_pos,
                             edgelist=network.edges, width=edges_p, ax=ax,
