@@ -104,9 +104,9 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
     r_thermal_cap = regression_thermal_capacity(settings)
     r_heat_loss = regression_heat_losses(settings, r_thermal_cap)
 
-    min_share = 0.1
+    min_share = 0.8
     max_share = 1
-    number_of_iterations = 10
+    number_of_iterations = 2
 
     share_q_c_tot = np.linspace(min_share, max_share, number_of_iterations)
     iterations = range(number_of_iterations)

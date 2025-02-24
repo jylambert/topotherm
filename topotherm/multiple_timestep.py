@@ -129,19 +129,19 @@ def model(matrices: dict,
         doc='Binary building decision'
     )
 
-    # Thermal power of the source
-    source_power = {'domain': pyo.PositiveReals,
-                    'initialize': [economics.source_max_power[i] for i in mdl.set_n_p]}
     mdl.P_source = pyo.Var(
         mdl.set_n_p, mdl.set_t,
-        doc='Thermal power of the source in kW',
-        bounds=[(0, economics.source_max_power[i]) for i in mdl.set_n_p],
-        **source_power)
+        doc='Thermal power of the source',
+        domain=pyo.PositiveReals,
+        bounds=lambda m, i, t: (0, economics.source_max_power[i]),
+        initialize=lambda m, i, t: economics.source_max_power[i])
+
     mdl.P_source_inst = pyo.Var(
         mdl.set_n_p,
-        doc='Thermal capacity of the heat source in kW',
-        bounds=[(economics.source_min_power[i], economics.source_max_power[i]) for i in mdl.set_n_p],
-        **source_power)
+        doc='Thermal capacity of the heat source',
+        domain=pyo.PositiveReals,
+        bounds=lambda m, i: (economics.source_min_power[i], economics.source_max_power[i]),
+        initialize=lambda m, i: economics.source_max_power[i])
 
     def heat_source_inst(m, j, t):
         """Never exceed the installed capacity of the heat source."""

@@ -107,20 +107,13 @@ def model(matrices: dict,
         domain=pyo.Binary,
         doc='Binary direction decisions')
 
-    # Bounds for source variables
-    source_power = {'bounds': [(0, economics.source_max_power[i]) for i in mdl.set_n_p],
-                    'domain': pyo.PositiveReals,
-                    'initialize': [economics.source_max_power[i] for i in mdl.set_n_p]}
-
-    # def ub_power(model, i):
-    #     """Upper bound for the power of the source."""
-    #     return (0, economics.source_max_power[i])
-
     # Definition of thermal power for each time step and each source
     mdl.P_source = pyo.Var(
         mdl.set_n_p, mdl.set_t,
         doc='Thermal power of the source',
-        **source_power)
+        domain=pyo.PositiveReals,
+        bounds=lambda m, i, t: (0, economics.source_max_power[i]),
+        initialize=lambda m, i, t: economics.source_max_power[i])
 
     # Definition of thermal capacity of each source
     mdl.P_source_inst = pyo.Var(
