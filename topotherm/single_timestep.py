@@ -6,6 +6,7 @@ The module contains the following functions:
     * model: Create the optimization model for the single time step operation
 """
 
+import numpy as np
 import pyomo.environ as pyo
 
 from topotherm.settings import Economics
@@ -53,7 +54,7 @@ def model(matrices: dict,
     """
 
     # Check if the optimization mode is implemented
-    if optimization_mode not in ['economic', 'forced']:
+    if optimization_mode not in ['economic', 'forced', 'sensitivity']:
         raise NotImplementedError(
             "Optimization mode %s not implemented" % optimization_mode)
 
@@ -161,7 +162,7 @@ def model(matrices: dict,
         if optimization_mode == "forced":
             sink = sum(matrices['q_c'][k, t]
                        for k in sets['a_c_out'][j])
-        elif optimization_mode == "economic":
+        elif (optimization_mode == "economic") | (optimization_mode == "sensitivity"):
             sink = (
                 sum(
                     (m.lambda_['ij', sets['a_i_in'][j][0]])
@@ -216,7 +217,7 @@ def model(matrices: dict,
     def connection_to_consumer_fcd(m, d, j):
         return m.lambda_[d, j] == sets[f'lambda_c_{d}'][j]
 
-    if optimization_mode == "economic":
+    if (optimization_mode == "economic") | (optimization_mode == "sensitivity"):
         msg_ = """Constraint if houses have their own connection-pipe
             and set the direction (ij)"""
         mdl.cons_connection_to_consumer = pyo.Constraint(
@@ -255,6 +256,23 @@ def model(matrices: dict,
         mdl.cons_total_energy_cons = pyo.Constraint(
             mdl.set_t, rule=total_energy_cons,
             doc='Total energy conservation')
+
+    if optimization_mode == "sensitivity":
+        def total_energy_qc(m):
+            return sum(
+                sum(m.lambda_['ij', j] * matrices['q_c'][
+                    np.where(matrices['a_c'][np.where(matrices['a_i'][:, j] == -1)[0], :][0] == 1)[0], t]
+                    * matrices['flh_consumer'][
+                        np.where(matrices['a_c'][np.where(matrices['a_i'][:, j] == -1)[0], :][0] == 1)[0], t] for j in
+                    mdl.set_con_ij)
+                + sum(m.lambda_['ji', j] * matrices['q_c'][
+                    np.where(matrices['a_c'][np.where(matrices['a_i'][:, j] == 1)[0], :][0] == 1)[0], t]
+                      * matrices['flh_consumer'][
+                          np.where(matrices['a_c'][np.where(matrices['a_i'][:, j] == 1)[0], :][0] == 1)[0], t] for j in
+                      mdl.set_con_ji)
+                for t in mdl.set_t) >= sets['q_c_tot']
+
+        mdl.total_energy_qc = pyo.Constraint(rule=total_energy_qc)
 
     mdl.revenue = pyo.Var(doc='Revenue', domain=pyo.NegativeReals)
     mdl.revenue_constr = pyo.Constraint(
