@@ -19,10 +19,8 @@ from topotherm.precalculation_hydraulic import regression_thermal_capacity, regr
 
 DATAPATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data_sts')
 OUTPUTPATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                          'results', 'sts_forced')
+                          'results', 'sts_sensitivity')
 
-# regression coefficients for thermal capacity and heat losses
-REGRESSION = 'regression.csv'
 PLOTS = True  # plot districts before and after optimization
 SOLVER = 'gurobi'  # 'gurobi', 'cplex' or 'scip'
 
@@ -83,15 +81,15 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
                                        inv_air, inv_river,
                                        inv_river, inv_air)
 
-    settings.economics.source_lifetime = (20)#, 20, 20, 20, 20, 20, 20, 20)
-    settings.economics.source_c_irr = (0.08)#, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08)
+    settings.economics.source_lifetime = [20]#, 20, 20, 20, 20, 20, 20, 20)
+    settings.economics.source_c_irr = [0.08]#, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08)
 
     settings.economics.pipes_lifetime = 20
     settings.economics.pipes_c_irr = 0.08
 
     settings.economics.heat_price = 0
 
-    settings.economics.source_max_power = (100000)#, 20000,
+    settings.economics.source_max_power = [100000]#, 20000,
                                            #100000, 1500,
                                            #20000, 100000,
                                            #100000, 20000)
@@ -145,7 +143,7 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
         dfres.to_csv(os.path.join(outputpath_sens, 'results.csv'), sep=';')
 
         # save solver results
-        dfsol = tt.utils.solver_to_df(result, model, solver=solver)
+        dfsol = tt.utils.solver_to_df(result, model)
         dfsol.to_csv(os.path.join(outputpath_sens, 'solver.csv'), sep=';')
 
         opt_mats = tt.postprocessing.sts(
@@ -165,5 +163,5 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
 
 if __name__ == '__main__':
     main(filepath=os.path.join(DATAPATH), outputpath=os.path.join(OUTPUTPATH),
-         plots=PLOTS, solver=SOLVER, mode='economic')
+         plots=PLOTS, solver=SOLVER, mode='sensitivity')
     print(f'Finished {OUTPUTPATH}')

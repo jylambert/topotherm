@@ -64,9 +64,6 @@ def model(matrices: dict,
     # Big-M-Constraint for pipes
     p_max_pipe_const = float(regression_inst['power_flow_max_kW'].max())
 
-    # Big-M-Constraint for source
-    p_max_source = matrices['q_c'].sum() * 2
-
     # Define index sets
     mdl.set_n_i = pyo.Set(initialize=range(sets['a_i_shape'][1]),
                             doc='Number of pipe connections supply/return line')
@@ -82,6 +79,10 @@ def model(matrices: dict,
                         doc='Set of pipe directions.')
     mdl.flow = pyo.Set(initialize=['in', 'out'],
                          doc='Flow direction in the pipe')
+    mdl.set_con_ij = pyo.Set(initialize=sets['connection_c_ij'],
+                               doc='Pipes with consumer in direction ij')
+    mdl.set_con_ji = pyo.Set(initialize=sets['connection_c_ji'],
+                               doc='Pipes with consumer in direction ji')
 
     # Define the combined set for pipes with consumers in both directions
     mdl.cons = pyo.Set(
@@ -107,9 +108,9 @@ def model(matrices: dict,
         doc='Binary direction decisions')
 
     # Bounds for source variables
-    source_power = {'bounds': (0, p_max_source),
+    source_power = {'bounds': [(0, economics.source_max_power[i]) for i in mdl.set_n_p],
                     'domain': pyo.PositiveReals,
-                    'initialize': p_max_source}
+                    'initialize': [economics.source_max_power[i] for i in mdl.set_n_p]}
 
     # def ub_power(model, i):
     #     """Upper bound for the power of the source."""
@@ -126,7 +127,7 @@ def model(matrices: dict,
         mdl.set_n_p,
         doc='Thermal capacity of the heat source',
         domain=pyo.PositiveReals,
-        bounds=lambda m, i: (0, economics.source_max_power[i]),
+        bounds=lambda m, i: (economics.source_min_power[i], economics.source_max_power[i]),
         initialize=lambda m, i: economics.source_max_power[i])
 
     # Definition of constraints

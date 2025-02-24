@@ -271,6 +271,7 @@ def mts(model: pyo.ConcreteModel,
     p_lin_opt = p_lin[valid_columns]
     p_ij_opt = p_ij[valid_columns, :]
     p_ji_opt = p_ji[valid_columns, :]
+    lambda_b_opt = lambda_b[valid_columns, :]
     lambda_ij_opt = lambda_ij[valid_columns, :]
     lambda_ji_opt = lambda_ji[valid_columns, :]
     pos_opt = matrices['position'][valid_rows, :]
@@ -310,6 +311,8 @@ def mts(model: pyo.ConcreteModel,
         a_c=a_c_opt,
         q_c=q_c_opt,
         l_i=l_i_opt,
+        lambda_b_orig=lambda_b,
+        lambda_b_opt=lambda_b_opt,
         lambda_ij_opt=lambda_ij_opt,
         lambda_ji_opt=lambda_ji_opt,
         d_i_0=d_lin,
