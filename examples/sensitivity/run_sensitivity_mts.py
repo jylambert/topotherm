@@ -61,7 +61,7 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
     settings.temperatures.return_ = 40
     settings.temperatures.ambient = -20
 
-    settings.solver.mip_gap = 2e-2
+    settings.solver.mip_gap = 1e-2
     settings.solver.time_limit = 10000
 
     elec_price_low = 0.080
@@ -104,9 +104,9 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
     r_thermal_cap = regression_thermal_capacity(settings)
     r_heat_loss = regression_heat_losses(settings, r_thermal_cap)
 
-    min_share = 0.8
+    min_share = 0.1
     max_share = 1
-    number_of_iterations = 2
+    number_of_iterations = 10
 
     share_q_c_tot = np.linspace(min_share, max_share, number_of_iterations)
     iterations = range(number_of_iterations)
@@ -123,8 +123,17 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
 
         model_sets = tt.sets.create(mat)
         model_sets['q_c_tot'] = (mat['flh_consumer'] * mat['q_c']).sum() * share_q_c_tot[run]
+        model_sets['lambda_b_previous'] = np.zeros(model_sets['a_i_shape'][1])
 
+        # The following section is only needed, if the built-up of the district should be consecutive and
+        # dependent of one another. In mts file comment in also the
+        if run != 0:
+            variant_previous = 'district_sensitivity_' + str(run-1)
+            lambda_built_previous = pd.read_parquet(os.path.join(outputpath, variant_previous, 'lambda_b_orig.parquet'))
+            model_sets['lambda_b_previous'] = lambda_built_previous.to_numpy().reshape(-1)
+        #
 
+        # Create outptuh directory
         outputpath_sens = os.path.join(outputpath, variant)
         tt.utils.create_dir(outputpath_sens)
 

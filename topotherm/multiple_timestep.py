@@ -99,6 +99,12 @@ def model(matrices: dict,
         doc='Assign to each consumer the corresponding pipe'
     )
 
+    mdl.consumer_edges_only = pyo.Set(
+        initialize=[np.where((matrices['a_i'][np.where(matrices['a_c'][:, i] == 1)[0].item(), :] == 1) |
+                                 (matrices['a_i'][np.where(matrices['a_c'][:, i] == 1)[0].item(), :] == -1)
+                                 )[0].item() for i in range(sets['a_c_shape'][1])]
+    )
+
     # Define variables
     pipe_power = {'bounds': (0, p_max_pipe_const),
                   'domain': pyo.NonNegativeReals,
@@ -251,6 +257,7 @@ def model(matrices: dict,
             mdl.cons, mdl.set_t,
             rule=connection_to_consumer_eco,
             doc=msg_)
+
     elif optimization_mode == "forced":
         msg_ = """Constraint if houses have their own connection-pipe
             and set the direction (ij or ji)"""
@@ -278,11 +285,16 @@ def model(matrices: dict,
 
     if optimization_mode == "sensitivity":
         def total_energy_qc(m):
-            return sum(sum(mdl.lambda_b[j] * matrices['flh_consumer'][k, t]
-                       * matrices['q_c'][k, t] for k, j in mdl.consumer_edges)
-                       for t in mdl.set_t) >= sets['q_c_tot']
+            return sum(sum(m.lambda_b[j] * matrices['flh_consumer'][k, t]
+                       * matrices['q_c'][k, t] for k, j in m.consumer_edges)
+                       for t in m.set_t) >= sets['q_c_tot']
 
         mdl.total_energy_qc = pyo.Constraint(rule=total_energy_qc)
+
+        def consecutive_optimizations(m, j):
+            return m.lambda_b[j] >= sets['lambda_b_previous'][j]
+        mdl.consecutive_opt = pyo.Constraint(mdl.consumer_edges_only,
+                                             rule=consecutive_optimizations)
 
     mdl.revenue = pyo.Var(doc='Revenue', domain=pyo.NegativeReals)
     mdl.revenue_constr = pyo.Constraint(
