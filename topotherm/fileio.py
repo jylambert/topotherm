@@ -55,7 +55,7 @@ def load(path: str or os.PathLike) -> dict:
         os.path.join(path, 'L_i.parquet')).to_numpy().astype(float)
     q_c = (pd.read_parquet(
         os.path.join(path, 'Q_c.parquet')
-        ).to_numpy().astype(float)) / 1000  # Data is in W, optimization in kW
+        ).to_numpy().astype(float))  # Data is in W, optimization in kW
     flh_consumer = pd.read_parquet(os.path.join(path, 'flh_consumer.parquet')).to_numpy()
     flh_source = pd.read_parquet(os.path.join(path, 'flh_source.parquet')).to_numpy()
     position = pd.read_parquet(
