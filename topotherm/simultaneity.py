@@ -7,15 +7,17 @@ import pandas as pd
 np.set_printoptions(legacy='1.25')
 
 
-def get_diversity_factor(graph: nx.DiGraph) -> np.array:
+def calculate(graph: nx.DiGraph) -> nx.DiGraph:
     """
-    Calculate the diversity factor of a given graph of the optimal district heating network.
+    Calculate the simultaneity factor of a given graph of the optimal district
+    heating network.
 
     Args:
         graph: A NetworkX graph object representing the network.
 
     Returns:
-        np.array: A Numpy array containing the diversity factors of the graph.
+         nx.DiGraph: A graph containing the simultaneity factors of the graph
+         in the attribute 'simultaneity'.
     """
     # Compute the Laplacian matrix for the graph
     laplace = compute_laplacian(graph)
@@ -27,15 +29,15 @@ def get_diversity_factor(graph: nx.DiGraph) -> np.array:
     laplace = resolve_multi_connections(G_copy, laplace)
 
     # Identify and mark end consumers in the graph
-    graph = get_end_consumers(graph, laplace)
+    graph = get_n_end_consumers(graph, laplace)
 
-    # Calculate the final diversity factor based on the processed graph
-    graph_diversity = calculate_diversity_factor(graph)
+    # Calculate the final simultaneity factor based on the processed graph
+    graph_simultaneity = calculate_simultaneity_factor(graph)
 
-    return graph_diversity
+    return graph_simultaneity
 
 
-def compute_laplacian(graph: nx.DiGraph) -> pd.DataFrame:
+def compute_laplacian(graph: nx.DiGraph) -> np.array:
     """
     Compute the Laplacian matrix of a given graph.
 
@@ -52,14 +54,13 @@ def compute_laplacian(graph: nx.DiGraph) -> pd.DataFrame:
     adjacency_matrix = nx.to_numpy_array(graph, nodelist=graph.nodes)
 
     # Compute the Laplacian matrix (D - A)
-    laplace = pd.DataFrame(out_degree - adjacency_matrix, 
-                           columns=graph.nodes, 
-                           index=graph.nodes)
+    laplace = out_degree - adjacency_matrix
+
     return laplace
 
 
 def resolve_loops(graph: nx.DiGraph,
-                  laplace: pd.DataFrame) -> tuple:
+                  laplace: pd.DataFrame) -> tuple[nx.DiGraph, np.array]:
     """
     Resolve loops in the graph and update the Laplacian matrix accordingly.
 
@@ -82,10 +83,8 @@ def resolve_loops(graph: nx.DiGraph,
         Returns:
             list: A list of nodes with the specified attribute value.
         """
-        return [
-            node for node, data in graph.nodes(data=True)
-            if data.get(attribute) == value
-        ]
+        return [node for node, data in graph.nodes(data=True)
+                if data.get(attribute) == value]
 
     # Find nodes labeled as 'Heat Source'
     heat_source_nodes = find_nodes_by_attribute(graph, 'label', 'Heat Source')
@@ -98,12 +97,12 @@ def resolve_loops(graph: nx.DiGraph,
             if nx.has_path(graph, node, loop[0]) and nx.has_path(graph, node, loop[-1]):
                 if nx.shortest_path_length(graph, 1, loop[-1]) > nx.shortest_path_length(graph, 1, loop[0]):
                     # Update Laplacian matrix and remove edge from the graph
-                    laplace.loc[loop[-1], loop[0]] = 0
-                    laplace.loc[loop[-1], loop[-1]] -= 1
+                    laplace[loop[-1], loop[0]] = 0
+                    laplace[loop[-1], loop[-1]] -= 1
                     G_copy.remove_edge(loop[-1], loop[0])
                 else:
-                    laplace.loc[loop[0], loop[-1]] = 0
-                    laplace.loc[loop[0], loop[0]] -= 1
+                    laplace[loop[0], loop[-1]] = 0
+                    laplace[loop[0], loop[0]] -= 1
                     G_copy.remove_edge(loop[0], loop[-1])
                 laplace_updated = True
             if laplace_updated:
@@ -112,7 +111,8 @@ def resolve_loops(graph: nx.DiGraph,
     return G_copy, laplace
 
 
-def resolve_multi_connections(G_copy, laplace):
+def resolve_multi_connections(G_copy: nx.DiGraph, 
+                              laplace: np.array) -> np.array:
     """
     Resolves multiple incoming connections for nodes in a directed graph by propagating 'connections' attributes 
     and updating the Laplacian matrix accordingly.
@@ -142,13 +142,13 @@ def resolve_multi_connections(G_copy, laplace):
     while has_connection_attribute(G_copy):
         updates_occurred = False  # Flag
         print(G_copy.nodes.data())
-        
+
         # Process nodes in normal order
         for node in G_copy.nodes:
             connection_attrs = {
                 key: value for key, value in G_copy.nodes[node].items() if 'connections' in key
             }
-            
+
             for key in connection_attrs.keys():
                 # Count successors with the same connections attribute
                 count_of_successors = sum(
@@ -179,13 +179,12 @@ def resolve_multi_connections(G_copy, laplace):
             }
         for key, value in connection_attrs.items():
             if value > 1:
-                laplace.loc[node, node] -= (value - 1)
+                laplace[node, node] -= (value - 1)
 
     return laplace
 
 
-
-def get_end_consumers(graph, laplace):
+def get_n_end_consumers(graph: nx.DiGraph, laplace:np.array) -> nx.DiGraph:
     """
     Identify and mark end consumers in the graph based on the Laplacian matrix.
 
@@ -194,75 +193,104 @@ def get_end_consumers(graph, laplace):
         laplace: The Laplacian matrix of the graph.
 
     Returns:
-        The graph with 'end consumers' attributes added to nodes.
+        The graph with 'n_consumers' attributes added to nodes.
     """
-    while not laplace.empty:
-        for i in laplace.index.tolist():
-            laplace_single_row = laplace.loc[i]
-            connected_nodes_no = laplace_single_row[i]
+    while laplace.size > 0:
+        for i in range(laplace.shape[0]):
+            # Skip if the node has already been processed (size is reduced)
+            if i >= laplace.shape[0]:
+                continue
 
-            laplace_connected_nodes = laplace_single_row.drop(i)
+            connected_nodes_no = laplace[i, i]
+
+            laplace_connected_nodes = np.delete(laplace[i], i)
             is_isolated = not (laplace_connected_nodes != 0).any()
 
             if is_isolated:
-                graph.nodes[i]['end consumers'] = connected_nodes_no
+                graph.nodes[i]['n_consumers'] = connected_nodes_no
                 if connected_nodes_no != 0:
-                    laplace_single_column = laplace[i]
-                    for j in laplace_single_column.index.tolist():
+                    laplace_single_column = laplace[:, i]
+                    for j in range(laplace_single_column.size):
                         if laplace_single_column[j] != 0:
-                            laplace.loc[j, j] += connected_nodes_no - 1
-                laplace.drop(index=i, columns=i, inplace=True)
+                            laplace[j, j] += connected_nodes_no - 1
+                laplace = np.delete(laplace, i, axis=0)
+                laplace = np.delete(laplace, i, axis=1)
+                break  # Restart the loop after modifying the Laplacian matrix
 
     return graph
 
 
-def calculate_diversity_factor(graph):
+def calculate_simultaneity_factor(graph: nx.DiGraph) -> nx.DiGraph:
     """
-    Calculate the diversity factor for edges in the graph.
+    Calculate the simultaneity factor for edges in the graph.
 
     Args:
-        graph: A NetworkX graph object.
+        graph: A NetworkX graph object with number of end consumers marked as 
+        n_consumers attributes.
 
     Returns:
-        np.array: A Numpy array that has edge names and values for the diversity factor
+        nx.DiGraph: A graph that has edge names and values for the
+        simultaneity factor
     """
     for u, v in graph.edges():
-        end_consumers_u = graph.nodes[u].get('end consumers', 0)
-        end_consumers_v = graph.nodes[v].get('end consumers', 0)
+        end_consumers_u = graph.nodes[u].get('n_consumers', 0)
+        end_consumers_v = graph.nodes[v].get('n_consumers', 0)
 
         max_end_consumers = max(end_consumers_u, end_consumers_v)
 
-        # Calculate the diversity factor based on the maximum number of end consumers
-        diversity_factor = (
-            0.449677646267461 +
-            (0.551234688 / (1 + pow((max_end_consumers / 53.84382392), 1.762743268)))
+        # Calculate the simultaneity factor based on the maximum number of end consumers
+        simultaneity_factor = (
+            0.449677646267461
+            + (0.551234688
+               / (1 + pow((max_end_consumers / 53.84382392), 1.762743268))
+               )
         )
 
-        if diversity_factor>1:
-            diversity_factor=1
-        graph.edges[u, v]['diversity factor'] = diversity_factor
+        graph.edges[u, v]['simultaneity'] = min(simultaneity_factor, 1)
 
-    name=np.array(list(nx.get_edge_attributes(graph,'diversity factor')))
-    # create a numpy array with edge names in the first column and values in the second 
-    col1 = np.core.defchararray.add(name[:, 0].astype(str), ', ')
-    col1 = np.core.defchararray.add(col1, name[:, 1].astype(str))
-    col2 = np.array(list(nx.get_edge_attributes(graph,'diversity factor').values()))
-    diversity_dataframe = pd.DataFrame({'Name': col1, 'Diversity Factor': col2})
-    return diversity_dataframe
+    # name=np.array(list(nx.get_edge_attributes(graph,'simultaneity factor')))
+    # # create a numpy array with edge names in the first column and values in the second 
+    # col1 = np.core.defchararray.add(name[:, 0].astype(str), ', ')
+    # col1 = np.core.defchararray.add(col1, name[:, 1].astype(str))
+    # col2 = np.array(list(nx.get_edge_attributes(graph,'simultaneity factor').values()))
+    # simultaneity_dataframe = pd.DataFrame({'Name': col1, 'simultaneity Factor': col2})
+    return graph
 
-def compare(power, factors):
-    
+
+def update_data(
+        df_nodes: pd.DataFrame,
+        df_edges: pd.DataFrame,
+        network: nx.DiGraph
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
-    Match the diversity factors with the correct edges and multiply with powr.
+    Update the edge and node data with simultaneity attributes.
 
     Args:
-        power: An array of supplied power at each edge
-        factor: An array of diversity factors for each edge.
-
-    Returns:
-        matches: An array of matched edges with updated power values
-    """
+        node_data: A DataFrame containing edge data.
+        edge_data: A DataFrame containing node data.
+        network_simultaneity: A NetworkX graph object with simultaneity factors,
+        needs to contain power, simultaneity attributes
     
-    merged_df = pd.merge(power, factors, on='Name', how='inner')
-    merged_df['revised power'] = merged_df['power'] * merged_df['Diversity Factor']
-    return merged_df[['Name', 'revised power']]
+    Returns:
+        tuple[pd.DataFrame, pd.DataFrame]: Updated edge and node data DataFrames.
+    """
+    # p_simultaneity = power * simultaneity to the network_simultaneity object
+    for u, v, d in network.edges(data=True):
+        network[u][v]['power_simultaneity'] = d['simultaneity'] * d['p']
+
+    # get simultaneity attributes from networkx object, add to edge_data
+    df_edges_sim = pd.DataFrame(
+        [(u, v, d['simultaneity'], d['power_simultaneity'])
+         for u, v, d in network.edges(data=True)],
+        columns=['start_node', 'end_node', 'simultaneity', 'power_simultaneity']
+    ).set_index(['start_node', 'end_node'])
+
+    df_edges = df_edges.join(df_edges_sim, on=['start_node', 'end_node'])
+
+    n_consumers_dict = {
+        n: d.get('n_consumers', None)
+        for n, d in network.nodes(data=True)}
+
+    df_nodes['n_consumers'] = pd.Series(n_consumers_dict)
+
+    return df_nodes, df_edges

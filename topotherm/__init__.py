@@ -7,4 +7,4 @@ from . import single_timestep
 from . import multiple_timestep
 from . import sets
 from . import plotting
-from . import diversity
+from . import simultaneity

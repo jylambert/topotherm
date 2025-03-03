@@ -6,6 +6,7 @@ from pytest import approx
 
 import topotherm as tt
 
+
 def read_regression(path, i):
     """Read the regression coefficients for the thermal capacity and heat
     losses from csv file.
@@ -39,10 +40,6 @@ def test_sts_forced(request):
 
     # import settings
     settings = tt.settings.load(os.path.join(current_path, 'data_sts', 'config.yaml'))
-
-    # modify either in code or in the config file
-    settings.economics.source_c_inv = [0.]  # no investment costs for sources
-    settings.temperatures.supply = 90
 
     model_sets = tt.sets.create(mat)
     model = tt.single_timestep.model(
@@ -80,10 +77,6 @@ def test_sts_eco(request):
 
     # import settings
     settings = tt.settings.load(os.path.join(current_path, 'data_sts', 'config.yaml'))
-
-    # modify either in code or in the config file
-    settings.economics.source_c_inv = [0.]  # no investment costs for sources
-    settings.temperatures.supply = 90
 
     model_sets = tt.sets.create(mat)
     model = tt.single_timestep.model(

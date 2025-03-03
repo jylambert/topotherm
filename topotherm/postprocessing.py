@@ -3,9 +3,12 @@ calculation of the diameter and mass flow of the pipes, the elimination of
 unused pipes and nodes.
 
 This module includes the following functions:
-    * calc_diam_and_velocity: Equations for the calculation of the diameter and velocity of the pipes depending on the mass flow and the power of the pipes
+    * calc_diam_and_velocity: Equations for the calculation of the diameter and
+        velocity of the pipes depending on the mass flow and the power of the
+        pipes
     * sts: Postprocessing for the single time step model
-    * to_networkx_graph: Export the postprocessed, optimal district as a networkx graph
+    * to_networkx_graph: Export the postprocessed, optimal district as a
+        networkx graph
     * mts: Postprocessing for the multiple time step model
 
 """
@@ -24,7 +27,7 @@ import pandas as pd
 from topotherm.settings import Settings
 
 
-def calc_diam_and_velocity(
+def diameter_and_velocity(
         v: Tuple[float, float],
         mass_lin: float,
         settings: Settings) -> Tuple[float, float]:
@@ -52,6 +55,41 @@ def calc_diam_and_velocity(
     # eq. for velocity
     eq2 = mass_lin - settings.water.density * vel * (np.pi / 4) * d ** 2
     return [eq1, eq2]
+
+
+def calculate_hydraulics(
+        power: np.ndarray,
+        settings: Settings
+        ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Calculate the mass flow, diameter and velocity for each pipe
+    given a installed thermal power and supply and return temperatures in
+    settings.
+    
+    Args:
+        power (np.ndarray): installed thermal power for each pipe
+        settings (Settings): settings for the optimization
+    
+    Returns:
+        Tuple[np.ndarray, np.ndarray, np.ndarray]: mass flow, diameter and
+        velocity
+    """
+    delta_t = settings.temperatures.supply - settings.temperatures.return_
+
+    # Compute mass flow rate for all pipes m = P / (cp * deltaT)
+    m_dot = power * 1e3 / (settings.water.heat_capacity_cp * delta_t)
+
+    # helper function for solving per pipe
+    def solve_per_pipe(m):
+        sol = root(lambda v: diameter_and_velocity(v, m, settings),
+                   (0.5, 0.02),
+                   method='lm')
+        return sol.x if sol.success else (np.nan, np.nan)
+
+    # Vectorized solving
+    results = np.array([solve_per_pipe(m) for m in m_dot])
+    vel, d = results.T
+
+    return m_dot, d, vel
 
 
 def sts(model: pyo.ConcreteModel,
@@ -154,46 +192,23 @@ def sts(model: pyo.ConcreteModel,
     a_i_opt = matrices['a_i'][valid_rows, :][:, valid_columns]
     l_i_opt = matrices['l_i'][valid_columns]
 
-    a_i_shape_opt = np.shape(a_i_opt)   # (rows 0, columns 1)
-    d_lin = np.zeros(a_i_shape_opt[1])  # Initialize linear diameters
-    v_lin = np.zeros(a_i_shape_opt[1])  # Initialize velocities
+    m_lin, d_lin, v_lin = calculate_hydraulics(p_lin_opt, settings)
 
-    # Assign supply and return temperatures
-    supply_temp_opt = np.ones(a_i_shape_opt[1]) * settings.temperatures.supply
-    return_temp_opt = np.ones(a_i_shape_opt[1]) * settings.temperatures.return_
-
-    # Calculate the mass flow for each pipe with m cp deltaT = P
-    m_lin = (p_lin_opt * 1000
-             / (settings.water.heat_capacity_cp
-                * (supply_temp_opt - return_temp_opt)
-                ))
-
-    # Calculate the diameter and velocity for each pipe
-    for h in range(a_i_shape_opt[1]):
-        mass_lin = m_lin[h]
-        sol = root(lambda v: calc_diam_and_velocity(v, mass_lin, settings),
-                   (0.5, 0.02),
-                   method='lm')
-        if sol.success:
-            v_lin[h], d_lin[h] = sol.x
-        else:
-            print(h, 'Warning: Failed to calculate diameter and velocity!')
-
-    res = dict(
-        a_i=a_i_opt,
-        a_p=a_p_opt,
-        a_c=a_c_opt,
-        q_c=q_c_opt,
-        l_i=l_i_opt,
-        d_i_0=d_lin,
-        m_i_0=m_lin,
-        position=pos_opt,
-        p=p_lin_opt,
-        flh_c_opt=flh_c_opt,
-        flh_s_opt=flh_s_opt,
-        p_s_inst_opt=p_source_inst_opt,
-        p_s_opt=p_source_opt
-    )
+    res = {
+        'a_i': a_i_opt,
+        'a_p': a_p_opt,
+        'a_c': a_c_opt,
+        'q_c': q_c_opt,
+        'l_i': l_i_opt,
+        'd_i_0': d_lin,
+        'm_i_0': m_lin,
+        'position': pos_opt,
+        'p': p_lin_opt,
+        'flh_c_opt': flh_c_opt,
+        'flh_s_opt': flh_s_opt,
+        'p_s_inst_opt': p_source_inst_opt,
+        'p_s_opt': p_source_opt
+    }
 
     return res
 
@@ -214,15 +229,22 @@ def mts(model: pyo.ConcreteModel,
         dict: Optimal variables and postprocessed data
     """
     # Get the values from the model
-    p_ij = np.reshape(np.array(pyo.value(model.P['ij', 'in', :, :])), (-1, matrices['q_c'].shape[1]))
-    p_ji = np.reshape(np.array(pyo.value(model.P['ji', 'in', :, :])), (-1, matrices['q_c'].shape[1]))
+    p_ij = np.reshape(np.array(pyo.value(model.P['ij', 'in', :, :])),
+                      (-1, matrices['q_c'].shape[1]))
+    p_ji = np.reshape(np.array(pyo.value(model.P['ji', 'in', :, :])),
+                      (-1, matrices['q_c'].shape[1]))
     p_cap = np.array(pyo.value(model.P_cap[:]))
     p_source_inst = np.array(pyo.value(model.P_source_inst[:]))
     p_source = np.array(pyo.value(model.P_source[:, :]))
 
     # flow direction, binary
-    lambda_ij = np.reshape(np.around(np.array(pyo.value(model.lambda_['ij', :, :])), 0), (-1, matrices['q_c'].shape[1]))
-    lambda_ji = np.reshape(np.around(np.array(pyo.value(model.lambda_['ji', :, :])), 0), (-1, matrices['q_c'].shape[1]))
+    lambda_ij = np.reshape(
+        np.around(np.array(pyo.value(model.lambda_['ij', :, :])), 0),
+        (-1, matrices['q_c'].shape[1]))
+    lambda_ji = np.reshape(
+        np.around(np.array(pyo.value(model.lambda_['ji', :, :])), 0),
+        (-1, matrices['q_c'].shape[1]))
+    # built pipes
     lambda_b = np.around(np.array(pyo.value(model.lambda_b[:])), 0)
 
     q_c_opt = np.zeros([matrices['a_c'].shape[1], len(model.set_t)])
@@ -295,50 +317,27 @@ def mts(model: pyo.ConcreteModel,
     a_i_opt = matrices['a_i'][valid_rows, :][:, valid_columns]
     l_i_opt = matrices['l_i'][valid_columns]
 
-    a_i_shape_opt = np.shape(a_i_opt)  # (rows 0, columns 1)
-    d_lin = np.zeros(a_i_shape_opt[1])  # Initialize linear diameters
-    v_lin = np.zeros(a_i_shape_opt[1])  # Initialize velocities
+    m_lin, d_lin, v_lin = calculate_hydraulics(p_lin_opt, settings)
 
-    # Assign supply and return temperatures
-    supply_temp_opt = np.ones(a_i_shape_opt[1]) * settings.temperatures.supply
-    return_temp_opt = np.ones(a_i_shape_opt[1]) * settings.temperatures.return_
-
-    # Calculate the mass flow for each pipe with m cp deltaT = P
-    m_lin = (p_lin_opt * 1000
-             / (settings.water.heat_capacity_cp
-                * (supply_temp_opt - return_temp_opt)
-                ))
-
-    # Calculate the diameter and velocity for each pipe
-    for h in range(a_i_shape_opt[1]):
-        mass_lin = m_lin[h]
-        sol = root(lambda v: calc_diam_and_velocity(v, mass_lin, settings),
-                   (0.5, 0.02),
-                   method='lm')
-        if sol.success:
-            v_lin[h], d_lin[h] = sol.x
-        else:
-            print(h, 'Warning: Failed to calculate diameter and velocity!')
-
-    res = dict(
-        a_i=a_i_opt,
-        a_p=a_p_opt,
-        a_c=a_c_opt,
-        q_c=q_c_opt,
-        l_i=l_i_opt,
-        lambda_ij_opt=lambda_ij_opt,
-        lambda_ji_opt=lambda_ji_opt,
-        d_i_0=d_lin,
-        m_i_0=m_lin,
-        position=pos_opt,
-        p=p_lin_opt,
-        p_ij=p_ij_opt,
-        p_ji=p_ji_opt,
-        flh_c_opt=flh_c_opt,
-        flh_s_opt=flh_s_opt,
-        p_s_inst_opt=p_source_inst_opt,
-        p_s_opt=p_source_opt
-    )
+    res = {
+        'a_i': a_i_opt,
+        'a_p': a_p_opt,
+        'a_c': a_c_opt,
+        'q_c': q_c_opt,
+        'l_i': l_i_opt,
+        'lambda_ij_opt': lambda_ij_opt,
+        'lambda_ji_opt': lambda_ji_opt,
+        'd_i_0': d_lin,
+        'm_i_0': m_lin,
+        'position': pos_opt,
+        'p': p_lin_opt,
+        'p_ij': p_ij_opt,
+        'p_ji': p_ji_opt,
+        'flh_c_opt': flh_c_opt,
+        'flh_s_opt': flh_s_opt,
+        'p_s_inst_opt': p_source_inst_opt,
+        'p_s_opt': p_source_opt
+        }  
 
     return res
 
@@ -396,8 +395,12 @@ def to_dataframe(matrices_optimal: dict,
         (pd.DataFrame, pd.DataFrame): pandas DataFrames of nodes and edges respectively
     """
     # Create a DataFrame for the nodes
-    nodes = pd.DataFrame(index=range(matrices_optimal['a_i'].shape[0]),
-                         columns=['type_', 'x', 'y'])
+    nodes = pd.DataFrame(
+        index=range(matrices_optimal['a_i'].shape[0]),
+        columns=['type_', 'x', 'y', 'demand', 'total_installed_power'],
+        data=None
+        )
+
     # Calculate the sum of matrices
     sum_ac = matrices_optimal['a_c'].sum(axis=1)
     sum_ap = matrices_optimal['a_p'].T.sum(axis=0)
@@ -407,14 +410,13 @@ def to_dataframe(matrices_optimal: dict,
     nodes['type_'] = ['consumer' if x == 1 else 'internal' if x == 0 else 'source' for x in total_sum]
     nodes['x'] = matrices_optimal['position'][:, 0]
     nodes['y'] = matrices_optimal['position'][:, 1]
-    nodes['demand'] = pd.NA
-    nodes['total_installed_power'] = pd.NA
 
     # TODO: inherit in some way the consumer and producer id so that you don't have to search for it
     # in the original matrices, reducing the need to import them.
     sources_nodes = nodes.type_ == 'source'
     positions_sources = nodes.loc[sources_nodes, ['x', 'y']].values
-    original_source_nodes = np.all(matrices_init['position'] == positions_sources, axis=1).squeeze()
+    matches =  np.all(matrices_init['position'][:, None, :] == positions_sources[None, :, :], axis=2)
+    original_source_nodes = np.where(matches)[0]
     original_source_prods = np.where(matrices_init['a_p'][original_source_nodes, :] == -1)[1]
     # assume that we want to write out the total sum of installed power for each source
     # inherent limitation of the dataframe structure, only one dimensional data possible
@@ -422,18 +424,25 @@ def to_dataframe(matrices_optimal: dict,
 
     consumer_nodes = nodes[nodes.type_ == 'consumer'].index
     positions_consumers = nodes.loc[consumer_nodes, ['x', 'y']].values
-    matches =  np.all(matrices_init['position'][:, None, :] == positions_consumers[None, :, :], axis=2)
-    original_consumer_nodes = np.where(matches)[0]  
-    original_consumer_edges = np.where(matrices_init['a_c'][original_consumer_nodes, :] == 1)[1]
-    nodes.loc[consumer_nodes, 'demand'] = matrices_init['q_c'][original_consumer_edges].squeeze()
-    if abs(nodes.demand.sum() - matrices_optimal['q_c'].sum()) > 1e-3:
-        raise ValueError(f'Error in the incidence matrix! Demand {nodes.demand.sum() * 1e3} != total demand {matrices_optimal["q_c"].sum()}')
+    matches =  np.all(matrices_init['position'][:, None, :]
+                      == positions_consumers[None, :, :],
+                      axis=2)
+    original_consumer_nodes = np.where(matches)[0]
+    original_consumer_edges = np.where(
+        matrices_init['a_c'][original_consumer_nodes, :] == 1)[1]
+    nodes.loc[consumer_nodes, 'demand'] = (
+        matrices_init['q_c']*matrices_init['flh_consumer']
+        )[original_consumer_edges].sum(axis=1).squeeze()
+    nodes.loc[consumer_nodes, 'total_installed_power'] = (
+        matrices_init['q_c'])[original_consumer_edges].max(axis=1).squeeze()
+    if abs(nodes.loc[consumer_nodes, 'total_installed_power'].sum()
+           - matrices_optimal['q_c'].max(axis=1).sum()) > 1e-3:
+        raise ValueError(f'Error in the incidence matrix! Demand {nodes.demand.sum()} != total demand {matrices_optimal["q_c"].sum()}')
 
     # Create a DataFrame for the edges
     edges = pd.DataFrame()
     edges['start_node'] = np.argmax(matrices_optimal['a_i'] == 1, axis=0)
     edges['end_node'] = np.argmax(matrices_optimal['a_i'] == -1, axis=0)
-    edges['Name'] = edges['start_node'].astype(str) + ', ' + edges['end_node'].astype(str)
     edges['x_start'] = matrices_optimal['position'][edges['start_node'], 0]
     edges['y_start'] = matrices_optimal['position'][edges['start_node'], 1]
     edges['x_end'] = matrices_optimal['position'][edges['end_node'], 0]
