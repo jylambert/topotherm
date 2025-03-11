@@ -173,6 +173,7 @@ def sts(model: pyo.ConcreteModel,
     valid_columns = matrices['a_i'].any(axis=0)
     valid_rows = matrices['a_i'].any(axis=1)
 
+    p_lin_opt = p_lin[valid_columns]
     pos_opt = matrices['position'][valid_rows, :]
     a_c_opt = matrices['a_c'][valid_rows, :]
     a_p_opt = matrices['a_p'][valid_rows, :]
