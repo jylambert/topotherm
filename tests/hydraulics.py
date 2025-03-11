@@ -5,6 +5,7 @@ from pytest import approx
 from topotherm import precalculation_hydraulic as precalc
 import topotherm as tt
 
+
 settings = tt.settings.Settings()
 settings.temperatures.ambient = -20
 settings.temperatures.supply = 90

@@ -43,10 +43,6 @@ def test_mts_forced(request):
     # import settings
     settings = tt.settings.load(os.path.join(current_path, 'data_mts', 'config.yaml'))
 
-    # modify either in code or in the config file
-    settings.economics.source_c_inv = [0.]  # no investment costs for sources
-    settings.temperatures.supply = 90
-
     model_sets = tt.sets.create(mat)
     model = tt.multiple_timestep.model(
         matrices=mat,
@@ -83,10 +79,6 @@ def test_mts_eco(request):
 
     # import settings
     settings = tt.settings.load(os.path.join(current_path, 'data_mts', 'config.yaml'))
-
-    # modify either in code or in the config file
-    settings.economics.source_c_inv = [0.]  # no investment costs for sources
-    settings.temperatures.supply = 90
 
     model_sets = tt.sets.create(mat)
     model = tt.multiple_timestep.model(

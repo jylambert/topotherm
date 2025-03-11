@@ -17,9 +17,10 @@ import networkx as nx
 import topotherm as tt
 
 
-DATAPATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
+DATAPATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data_sts')
 OUTPUTPATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                           'results', 'sts_forced')
+
 # regression coefficients for thermal capacity and heat losses
 REGRESSION = 'regression.csv'
 PLOTS = True  # plot districts before and after optimization
@@ -45,7 +46,7 @@ def read_regression(path, i):
     return r_thermal_cap, r_heat_loss
 
 
-def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
+def main(filepath, outputpath, plots=True, solver='gurobi', mode='economic'):
     """Main function to run the optimization"""
     # Create output directory if it does not exist
     tt.utils.create_dir(outputpath)
@@ -66,7 +67,8 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
 
     # import settings
     settings = tt.settings.load(os.path.join(filepath, 'config.yaml'))
-    print(settings)
+
+    # modify either in code or in the config file
     settings.economics.source_c_inv = [0.]  # no investment costs for sources
 
     model_sets = tt.sets.create(mat)
@@ -83,7 +85,6 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
     opt.options['mipgap'] = settings.solver.mip_gap
     opt.options['timelimit'] = settings.solver.time_limit
     opt.options['logfile'] = os.path.join(outputpath, 'optimization.log')
-    #opt.options['Seed'] = 56324978
 
     result = opt.solve(model, tee=True)
 
@@ -100,6 +101,8 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
         matrices=mat,
         settings=settings)
 
+    node_data, edge_data = tt.postprocessing.to_dataframe(opt_mats, mat)
+
     # iterate over opt_mats and save each matrix as parquet file
     for key, value in opt_mats.items():
         pd.DataFrame(value).to_parquet(os.path.join(outputpath, key + '.parquet'))
@@ -107,11 +110,36 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
     # Save figure optimized districts
     if plots:
         f = tt.plotting.district(opt_mats, diameter=opt_mats['d_i_0'],
-                                 isnot_init=True)
+                                    isnot_init=True)
         f.savefig(os.path.join(outputpath, 'district_optimal.svg'),
-                  bbox_inches='tight')
+                    bbox_inches='tight')
 
+    # create networkx graph object
     network = tt.postprocessing.to_networkx_graph(opt_mats)
+
+    # calculate simultaneity factors
+    network_simultaneity=tt.simultaneity.calculate(network)
+
+    node_data, edge_data = tt.simultaneity.update_data(
+        df_nodes=node_data,
+        df_edges=edge_data,
+        network=network_simultaneity)
+
+    opt_mats_div = opt_mats.copy()
+    opt_mats_div['p_sim'] = edge_data['power_simultaneity'].values
+    opt_mats_div['m_i_0'], opt_mats_div['d_i_opt'], _ = tt.postprocessing.calculate_hydraulics(
+                 opt_mats_div['p_sim'],
+                 settings)
+
+    if plots:
+        f = tt.plotting.district(opt_mats, diameter=opt_mats_div['d_i_opt'],
+                                    isnot_init=True)
+        f.savefig(os.path.join(outputpath, 'district_optimal_div.svg'),
+                    bbox_inches='tight')
+
+    # save updated values 
+    for key, value in opt_mats_div.items():
+        pd.DataFrame(value).to_parquet(os.path.join(outputpath, key + '_div.parquet'))
 
 
 if __name__ == '__main__':
