@@ -94,8 +94,8 @@ def calculate_hydraulics(
 
 def sts(model: pyo.ConcreteModel,
         matrices: dict,
-        settings: Settings,
-        p_div=np.zeros(5)):
+        settings: Settings
+    ):
     """Postprocessing for the single time step model. This includes the
     calculation of the diameter and velocity of the pipes, the elimination of
     unused pipes and nodes. Drops unused pipes and nodes.
@@ -104,7 +104,6 @@ def sts(model: pyo.ConcreteModel,
         model (pyo.ConcreteModel): solved pyomo model
         matrices (dict): dict containing the matrices
         settings (tt.settings.Settings): settings for the optimization
-        p_div (np.array): modified power values
     
     Returns:
         dict: Optimal variables and postprocessed data
@@ -122,10 +121,7 @@ def sts(model: pyo.ConcreteModel,
     q_c_opt = np.zeros([matrices['a_c'].shape[1], len(model.set_t)])
     flh_c_opt = np.zeros([matrices['a_c'].shape[1], len(model.set_t)])
 
-    if all(p_div)==0: # No need to remove consumers in second run-through 
-    # Exclude non-connected consumers in Q_c, only affects the economic case
-    # Check for consumers connected in direction ij
-     for d, e in model.cons:
+    for d, e in model.cons:
         if d == 'ij':
             # edge in incidence matrix where pipe exits into node n (==-1)
             a_i_idx = np.where(matrices['a_i'][:, e] == -1)
@@ -176,15 +172,6 @@ def sts(model: pyo.ConcreteModel,
     # drop entries with 0 in the incidence matrix to reduce size
     valid_columns = matrices['a_i'].any(axis=0)
     valid_rows = matrices['a_i'].any(axis=1)
-
-
-    if all(p_div) == 0: # use modified power values in the second run through
-        p_lin_opt = p_lin[valid_columns]
-        p_lin_opt = p_lin[valid_columns]
-    else:
-        p_lin_opt = p_div
-
-        p_lin_opt = p_div
 
     pos_opt = matrices['position'][valid_rows, :]
     a_c_opt = matrices['a_c'][valid_rows, :]
