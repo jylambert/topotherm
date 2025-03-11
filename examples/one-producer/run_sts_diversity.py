@@ -23,7 +23,7 @@ OUTPUTPATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
 
 # regression coefficients for thermal capacity and heat losses
 REGRESSION = 'regression.csv'
-PLOTS = False  # plot districts before and after optimization
+PLOTS = True  # plot districts before and after optimization
 SOLVER = 'gurobi'  # 'gurobi', 'cplex' or 'scip'
 
 
@@ -130,6 +130,12 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='economic'):
     opt_mats_div['m_i_0'], opt_mats_div['d_i_opt'], _ = tt.postprocessing.calculate_hydraulics(
                  opt_mats_div['p_sim'],
                  settings)
+
+    if plots:
+        f = tt.plotting.district(opt_mats, diameter=opt_mats_div['d_i_opt'],
+                                    isnot_init=True)
+        f.savefig(os.path.join(outputpath, 'district_optimal_div.svg'),
+                    bbox_inches='tight')
 
     # save updated values 
     for key, value in opt_mats_div.items():

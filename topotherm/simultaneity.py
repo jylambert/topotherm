@@ -248,12 +248,6 @@ def calculate_simultaneity_factor(graph: nx.DiGraph) -> nx.DiGraph:
 
         graph.edges[u, v]['simultaneity'] = min(simultaneity_factor, 1)
 
-    # name=np.array(list(nx.get_edge_attributes(graph,'simultaneity factor')))
-    # # create a numpy array with edge names in the first column and values in the second 
-    # col1 = np.core.defchararray.add(name[:, 0].astype(str), ', ')
-    # col1 = np.core.defchararray.add(col1, name[:, 1].astype(str))
-    # col2 = np.array(list(nx.get_edge_attributes(graph,'simultaneity factor').values()))
-    # simultaneity_dataframe = pd.DataFrame({'Name': col1, 'simultaneity Factor': col2})
     return graph
 
 
