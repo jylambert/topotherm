@@ -135,38 +135,6 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='economic'):
     for key, value in opt_mats_div.items():
         pd.DataFrame(value).to_parquet(os.path.join(outputpath, key + '_div.parquet'))
 
-    fig, ax = plt.subplots(figsize=(20, 20), layout='constrained')
-    node_colors = []
-    node_label = []
-    node_id = {}
-    node_pos = []
-    edges_p = []
-    edges_label = {}
-
-    for node in network.nodes(data=True):
-        node_colors.append(node[1]['color'])
-        node_label.append(node[1]['type_'])
-        node_id[node[0]] = str(node[0])
-        node_pos.append([node[1]['x'], node[1]['y']])
-   
-    for edge in network.edges(data=True):
-        edges_p.append(edge[2]['p'])
-        edges_label[(int(edge[0])), int(edge[1])] = str(edge[0]) + ' -> ' + str(edge[1])
-
-    nx.draw_networkx_edges(network, pos=node_pos,
-                            edgelist=network.edges, width=edges_p, ax=ax,
-                            label=edges_label, alpha=0.3, edge_color='grey')
-    nx.draw_networkx_nodes(network, pos=node_pos, node_color=node_colors,
-                            ax=ax, label=node_label)
-
-    nx.draw_networkx_labels(network, pos=node_pos, labels=node_id, ax=ax)#
-    nx.draw_networkx_edge_labels(network, pos=node_pos, edge_labels=edges_label, ax=ax)
-
-    fig.show()
-    fig.savefig(os.path.join(outputpath, 'networkx.svg'), bbox_inches='tight')
-    # close all figures
-    plt.close('all')
-
 
 if __name__ == '__main__':
     main(filepath=os.path.join(DATAPATH), outputpath=os.path.join(OUTPUTPATH),
