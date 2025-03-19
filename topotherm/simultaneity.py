@@ -1,10 +1,10 @@
+"""Calculate the simultaneity factor of a given graph of the optimal district heating network.
+"""
 import copy
 
 import numpy as np
 import networkx as nx
 import pandas as pd
-
-np.set_printoptions(legacy='1.25')
 
 
 def calculate(graph: nx.DiGraph) -> nx.DiGraph:
@@ -195,28 +195,25 @@ def get_n_end_consumers(graph: nx.DiGraph, laplace:np.array) -> nx.DiGraph:
     Returns:
         The graph with 'n_consumers' attributes added to nodes.
     """
-    while laplace.size > 0:
-        for i in range(laplace.shape[0]):
-            # Skip if the node has already been processed (size is reduced)
-            if i >= laplace.shape[0]:
-                continue
+    laplace = pd.DataFrame(laplace, index=graph.nodes, columns=graph.nodes)
 
-            connected_nodes_no = laplace[i, i]
+    while not laplace.empty:
+        for i in laplace.index.tolist():
+            laplace_single_row = laplace.loc[i]
+            connected_nodes_no = laplace_single_row[i]
 
-            laplace_connected_nodes = np.delete(laplace[i], i)
+            laplace_connected_nodes = laplace_single_row.drop(i)
             is_isolated = not (laplace_connected_nodes != 0).any()
 
             if is_isolated:
                 graph.nodes[i]['n_consumers'] = connected_nodes_no
-                if connected_nodes_no != 0:
-                    laplace_single_column = laplace[:, i]
-                    for j in range(laplace_single_column.size):
-                        if laplace_single_column[j] != 0:
-                            laplace[j, j] += connected_nodes_no - 1
-                laplace = np.delete(laplace, i, axis=0)
-                laplace = np.delete(laplace, i, axis=1)
-                break  # Restart the loop after modifying the Laplacian matrix
 
+                if connected_nodes_no != 0:
+                    laplace_single_column = laplace[i]
+                    for j in laplace_single_column.index.tolist():
+                        if laplace_single_column[j] != 0:
+                            laplace.loc[j, j] += connected_nodes_no - 1
+                laplace.drop(index=i, columns=i, inplace=True)
     return graph
 
 
