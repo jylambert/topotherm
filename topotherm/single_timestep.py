@@ -84,6 +84,20 @@ def model(matrices: dict,
     mdl.set_con_ji = pyo.Set(initialize=sets['connection_c_ji'],
                                doc='Pipes with consumer in direction ji')
 
+    mdl.consumer_edges = pyo.Set(
+        initialize=[(i, np.where((matrices['a_i'][np.where(matrices['a_c'][:, i] == 1)[0].item(), :] == 1) |
+                                 (matrices['a_i'][np.where(matrices['a_c'][:, i] == 1)[0].item(), :] == -1)
+                                 )[0].item()) for i in range(sets['a_c_shape'][1])],
+        dimen=2,
+        doc='Assign to each consumer the corresponding pipe'
+    )
+
+    mdl.consumer_edges_only = pyo.Set(
+        initialize=[np.where((matrices['a_i'][np.where(matrices['a_c'][:, i] == 1)[0].item(), :] == 1) |
+                                 (matrices['a_i'][np.where(matrices['a_c'][:, i] == 1)[0].item(), :] == -1)
+                                 )[0].item() for i in range(sets['a_c_shape'][1])]
+    )
+
     # Define the combined set for pipes with consumers in both directions
     mdl.cons = pyo.Set(
         initialize=[('ij', edge) for edge in sets['connection_c_ij']] +
@@ -267,6 +281,11 @@ def model(matrices: dict,
                 for t in mdl.set_t) >= sets['q_c_tot']
 
         mdl.total_energy_qc = pyo.Constraint(rule=total_energy_qc)
+
+        def consecutive_optimizations(m, j):
+            return sets['lambda_b_previous'][j] <= m.lambda_['ij', j] + m.lambda_['ji', j]
+        mdl.consecutive_opt = pyo.Constraint(mdl.consumer_edges_only,
+                                             rule=consecutive_optimizations)
 
     mdl.revenue = pyo.Var(doc='Revenue', domain=pyo.NegativeReals)
     mdl.revenue_constr = pyo.Constraint(

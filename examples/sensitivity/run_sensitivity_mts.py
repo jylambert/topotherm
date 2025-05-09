@@ -17,10 +17,8 @@ from topotherm.settings import Settings
 from topotherm.precalculation_hydraulic import regression_thermal_capacity, regression_heat_losses
 
 
-DATAPATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                        'data_mts')
-OUTPUTPATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                          'results', 'mts_sensitivity')
+DATAPATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data_mts')
+OUTPUTPATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'results', 'data_mts')
 
 PLOTS = True  # save plots of the district
 SOLVER = 'gurobi'  # 'gurobi' or 'cbc'
@@ -40,65 +38,7 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
 
     # default settings
     settings = Settings()
-    settings.piping.diameter = (
-        0.0229, 0.0291, 0.0372, 0.0431, 0.0545, 0.0703, 0.0825, 0.1071, 0.1325, 0.1603, 0.2101, 0.263, 0.3127, 0.3444,
-        0.3938, 0.4444, 0.4954
-    )
-
-    settings.piping.outer_diameter = (
-        0.09, 0.09, 0.11, 0.11, 0.125, 0.14, 0.16, 0.2, 0.225, 0.25, 0.315, 0.4, 0.45, 0.5, 0.56, 0.63, 0.71
-    )
-
-    settings.piping.cost = (
-        390, 400, 425, 459, 490, 535, 599, 661, 749, 886, 1170, 1016, 1192, 1395, 1748, 2070, 2150
-    )
-
-    settings.piping.number_diameters = 17
-    settings.piping.max_pr_loss = 250
-    settings.piping.roughness = 0.01e-3
-
-    settings.temperatures.supply = 70
-    settings.temperatures.return_ = 40
-    settings.temperatures.ambient = -20
-
-    settings.solver.mip_gap = 1e-2
-    settings.solver.time_limit = 10000
-
-    elec_price_low = 0.080
-
-    cop_river = 1.86
-    cop_air = 1.97
-
-    inv_river = 656.625
-    inv_air = 598
-
-    settings.economics.source_price = (elec_price_low/cop_river, elec_price_low/cop_air,
-                                       elec_price_low/cop_river, elec_price_low/cop_air,
-                                       elec_price_low/cop_air, elec_price_low/cop_river,
-                                       elec_price_low/cop_river, elec_price_low/cop_air,)
-
-    settings.economics.source_c_inv = (inv_river, inv_air,
-                                       inv_river, inv_air,
-                                       inv_air, inv_river,
-                                       inv_river, inv_air)
-
-    settings.economics.source_lifetime = [20]#, 20, 20, 20, 20, 20, 20, 20)
-    settings.economics.source_c_irr = [0.08]#, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08)
-
-    settings.economics.pipes_lifetime = 20
-    settings.economics.pipes_c_irr = 0.08
-
     settings.economics.heat_price = 0
-
-    settings.economics.source_max_power = [100000]#, 20000,
-                                           #100000, 1500,
-                                           #20000, 100000,
-                                           #100000, 20000)
-
-    settings.economics.source_min_power = [0]#, 0,
-                                           #0, 0,
-                                           #0, 0,
-                                           #0, 0)
 
     # regression
     r_thermal_cap = regression_thermal_capacity(settings)
@@ -125,15 +65,14 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
         model_sets['q_c_tot'] = (mat['flh_consumer'] * mat['q_c']).sum() * share_q_c_tot[run]
         model_sets['lambda_b_previous'] = np.zeros(model_sets['a_i_shape'][1])
 
-        # The following section is only needed, if the built-up of the district should be consecutive and
-        # dependent of one another. In mts file comment in also the
+        # The following if section is only needed, if the built-up of the district should be consecutive and
+        # dependent of one another. Also comment or uncomment constraint in model file.
         if run != 0:
             variant_previous = 'district_sensitivity_' + str(run-1)
             lambda_built_previous = pd.read_parquet(os.path.join(outputpath, variant_previous, 'lambda_b_orig.parquet'))
             model_sets['lambda_b_previous'] = lambda_built_previous.to_numpy().reshape(-1)
-        #
 
-        # Create outptuh directory
+        # Create output directory
         outputpath_sens = os.path.join(outputpath, variant)
         tt.utils.create_dir(outputpath_sens)
 

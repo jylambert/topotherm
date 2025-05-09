@@ -74,6 +74,7 @@ def sts(model: pyo.ConcreteModel,
     # flow direction, binary
     lambda_ij = np.around(np.array(pyo.value(model.lambda_['ij', :])), 0)
     lambda_ji = np.around(np.array(pyo.value(model.lambda_['ji', :])), 0)
+    lambda_sum = lambda_ij + lambda_ji
 
     q_c_opt = np.zeros([matrices['a_c'].shape[1], len(model.set_t)])
     flh_c_opt = np.zeros([matrices['a_c'].shape[1], len(model.set_t)])
@@ -134,6 +135,7 @@ def sts(model: pyo.ConcreteModel,
     p_lin_opt = p_lin[valid_columns]
     pos_opt = matrices['position'][valid_rows, :]
     a_c_opt = matrices['a_c'][valid_rows, :]
+    a_c_opt = a_c_opt[:, a_c_opt.any(axis=0)]
     a_p_opt = matrices['a_p'][valid_rows, :]
     a_i_opt = matrices['a_i'][valid_rows, :][:, valid_columns]
     l_i_opt = matrices['l_i'][valid_columns]
@@ -176,7 +178,8 @@ def sts(model: pyo.ConcreteModel,
         flh_c_opt=flh_c_opt,
         flh_s_opt=flh_s_opt,
         p_s_inst_opt=p_source_inst_opt,
-        p_s_opt=p_source_opt
+        p_s_opt=p_source_opt,
+        lambda_b_orig=lambda_sum
     )
 
     return res
@@ -243,10 +246,9 @@ def mts(model: pyo.ConcreteModel,
         p_source_opt = p_source
         flh_s_opt = matrices['flh_source']
     else:
-        valid_sources = p_source_inst.any(axis=1)
-        p_source_inst_opt = p_source_inst[valid_sources]
-        p_source_opt = p_source[valid_sources, :]
-        flh_s_opt = matrices['flh_source'][valid_sources, :]
+        p_source_inst_opt = p_source_inst[p_source_inst != 0]
+        p_source_opt = p_source[p_source_inst != 0, :]
+        flh_s_opt = matrices['flh_source'][p_source_inst != 0, :]
 
     # Adaption of Incidence Matrix for further postprocessing
     for q in model.set_n_i:
@@ -275,6 +277,7 @@ def mts(model: pyo.ConcreteModel,
     lambda_ji_opt = lambda_ji[valid_columns, :]
     pos_opt = matrices['position'][valid_rows, :]
     a_c_opt = matrices['a_c'][valid_rows, :]
+    a_c_opt = a_c_opt[:, a_c_opt.any(axis=0)]
     a_p_opt = matrices['a_p'][valid_rows, :]
     a_i_opt = matrices['a_i'][valid_rows, :][:, valid_columns]
     l_i_opt = matrices['l_i'][valid_columns]
