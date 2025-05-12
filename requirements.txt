@@ -1,5 +1,7 @@
 numpy
 pandas
+geopandas
+shapely
 scipy
 networkx
 matplotlib

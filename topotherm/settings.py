@@ -125,6 +125,9 @@ class Economics(BaseModel):
     source_max_power: List[float] = Field(
         default_factory=lambda: [1e6],
         description="Maximum installed power for sources in kW")
+    source_min_power: List[float] = Field(
+        default_factory=lambda: [0],
+        description="Maximum installed power for sources in kW")
 
     pipes_c_irr: float = Field(
         0.08, description="Interest rate for pipes")

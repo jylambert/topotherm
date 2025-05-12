@@ -6,6 +6,7 @@ The module contains the following functions:
     * model: Create the optimization model for the single time step operation
 """
 
+import numpy as np
 import pyomo.environ as pyo
 
 from topotherm.settings import Economics
@@ -53,7 +54,7 @@ def model(matrices: dict,
     """
 
     # Check if the optimization mode is implemented
-    if optimization_mode not in ['economic', 'forced']:
+    if optimization_mode not in ['economic', 'forced', 'sensitivity']:
         raise NotImplementedError(
             "Optimization mode %s not implemented" % optimization_mode)
 
@@ -62,9 +63,6 @@ def model(matrices: dict,
 
     # Big-M-Constraint for pipes
     p_max_pipe_const = float(regression_inst['power_flow_max_kW'].max())
-
-    # Big-M-Constraint for source
-    p_max_source = matrices['q_c'].sum() * 2
 
     # Define index sets
     mdl.set_n_i = pyo.Set(initialize=range(sets['a_i_shape'][1]),
@@ -81,6 +79,24 @@ def model(matrices: dict,
                         doc='Set of pipe directions.')
     mdl.flow = pyo.Set(initialize=['in', 'out'],
                          doc='Flow direction in the pipe')
+    mdl.set_con_ij = pyo.Set(initialize=sets['connection_c_ij'],
+                               doc='Pipes with consumer in direction ij')
+    mdl.set_con_ji = pyo.Set(initialize=sets['connection_c_ji'],
+                               doc='Pipes with consumer in direction ji')
+
+    mdl.consumer_edges = pyo.Set(
+        initialize=[(i, np.where((matrices['a_i'][np.where(matrices['a_c'][:, i] == 1)[0].item(), :] == 1) |
+                                 (matrices['a_i'][np.where(matrices['a_c'][:, i] == 1)[0].item(), :] == -1)
+                                 )[0].item()) for i in range(sets['a_c_shape'][1])],
+        dimen=2,
+        doc='Assign to each consumer the corresponding pipe'
+    )
+
+    mdl.consumer_edges_only = pyo.Set(
+        initialize=[np.where((matrices['a_i'][np.where(matrices['a_c'][:, i] == 1)[0].item(), :] == 1) |
+                                 (matrices['a_i'][np.where(matrices['a_c'][:, i] == 1)[0].item(), :] == -1)
+                                 )[0].item() for i in range(sets['a_c_shape'][1])]
+    )
 
     # Define the combined set for pipes with consumers in both directions
     mdl.cons = pyo.Set(
@@ -105,27 +121,21 @@ def model(matrices: dict,
         domain=pyo.Binary,
         doc='Binary direction decisions')
 
-    # Bounds for source variables
-    source_power = {'bounds': (0, p_max_source),
-                    'domain': pyo.NonNegativeReals,
-                    'initialize': p_max_source}
-
-    # def ub_power(model, i):
-    #     """Upper bound for the power of the source."""
-    #     return (0, economics.source_max_power[i])
-
     # Definition of thermal power for each time step and each source
     mdl.P_source = pyo.Var(
         mdl.set_n_p, mdl.set_t,
         doc='Thermal power of the source',
-        **source_power)
+        domain=pyo.NonNegativeReals,
+        bounds=lambda m, i, t: (0, economics.source_max_power[i]),
+        initialize=lambda m, i, t: economics.source_max_power[i])
 
     # Definition of thermal capacity of each source
     mdl.P_source_inst = pyo.Var(
         mdl.set_n_p,
         doc='Thermal capacity of the heat source',
+
         domain=pyo.NonNegativeReals,
-        bounds=lambda m, i: (0, economics.source_max_power[i]),
+        bounds=lambda m, i: (economics.source_min_power[i], economics.source_max_power[i]),
         initialize=lambda m, i: economics.source_max_power[i])
 
     # Definition of constraints
@@ -161,7 +171,7 @@ def model(matrices: dict,
         if optimization_mode == "forced":
             sink = sum(matrices['q_c'][k, t]
                        for k in sets['a_c_out'][j])
-        elif optimization_mode == "economic":
+        elif (optimization_mode == "economic") | (optimization_mode == "sensitivity"):
             sink = (
                 sum(
                     (m.lambda_['ij', sets['a_i_in'][j][0]])
@@ -216,7 +226,7 @@ def model(matrices: dict,
     def connection_to_consumer_fcd(m, d, j):
         return m.lambda_[d, j] == sets[f'lambda_c_{d}'][j]
 
-    if optimization_mode == "economic":
+    if (optimization_mode == "economic") | (optimization_mode == "sensitivity"):
         msg_ = """Constraint if houses have their own connection-pipe
             and set the direction (ij)"""
         mdl.cons_connection_to_consumer = pyo.Constraint(
@@ -255,6 +265,28 @@ def model(matrices: dict,
         mdl.cons_total_energy_cons = pyo.Constraint(
             mdl.set_t, rule=total_energy_cons,
             doc='Total energy conservation')
+
+    if optimization_mode == "sensitivity":
+        def total_energy_qc(m):
+            return sum(
+                sum(m.lambda_['ij', j] * matrices['q_c'][
+                    np.where(matrices['a_c'][np.where(matrices['a_i'][:, j] == -1)[0], :][0] == 1)[0], t]
+                    * matrices['flh_consumer'][
+                        np.where(matrices['a_c'][np.where(matrices['a_i'][:, j] == -1)[0], :][0] == 1)[0], t] for j in
+                    mdl.set_con_ij)
+                + sum(m.lambda_['ji', j] * matrices['q_c'][
+                    np.where(matrices['a_c'][np.where(matrices['a_i'][:, j] == 1)[0], :][0] == 1)[0], t]
+                      * matrices['flh_consumer'][
+                          np.where(matrices['a_c'][np.where(matrices['a_i'][:, j] == 1)[0], :][0] == 1)[0], t] for j in
+                      mdl.set_con_ji)
+                for t in mdl.set_t) >= sets['q_c_tot']
+
+        mdl.total_energy_qc = pyo.Constraint(rule=total_energy_qc)
+
+        def consecutive_optimizations(m, j):
+            return sets['lambda_b_previous'][j] <= m.lambda_['ij', j] + m.lambda_['ji', j]
+        mdl.consecutive_opt = pyo.Constraint(mdl.consumer_edges_only,
+                                             rule=consecutive_optimizations)
 
     mdl.revenue = pyo.Var(doc='Revenue', domain=pyo.NegativeReals)
     mdl.revenue_constr = pyo.Constraint(

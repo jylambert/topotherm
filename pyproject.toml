@@ -41,6 +41,8 @@ dependencies = [
     "Pillow >= 10.2.0",
     "pyyaml",
     "pydantic",
+    "geopandas",
+    "shapely"
 ]
 
 [tool.setuptools]
