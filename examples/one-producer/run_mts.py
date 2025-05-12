@@ -14,14 +14,15 @@ import pyomo.environ as pyo
 import topotherm as tt
 
 
-DATAPATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                        'data_mts')
-OUTPUTPATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                          'results/mts_eco/')
 REGRESSION = 'regression.csv'  # regression coefficients for thermal capacity and heat losses
 TIMESERIES = 'timeseries.csv'  # timeseries for heat scaling
 PLOTS = True  # save plots of the district
 SOLVER = 'gurobi'  # 'gurobi' or 'cbc'
+MODE = 'forced'  # 'economic' or 'forced'
+DATAPATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                        'data_mts')
+OUTPUTPATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                          f'results/mts_{MODE}/')
 
 
 def read_regression(path, i):
@@ -50,6 +51,7 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
 
     # Load the district
     mat = tt.fileio.load(filepath)
+    mat['q_c'] = mat['q_c'] / 1000  # convert from W to kW
 
     if plots:
         f = tt.plotting.district(mat, isnot_init=False)  # Save initial District
@@ -75,7 +77,6 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
         economics=settings.economics,
         optimization_mode=mode)
 
-
     # Optimization initialization
     opt = pyo.SolverFactory(solver)
     opt.options['mipgap'] = settings.solver.mip_gap
@@ -83,6 +84,9 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
     opt.options['logfile'] = os.path.join(outputpath, 'optimization.log')
 
     result = opt.solve(model, tee=True)
+
+    assert result.solver.termination_condition == pyo.TerminationCondition.optimal, \
+        f"Optimization failed with termination condition {result.solver.termination_condition}"
 
     # Save model results to csv
     dfres = tt.utils.model_to_df(model)
@@ -100,6 +104,10 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
     for key, value in opt_mats.items():
         pd.DataFrame(value).to_parquet(os.path.join(outputpath, key + '.parquet'))
 
+    node_data, edge_data = tt.postprocessing.to_dataframe(opt_mats, mat)
+    node_data.to_csv(os.path.join(outputpath, 'node_data.csv'), sep=';')
+    edge_data.to_csv(os.path.join(outputpath, 'edge_data.csv'), sep=';')
+
     # Save figure optimized districts
     if plots:
         f = tt.plotting.district(opt_mats,
@@ -114,5 +122,5 @@ if __name__ == '__main__':
          outputpath=os.path.join(OUTPUTPATH),
          plots=PLOTS,
          solver=SOLVER,
-         mode='forced')
+         mode=MODE)
     print(f'Finished {OUTPUTPATH}')

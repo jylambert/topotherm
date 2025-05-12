@@ -11,6 +11,8 @@ import os
 
 import pandas as pd
 import pyomo.environ as pyo
+import matplotlib.pyplot as plt
+import networkx as nx
 
 import topotherm as tt
 
@@ -51,6 +53,7 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='economic'):
 
     # Load the district
     mat = tt.fileio.load(filepath)
+    mat['q_c'] = mat['q_c'] / 1000  # convert to kW
 
     if plots:
         f = tt.plotting.district(mat, isnot_init=False) # Save initial District
@@ -85,6 +88,9 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='economic'):
 
     result = opt.solve(model, tee=True)
 
+    assert result.solver.termination_condition == pyo.TerminationCondition.optimal, \
+        f"Optimization failed with termination condition {result.solver.termination_condition}"
+
     # Save model results to csv
     dfres = tt.utils.model_to_df(model)
     dfres.to_csv(os.path.join(outputpath, 'results.csv'), sep=';')
@@ -98,6 +104,10 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='economic'):
         matrices=mat,
         settings=settings)
 
+    node_data, edge_data = tt.postprocessing.to_dataframe(opt_mats, mat)
+    node_data.to_csv(os.path.join(outputpath, 'node_data.csv'), sep=';')
+    edge_data.to_csv(os.path.join(outputpath, 'edge_data.csv'), sep=';')
+
     # iterate over opt_mats and save each matrix as parquet file
     for key, value in opt_mats.items():
         pd.DataFrame(value).to_parquet(os.path.join(outputpath, key + '.parquet'))
@@ -108,8 +118,11 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='economic'):
                                     isnot_init=True)
         f.savefig(os.path.join(outputpath, 'district_optimal.svg'),
                     bbox_inches='tight')
+    
+    # create networkx graph object
+    network = tt.postprocessing.to_networkx_graph(opt_mats)
 
 if __name__ == '__main__':
     main(filepath=os.path.join(DATAPATH), outputpath=os.path.join(OUTPUTPATH),
-         plots=PLOTS, solver=SOLVER, mode='economic')
+         plots=PLOTS, solver=SOLVER, mode='forced')
     print(f'Finished {OUTPUTPATH}')

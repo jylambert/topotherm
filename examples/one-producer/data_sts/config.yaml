@@ -28,7 +28,7 @@ economics:
   source_c_inv: [0]  # Investment costs for each source
   source_c_irr: [0.08]  # Interest rate for each source
   source_lifetime: [40.]  # years for source investments
-  source_price: [80e-3]  # Price for heat production at supply in €/kW
-  heat_price: 120e-3  # Selling Price for heat in €/kW
+  source_price: [80e-3]  # Price for heat production at supply in €/kW make 0
+  heat_price: 120e-3  # Selling Price for heat in €/kW make 0
   pipes_c_irr: 0.08  # Interest rate
   pipes_lifetime: 40.  # years for piping investments

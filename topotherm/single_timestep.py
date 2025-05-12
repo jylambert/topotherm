@@ -125,7 +125,7 @@ def model(matrices: dict,
     mdl.P_source = pyo.Var(
         mdl.set_n_p, mdl.set_t,
         doc='Thermal power of the source',
-        domain=pyo.PositiveReals,
+        domain=pyo.NonNegativeReals,
         bounds=lambda m, i, t: (0, economics.source_max_power[i]),
         initialize=lambda m, i, t: economics.source_max_power[i])
 
@@ -133,7 +133,8 @@ def model(matrices: dict,
     mdl.P_source_inst = pyo.Var(
         mdl.set_n_p,
         doc='Thermal capacity of the heat source',
-        domain=pyo.PositiveReals,
+
+        domain=pyo.NonNegativeReals,
         bounds=lambda m, i: (economics.source_min_power[i], economics.source_max_power[i]),
         initialize=lambda m, i: economics.source_max_power[i])
 
@@ -307,7 +308,7 @@ def model(matrices: dict,
                 for t in mdl.set_t) * economics.heat_price * (-1)),
         doc='Revenue constraint')
     
-    mdl.opex_source = pyo.Var(doc='OPEX Source', domain=pyo.PositiveReals)
+    mdl.opex_source = pyo.Var(doc='OPEX Source', domain=pyo.NonNegativeReals)
     mdl.opex_source_constr = pyo.Constraint(
         expr=mdl.opex_source == sum(
             sum(mdl.P_source[k, t]
@@ -317,7 +318,7 @@ def model(matrices: dict,
             for t in mdl.set_t),
         doc='OPEX Source constraint')
 
-    mdl.capex_pipes = pyo.Var(doc='CAPEX Pipe', domain=pyo.PositiveReals)
+    mdl.capex_pipes = pyo.Var(doc='CAPEX Pipe', domain=pyo.NonNegativeReals)
 
     # CAREFUL HARDCODED FOR 0 TIME STEPS
     def pipes_fix(k):
@@ -335,7 +336,7 @@ def model(matrices: dict,
             * annuity(economics.pipes_c_irr, economics.pipes_lifetime),
         doc='CAPEX Pipe constraint')
 
-    mdl.capex_source = pyo.Var(doc='CAPEX Source', domain=pyo.PositiveReals)
+    mdl.capex_source = pyo.Var(doc='CAPEX Source', domain=pyo.NonNegativeReals)
     mdl.capex_source_constr = pyo.Constraint(
         expr=mdl.capex_source == sum(
             mdl.P_source_inst[k] * economics.source_c_inv[k]

@@ -8,3 +8,5 @@ from . import multiple_timestep
 from . import sets
 from . import plotting
 from . import create_matrices
+from . import simultaneity
+

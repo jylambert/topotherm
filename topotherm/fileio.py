@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 
 
-def load(path: str or os.PathLike) -> dict:
+def load(path: os.PathLike) -> dict:
     """Read the input data from the given path and return the matrices
         * A_i: Incidence matrix for the pipes with rows: nodes, columns: edges.
         * A_p: Adjacency matrix for the producers with rows: nodes, columns:
