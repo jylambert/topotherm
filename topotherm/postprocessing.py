@@ -198,8 +198,8 @@ def sts(model: pyo.ConcreteModel,
         'flh_c_opt': flh_c_opt,
         'flh_s_opt': flh_s_opt,
         'p_s_inst_opt': p_source_inst_opt,
-        'p_s_opt': p_source_opt
-        'lambda_b_orig'=lambda_sum
+        'p_s_opt': p_source_opt,
+        'lambda_b_orig': lambda_sum
     }
 
     return res
@@ -317,7 +317,7 @@ def mts(model: pyo.ConcreteModel,
         'a_c': a_c_opt,
         'q_c': q_c_opt,
         'l_i': l_i_opt,
-        'lambda_b_orig'=lambda_b,
+        'lambda_b_orig': lambda_b,
         'lambda_ij_opt': lambda_ij_opt,
         'lambda_ji_opt': lambda_ji_opt,
         'd_i_0': d_lin,
