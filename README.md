@@ -84,7 +84,7 @@ git clone https://github.com/jylambert/topotherm.git
 
 ```Python
 cd topotherm
-python setup.py install
+pip install .
 ```
 
 This can also be done with venv or equivalent.
