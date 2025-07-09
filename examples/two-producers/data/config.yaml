@@ -34,3 +34,4 @@ economics:
   heat_price: 120e-3  # Selling Price for heat in €/kW
   pipes_c_irr: 0.08  # Interest rate
   pipes_lifetime: 40.  # years for piping investments
+  source_min_power: [0,0]
