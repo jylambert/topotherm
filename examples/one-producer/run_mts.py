@@ -15,7 +15,6 @@ import topotherm as tt
 
 
 REGRESSION = 'regression.csv'  # regression coefficients for thermal capacity and heat losses
-TIMESERIES = 'timeseries.csv'  # timeseries for heat scaling
 PLOTS = True  # save plots of the district
 SOLVER = 'gurobi'  # 'gurobi' or 'cbc'
 MODE = 'forced'  # 'economic' or 'forced'
@@ -52,6 +51,8 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
     # Load the district
     mat = tt.fileio.load(filepath)
     mat['q_c'] = mat['q_c'] / 1000  # convert from W to kW
+    n_timesteps = mat['q_c'].shape[1]
+    print("Number of timesteps:", n_timesteps)
 
     if plots:
         f = tt.plotting.district(mat, isnot_init=False)  # Save initial District

@@ -31,48 +31,61 @@ def diameter_and_velocity(
         v: Tuple[float, float],
         mass_lin: float,
         settings: Settings) -> Tuple[float, float]:
-    """Equations for the calculation of the diameter and velocity of
+    """
+    Equations for the calculation of the diameter and velocity of
     the pipes depending on the mass flow and the power of the pipes.
 
-    Args:
-        v (Tuple[float, float]): Tuple containing the velocity and diameter
-        mass_lin (float): mass flow of the pipe
-        settings (Settings): settings for the optimization
-    
-    Returns:
-        Tuple[float, float]: Tuple containing the velocity and diameter
+    Parameters
+    ----------
+    v : tuple of float
+        Tuple containing the velocity and diameter.
+    mass_lin : float
+        Mass flow of the pipe.
+    settings : Settings
+        Settings for the optimization.
+
+    Returns
+    -------
+    tuple of float
+        Tuple containing:
+
+        - velocity : float
+            Calculated velocity of the pipe.
+        - diameter : float
+            Calculated diameter of the pipe.
     """
-    vel, d = v
-    reynolds = ((settings.water.density * vel * d)
-                / settings.water.dynamic_viscosity)
-    # friction factor
-    f = (-1.8 * np.log10((settings.piping.roughness / (3.7 * d)) ** 1.11
-                            + 6.9 / reynolds)
-                            )**-2
-    # eq. for diameter
-    eq1 = vel - np.sqrt((2 * settings.piping.max_pr_loss * d)
-                        / (f * settings.water.density))
-    # eq. for velocity
-    eq2 = mass_lin - settings.water.density * vel * (np.pi / 4) * d ** 2
-    return [eq1, eq2]
+
 
 
 def calculate_hydraulics(
         power: np.ndarray,
         settings: Settings
         ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Calculate the mass flow, diameter and velocity for each pipe
+    """
+    Calculate the mass flow, diameter and velocity for each pipe
     given a installed thermal power and supply and return temperatures in
     settings.
-    
-    Args:
-        power (np.ndarray): installed thermal power for each pipe
-        settings (Settings): settings for the optimization
-    
-    Returns:
-        Tuple[np.ndarray, np.ndarray, np.ndarray]: mass flow, diameter and
-        velocity
+
+    Parameters
+    ----------
+    power : np.ndarray
+        Installed thermal power for each pipe.
+    settings : Settings
+        Settings for the optimization.
+
+    Returns
+    -------
+    tuple of np.ndarray
+        Tuple containing:
+
+        - mass_flow : np.ndarray
+            Mass flow for each pipe.
+        - diameter  : np.ndarray
+            Diameter for each pipe.
+        - velocity  : np.ndarray
+            Velocity for each pipe.
     """
+
     delta_t = settings.temperatures.supply - settings.temperatures.return_
 
     # Compute mass flow rate for all pipes m = P / (cp * deltaT)
@@ -96,18 +109,26 @@ def sts(model: pyo.ConcreteModel,
         matrices: dict,
         settings: Settings
     ):
-    """Postprocessing for the single time step model. This includes the
+    """
+    Postprocessing for the single time step model. This includes the
     calculation of the diameter and velocity of the pipes, the elimination of
     unused pipes and nodes. Drops unused pipes and nodes.
 
-    Args:
-        model (pyo.ConcreteModel): solved pyomo model
-        matrices (dict): dict containing the matrices
-        settings (tt.settings.Settings): settings for the optimization
-    
-    Returns:
-        dict: Optimal variables and postprocessed data
+    Parameters
+    ----------
+    model : pyo.ConcreteModel
+        Solved Pyomo model.
+    matrices : dict
+        Dictionary containing the matrices.
+    settings : tt.settings.Settings
+        Settings for the optimization.
+
+    Returns
+    -------
+    dict
+        Optimal variables and postprocessed data.
     """
+
     # Get the values from the model
     p_ij = np.array(pyo.value(model.P['ij', 'in', :, :]))
     p_ji = np.array(pyo.value(model.P['ji', 'in', :, :]))
@@ -336,17 +357,24 @@ def mts(model: pyo.ConcreteModel,
 
 
 def to_networkx_graph(matrices: dict) -> nx.DiGraph:
-    """Export the postprocessed, optimal district as a networkx graph.
+    """
+    Export the postprocessed, optimal district as a networkx graph.
     Includes the nodes and edges of the district, their length, installed
     diameter and power.
 
-    Args:
-        matrices: a dict containing the optimal matrix as output by topotherm.postprocessing.sts
-        matrices: a dict containing the optimal matrix as output by topotherm.postprocessing.sts
-        
-    Returns:
-        nx.DiGraph: networkx graph
+    Parameters
+    ----------
+    matrices : dict
+        a dict containing the optimal matrix as output by topotherm.postprocessing.sts
+    matrices : dict
+        a dict containing the optimal matrix as output by topotherm.postprocessing.sts
+
+    Returns
+    -------
+    nx.DiGraph
+        networkx graph
     """
+
     G = nx.DiGraph()
 
     # Add the nodes to the graph
@@ -376,17 +404,26 @@ def to_networkx_graph(matrices: dict) -> nx.DiGraph:
 
 def to_dataframe(matrices_optimal: dict,
                  matrices_init: dict) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    """Export the postprocessed, optimal district as a pandas DataFrame.
+    """
+    Export the postprocessed, optimal district as a pandas DataFrame.
     Includes the nodes and edges of the district, their length, installed
     diameter and power.
 
-    Args:
-        matrices_optimal: solved and cleaned matrices as output by topotherm.postprocessing.sts
-        matrices_init: original matrices as output by topotherm.fileio.load
-    
-    Returns:
-        (pd.DataFrame, pd.DataFrame): pandas DataFrames of nodes and edges respectively
+    Parameters
+    ----------
+    matrices_optimal : dict
+        Solved and cleaned matrices as output by `topotherm.postprocessing.sts`.
+    matrices_init : dict
+        Original matrices as output by `topotherm.fileio.load`.
+
+    Returns
+    -------
+    nodes_df : pd.DataFrame
+        pandas DataFrame of nodes.
+    edges_df : pd.DataFrame
+        pandas DataFrame of edges.
     """
+
     # Create a DataFrame for the nodes
     nodes = pd.DataFrame(
         index=range(matrices_optimal['a_i'].shape[0]),

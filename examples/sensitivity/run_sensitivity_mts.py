@@ -37,7 +37,7 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
         f.savefig(os.path.join(outputpath, 'district_initial.svg'), bbox_inches='tight')
 
     # default settings
-    settings = Settings()
+    settings = tt.settings.load(os.path.join(filepath, 'config.yaml'))
     settings.economics.heat_price = 0
 
     # regression

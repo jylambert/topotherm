@@ -10,7 +10,10 @@ Topotherm documentation
 network design model which scales well into larger districts for single
 and mulitple time steps.
 
-.. toctree::   
+.. toctree:: 
+   :maxdepth: 2 
+   :caption: Contents:
+
    overview
    install
    solver
@@ -18,6 +21,6 @@ and mulitple time steps.
    methodology 
    documentation
    topotherm
-   :maxdepth: 2
-   :caption: Contents:
+
+
 

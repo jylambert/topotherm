@@ -110,8 +110,8 @@ class Solver(BaseModel):
 class Economics(BaseModel):
     """Economic properties for the optimization problem. Used for the
     optimization model."""
-    source_price: List[float] = Field(
-        default_factory=lambda: [80e-3],
+    source_price: List[List[float]] = Field(
+        default_factory=lambda: [[80e-3]],
         description="Variable price for one kW of heat production at supply in €/kW")
     source_c_inv: List[float] = Field(
         default_factory=lambda: [0.],
