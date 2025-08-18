@@ -3,7 +3,10 @@
 @author: Jerry Lambert (jerry.lambert@tum.de); Amedeo Ceruti (amedeo.ceruti@tum.de)
 
 This file is used to optimize district heating systems with the tool topotherm
-of the Chair of Energy Systems. This is the example file for the MTS-Easy model.
+of the Chair of Energy Systems. This is the example file is based on the MTS model. 
+The sensitvity example highlights the  'sensitivity' model, which calculatesn the network
+configurations in steps of 10 % from 10 to 100% of the total heating demand in a district. This
+way the costs can be calculated incrementally.
 """
 
 import os
@@ -13,7 +16,6 @@ import pandas as pd
 import pyomo.environ as pyo
 
 import topotherm as tt
-from topotherm.settings import Settings
 from topotherm.precalculation_hydraulic import regression_thermal_capacity, regression_heat_losses
 
 
@@ -44,16 +46,16 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
     r_thermal_cap = regression_thermal_capacity(settings)
     r_heat_loss = regression_heat_losses(settings, r_thermal_cap)
 
-    min_share = 0.1
-    max_share = 1
-    number_of_iterations = 10
+    min_share = 0.1  # sensitivity starts at 10 % of total heating demand
+    max_share = 1  # up to 100 % heating demand
+    number_of_iterations = 10  # in ten steps
 
     share_q_c_tot = np.linspace(min_share, max_share, number_of_iterations)
     iterations = range(number_of_iterations)
 
     for run in iterations:
         print('============================')
-        print(f'Running iteration {run}')
+        print(f'Running iteration {run} of {number_of_iterations}')
         print('============================\n')
 
         variant = 'district_sensitivity_' + str(run)
@@ -65,11 +67,13 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
         model_sets['q_c_tot'] = (mat['flh_consumer'] * mat['q_c']).sum() * share_q_c_tot[run]
         model_sets['lambda_b_previous'] = np.zeros(model_sets['a_i_shape'][1])
 
-        # The following if section is only needed, if the built-up of the district should be consecutive and
-        # dependent of one another. Also comment or uncomment constraint in model file.
+        # The following if section is only needed, if the built-up of the district should be
+        # consecutive and dependent of one another.
+        # Also comment or uncomment constraint editing in model.
         if run != 0:
             variant_previous = 'district_sensitivity_' + str(run-1)
-            lambda_built_previous = pd.read_parquet(os.path.join(outputpath, variant_previous, 'lambda_b_orig.parquet'))
+            lambda_built_previous = pd.read_parquet(
+                os.path.join(outputpath, variant_previous, 'lambda_b_orig.parquet'))
             model_sets['lambda_b_previous'] = lambda_built_previous.to_numpy().reshape(-1)
 
         # Create output directory

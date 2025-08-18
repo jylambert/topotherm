@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-@author: Jerry Lambert (jerry.lambert@tum.de); Amedeo Ceruti
-(amedeo.ceruti@tum.de)
+@author: Jerry Lambert (jerry.lambert@tum.de); Amedeo Ceruti (amedeo.ceruti@tum.de)
 
 This file is used to optimize district heating systems with the tool topotherm
-of the Chair of Energy Systems.
+of the Chair of Energy Systems. This is the example file is based on the MTS model. 
+The sensitvity example highlights the  'sensitivity' model, which calculatesn the network
+configurations in steps of 10 % from 10 to 100% of the total heating demand in a district. This
+way the costs can be calculated incrementally.
 """
 
 import os
@@ -14,7 +16,6 @@ import pandas as pd
 import pyomo.environ as pyo
 
 import topotherm as tt
-from topotherm.settings import Settings
 from topotherm.precalculation_hydraulic import regression_thermal_capacity, regression_heat_losses
 
 DATAPATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data_sts')
@@ -44,16 +45,16 @@ def main(filepath, outputpath, plots=False, solver='gurobi', mode='forced'):
     r_thermal_cap = regression_thermal_capacity(settings)
     r_heat_loss = regression_heat_losses(settings, r_thermal_cap)
 
-    min_share = 0.1
-    max_share = 1
-    number_of_iterations = 10
+    min_share = 0.1  # sensitivity starts at 10 % of total heating demand
+    max_share = 1  # up to 100 % heating demand
+    number_of_iterations = 10  # in ten steps
 
     share_q_c_tot = np.linspace(min_share, max_share, number_of_iterations)
     iterations = range(number_of_iterations)
 
     for run in iterations:
         print('============================')
-        print(f'Running iteration {run}')
+        print(f'Running iteration {run} of {number_of_iterations}')
         print('============================\n')
 
         variant = 'district_sensitivity_' + str(run)
