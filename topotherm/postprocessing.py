@@ -14,14 +14,11 @@ This module includes the following functions:
 """
 
 from typing import Tuple
-import os
-import os
 
 import numpy as np
 import pyomo.environ as pyo
 from scipy.optimize import root
 import networkx as nx
-import pandas as pd
 import pandas as pd
 
 from topotherm.settings import Settings
@@ -54,6 +51,19 @@ def diameter_and_velocity(
         - diameter : float
             Calculated diameter of the pipe.
     """
+    vel, d = v
+    reynolds = ((settings.water.density * vel * d)
+                / settings.water.dynamic_viscosity)
+    # friction factor
+    f = (-1.8 * np.log10((settings.piping.roughness / (3.7 * d)) ** 1.11
+                            + 6.9 / reynolds)
+                            )**-2
+    # eq. for diameter
+    eq1 = vel - np.sqrt((2 * settings.piping.max_pr_loss * d)
+                        / (f * settings.water.density))
+    # eq. for velocity
+    eq2 = mass_lin - settings.water.density * vel * (np.pi / 4) * d ** 2
+    return [eq1, eq2]
 
 
 

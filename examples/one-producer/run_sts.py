@@ -11,8 +11,6 @@ import os
 
 import pandas as pd
 import pyomo.environ as pyo
-import matplotlib.pyplot as plt
-import networkx as nx
 
 import topotherm as tt
 

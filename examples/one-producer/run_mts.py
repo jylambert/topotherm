@@ -51,8 +51,6 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
     # Load the district
     mat = tt.fileio.load(filepath)
     mat['q_c'] = mat['q_c'] / 1000  # convert from W to kW
-    n_timesteps = mat['q_c'].shape[1]
-    print("Number of timesteps:", n_timesteps)
 
     if plots:
         f = tt.plotting.district(mat, isnot_init=False)  # Save initial District
