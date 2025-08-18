@@ -317,7 +317,7 @@ def model(matrices: dict,
                 * matrices['q_c'][k, t] for k, j in mdl.consumer_edges)
                 for t in mdl.set_t) * economics.heat_price * (-1),
         doc='Revenue constraint')
-    
+
     mdl.opex_source = pyo.Var(doc='OPEX Source', domain=pyo.NonNegativeReals)
     mdl.opex_source_constr = pyo.Constraint(
         expr=mdl.opex_source == sum(
@@ -327,7 +327,7 @@ def model(matrices: dict,
                 for k in mdl.set_n_p)
             for t in mdl.set_t),
         doc='OPEX Source constraint')
-    
+
     mdl.capex_pipes = pyo.Var(doc='CAPEX Pipe', domain=pyo.NonNegativeReals)
     pipes = sum(
         ((mdl.P_cap[k] * regression_inst['a']
