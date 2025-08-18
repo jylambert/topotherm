@@ -12,33 +12,42 @@ import pandas as pd
 
 
 def load(path: os.PathLike) -> dict:
-    """Read the input data from the given path and return the matrices
-        * A_i: Incidence matrix for the pipes with rows: nodes, columns: edges.
-        * A_p: Adjacency matrix for the producers with rows: nodes, columns:
-            supply ids.
-        * A_c: Adjacency matrix for the consumers with rows: nodes, columns:
-            consumer ids.
-        * Q_c: Heat demand of the consumers in W.
-        * L_i: Length of edges
-        * rel_positions: x, y coordinates of the nodes in the network.
-    
-    Args:
-        path (str or os.path): Path to the input data.
-    
-    Returns:
-        dict: Matrices stored in keys `a_i`, `a_p`, `a_c`, `q_c`, `l_i`,
-            and `position`.
     """
+    Read the input data from the given path and return the matrices.
+
+    Parameters
+    ----------
+    path : str or os.PathLike
+        Path to the input data.
+
+    Returns
+    -------
+    result : dict
+        Matrices stored in keys:
+
+        - **a_i** : Incidence matrix for the pipes (rows: nodes, columns: edges).
+        - **a_p** : Adjacency matrix for the producers (rows: nodes, columns: supply ids).
+        - **a_c** : Adjacency matrix for the consumers (rows: nodes, columns: consumer ids).
+        - **Q_c** : Heat demand of the consumers in W.
+        - **L_i** : Length of edges.
+        - **rel_positions** : x, y coordinates of the nodes in the network.
+    """
+
     def duplicate_columns(data: np.ndarray, minoccur: int = 2) -> list:
-        """Find duplicate columns in a numpy array.
-        
-        Args:
-            data (np.array): Data to check for duplicates.
-            minoccur (int): Minimum number of occurrences to be considered a
-                duplicate.
-        
-        Returns:
-            list: List of indices of duplicate columns.
+        """
+        Find duplicate columns in a numpy array.
+
+        Parameters
+        ----------
+        data : np.ndarray
+            Data to check for duplicates.
+        minoccur : int
+            Minimum number of occurrences to be considered a duplicate.
+
+        Returns
+        -------
+        list
+            List of indices of duplicate columns.
         """
         ind = np.lexsort(data)
         diff = np.any(data.T[ind[1:]] != data.T[ind[:-1]], axis=1)

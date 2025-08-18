@@ -15,15 +15,18 @@ sys.path.insert(0, os.path.abspath('../..'))
 
 
 project = 'Topotherm'
-copyright = '2024, Lambert, Jerry and Ceruti, Amedeo'
+copyright = '2025, Lambert, Jerry and Ceruti, Amedeo'
 author = 'Jerry Lambert & Amedeo Ceruti'
-release = '0.3.0'
+release = '0.4.1'
 
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-extensions = ['sphinx.ext.autodoc']
+extensions = [
+    'sphinx.ext.autodoc',
+    'sphinx.ext.napoleon',    
+    ]
 
 templates_path = ['_templates']
 exclude_patterns = []

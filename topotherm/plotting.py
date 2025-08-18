@@ -9,24 +9,33 @@ from matplotlib.lines import Line2D
 def district(matrices: dict,
              diameter: list[float] = [0],
              isnot_init: bool = False) -> plt.Figure:
-    """Plot the district heating network with the given matrices.
-    
-    Args:
-        matrices (dict): Dictionary with the matrices of the district heating
-            network with keys:
-                * a_i: Incidence matrix with rows: nodes, columns: edges.
-                * a_p: Adjacency matrix for the producers: rows: nodes, columns: supply ids.
-                * a_c: Adjacency matrix for the consumers: rows: nodes, columns: consumer ids.
-                * l_i: Length of edges
-                * position: x, y coordinates of the nodes in the network.
-
-        diameter (list[float]): Inner diameter of the pipes, default = [0]
-        isnot_init (bool): Either True or False, for plot before or after the
-            optimization, default = False.
-
-    Returns:
-        plt.Figure: Figure of the district
     """
+    Plot the district heating network with the given matrices.
+
+    Parameters
+    ----------
+    matrices : dict
+        Dictionary with the matrices of the district heating network with keys:
+
+        - **a_i**       : Incidence matrix with rows: nodes, columns: edges.
+        - **a_p**       : Adjacency matrix for the producers with rows: nodes, columns: supply ids.
+        - **a_c**       : Adjacency matrix for the consumers with rows: nodes, columns: consumer ids.
+        - **l_i**       : Length of edges.
+        - **position**  : x, y coordinates of the nodes in the network.
+
+    diameter : list of float
+        Inner diameter of the pipes (default = [0]).
+
+    isnot_init : bool
+        True to plot after optimization, False for before (default = False).
+
+    Returns
+    -------
+    plt.Figure
+        Figure of the district.
+    """
+
+
     G = nx.DiGraph()
     s = np.array([0, 0, 0])
 
@@ -106,8 +115,18 @@ def district(matrices: dict,
 
 
 def plot_networkx(n):
-    """Input: n: a networkx graph
-    + Returns: Figure of the networkx graph
+    """
+    Plot a NetworkX graph.
+
+    Parameters
+    ----------
+    n : networkx.Graph
+        Input NetworkX graph.
+
+    Returns
+    -------
+    fig : matplotlib.figure.Figure
+        Figure of the NetworkX graph.
     """
 
     fig, ax = plt.subplots(figsize=(15, 5))

@@ -10,8 +10,6 @@ import os
 
 import pandas as pd
 import pyomo.environ as pyo
-import networkx as nx
-import matplotlib.pyplot as plt
 import topotherm as tt
 
 
@@ -113,9 +111,6 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='forced'):
                                  isnot_init=True)
         f.savefig(os.path.join(outputpath, 'district_optimal.svg'),
                     bbox_inches='tight')
-
-    # create networkx graph object
-    network = tt.postprocessing.to_networkx_graph(opt_mats)
 
 
 if __name__ == '__main__':

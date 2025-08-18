@@ -10,14 +10,17 @@ from topotherm.utils import create_dir
 
 
 def create_connection_line(point, edges):
-    """Creates a connection line from a single point to multiple edges
+    """
+    Creates a connection line from a single point to multiple edges
 
-    Args:
-        point: Single point which should be connected
-        edges: Geoseries of edges to which the point should be connected
+    Parameters
+    ----------
+    point: Single point which should be connected
+    edges: Geoseries of edges to which the point should be connected
 
-    Returns:
-        line : A single linestring connecting the point to the nearest edge
+    Returns
+    -------
+    line : A single linestring connecting the point to the nearest edge
     """
     # Find the nearest point on the edges
     nearest_geom = edges.distance(point).idxmin()
@@ -30,14 +33,17 @@ def create_connection_line(point, edges):
 
 
 def create_nearest_point(point, edges):
-    """Finds the nearest point on a geoseries of edges
+    """
+    Finds the nearest point on a geoseries of edges
 
-    Args:
-        point: Single point which should be projected onto an edge
-        edges: Geoseries of edges onto which the point should be projected
+    Parameters
+    ----------
+    point: Single point which should be projected onto an edge
+    edges: Geoseries of edges onto which the point should be projected
 
-    Returns:
-        nearest point: A single nearest point object.
+    Returns
+    -------
+    nearest point: A single nearest point object.
     """
     # Find the nearest point on the edges
     nearest_geom = edges.distance(point).idxmin()
@@ -47,14 +53,17 @@ def create_nearest_point(point, edges):
 
 
 def create_edge_nearest_point(points1, points2):
-    """Creates an edge for each points1 to the nearest points2
+    """
+    Creates an edge for each points1 to the nearest points2
 
-    Args:
-        points1: Series of points which should be connected to the nearest points2
-        points2: Series of points to which should be connected the points1
+    Parameters
+    ----------
+    points1: Series of points which should be connected to the nearest points2
+    points2: Series of points to which should be connected the points1
 
-    Returns:
-        lines_gs: Geoseries of lines connecting points1 to points2
+    Returns
+    -------
+    lines_gs: Geoseries of lines connecting points1 to points2
     """
     # Extract coordinates from GeoSeries
     coords1 = np.array(list(zip(points1.x, points1.y)))
@@ -76,17 +85,20 @@ def create_edge_nearest_point(points1, points2):
 
 
 def create_matrices(inputpath, outputpath, buffer=2.5):
-    """Creates from a set of shapefiles ()
+    """
+    Creates from a set of shapefiles ()
 
-    Args:
-        inputpath: Path to the initial shape files for the street layout (street.shp), heat sinks (heat_sinks.shp)
-                   and heat sources (heat_sources.shp)
-        outputpath: Path to the result folder
-        buffer: Radius of the buffer layer in meter, which is used to aggregate connection lines
+    Parameters
+    ----------
+    inputpath: Path to the initial shape files for the street layout (street.shp), heat sinks (heat_sinks.shp)
+               and heat sources (heat_sources.shp)
+    outputpath: Path to the result folder
+    buffer: Radius of the buffer layer in meter, which is used to aggregate connection lines
 
-    Returns:
-        Parquet files, needed for the optimization of the district heating network
-        Shapefiles of the nodes and edges of the district
+    Returns
+    -------
+    Parquet files, needed for the optimization of the district heating network
+    Shapefiles of the nodes and edges of the district
     """
     # Create the results folder
     create_dir(outputpath)

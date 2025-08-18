@@ -15,7 +15,7 @@ piping:
   diameter: [0.0216, 0.0285, 0.0372, 0.0431, 0.0545, 0.0703, 0.0825, 0.1071, 0.1325, 0.1603, 0.2101, 0.263, 0.3127, 0.3444, 0.3938]
   outer_diameter: [0.09, 0.09, 0.11, 0.11, 0.125, 0.14, 0.16, 0.2, 0.225, 0.25, 0.315, 0.4, 0.45, 0.5, 0.56]
   cost: [390, 400, 430, 464, 498, 537, 602, 670, 754, 886, 1171, 1184, 1197, 1401, 1755]
-  number_diameter: 15
+  number_diameters: 15
   max_pr_loss: 250
   roughness: 0.05e-3
   thermal_conductivity: 0.024
@@ -28,7 +28,7 @@ economics:
   source_c_inv: [0]  # Investment costs for each source
   source_c_irr: [0.08]  # Interest rate for each source
   source_lifetime: [40.]  # years for source investments
-  source_price: [80e-3]  # Price for heat production at supply in €/kW
+  source_price: [[80e-3]]  # Price for heat production at supply in €/kW
   heat_price: 120e-3  # Selling Price for heat in €/kW
   pipes_c_irr: 0.08  # Interest rate
   pipes_lifetime: 40.  # years for piping investments

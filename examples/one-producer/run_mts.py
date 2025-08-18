@@ -15,7 +15,6 @@ import topotherm as tt
 
 
 REGRESSION = 'regression.csv'  # regression coefficients for thermal capacity and heat losses
-TIMESERIES = 'timeseries.csv'  # timeseries for heat scaling
 PLOTS = True  # save plots of the district
 SOLVER = 'gurobi'  # 'gurobi' or 'cbc'
 MODE = 'forced'  # 'economic' or 'forced'

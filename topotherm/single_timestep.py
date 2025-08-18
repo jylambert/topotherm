@@ -312,7 +312,7 @@ def model(matrices: dict,
     mdl.opex_source_constr = pyo.Constraint(
         expr=mdl.opex_source == sum(
             sum(mdl.P_source[k, t]
-                * economics.source_price[k]
+                * economics.source_price[k][t]
                 * matrices['flh_source'][k, t]
                 for k in mdl.set_n_p)
             for t in mdl.set_t),
