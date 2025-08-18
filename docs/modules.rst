@@ -1,4 +1,4 @@
-topotherm-0.2.0
+topotherm-0.4.1
 ===============
 
 .. toctree::

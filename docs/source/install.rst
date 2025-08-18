@@ -21,8 +21,7 @@ Anaconda or mamba
 
 We recommend to install the dependencies with anaconda or mamba: ::
 
- conda
- cd topotherm
- conda create -n topotherm python
- conda activate topotherm
- pip install -e .
+   mamba
+   cd topotherm
+   mamba env create -f environment.yml -n topotherm
+   mamba activate topotherm
