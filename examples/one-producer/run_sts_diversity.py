@@ -17,7 +17,7 @@ import topotherm as tt
 
 DATAPATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data_sts')
 OUTPUTPATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                          'results', 'sts_forced')
+                          'results', 'sts_div')
 
 # regression coefficients for thermal capacity and heat losses
 REGRESSION = 'regression.csv'
