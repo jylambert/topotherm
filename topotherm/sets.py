@@ -6,36 +6,33 @@ import numpy as np
 
 
 def create(matrices):
-    """Create sets for the optimization. The sets are used to define the
-    variables and constraints. Depending on the matrices, the sets are
-    calculated with the defined directions (i -> j as a reference).
+    """
+    Create sets for the optimization. The sets are used to define variables
+    and constraints. Depending on the matrices, the sets are computed with the
+    defined directions (``i -> j`` as reference).
 
-    Args:
-        matrices (dict): Dictionary with the matrices of the district heating
-        network with keys:
-            * a_i: Incidence matrix with rows: nodes, columns: edges.
-            * a_p: Adjacency matrix for the producers: rows: nodes, columns: supply ids.
-            * a_c: Adjacency matrix for the consumers: rows: nodes, columns: consumer ids.
+    Parameters
+    ----------
+    matrices : dict
+        Matrices of the district heating network with keys:
+        - ``a_i`` : Incidence matrix (rows: nodes, columns: edges).
+        - ``a_p`` : Adjacency matrix for producers (rows: nodes, columns: supply IDs).
+        - ``a_c`` : Adjacency matrix for consumers (rows: nodes, columns: consumer IDs).
 
-    Returns:
-        dict: sets for the optimization.
-            * connection_c_ij: Consumers connected to the network in direction i -> j
-            * lambda_c_ij: Binary vector with 1 where consumers are connected
-                to the network in direction i -> j
-            * connection_c_ji: Consumers connected to the network in direction
-                j -> i
-            * lambda_c_ji: Binary vector with 1 where consumers are connected
-                to the network in direction j -> i
-            * a_i_out: Dictionary with the outgoing pipes for each node (
-                direction i -> j is 1)
-            * a_i_in: Dictionary with the ingoing pipes for each node
-                (direction i -> j ingoing is -1)
-            * a_p_in: Dictionary with the ingoing pipes for each producer
-                (direction i -> j ingoing is -1)
-            * a_c_out: Dictionary with the outgoing pipes for each consumer
-                (direction i -> j is 1)
-            * a_c_out_edge: Dictionary with the outgoing pipes for each consumer
-                with the edge pipes
+    Returns
+    -------
+    dict
+        Sets for the optimization containing:
+        - ``connection_c_ij`` : Indices of consumers connected to the network in direction ``i -> j``.
+        - ``lambda_c_ij`` : Binary vector (1 where consumers are connected in direction ``i -> j``).
+        - ``connection_c_ji`` : Indices of consumers connected to the network in direction ``j -> i``.
+        - ``lambda_c_ji`` : Binary vector (1 where consumers are connected in direction ``j -> i``).
+        - ``a_i_out`` : Dict mapping node index → array of outgoing pipe indices (``i -> j`` is ``+1``).
+        - ``a_i_in`` : Dict mapping node index → array of incoming pipe indices (``i -> j`` incoming is ``-1``).
+        - ``a_p_in`` : Dict mapping producer index → array of incoming pipe indices (``-1``).
+        - ``a_c_out`` : Dict mapping consumer index → array of outgoing pipe indices (``+1``).
+        - ``a_c_out_edge`` : Dict mapping consumer index → array of adjacent edge indices.
+
     """
     s = {}
     # Shapes of matrices

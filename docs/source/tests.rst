@@ -1,53 +1,11 @@
-tests package
-=============
+.. _tests:
+.. _tests-page:
 
-Submodules
-----------
+Tests
+=====
 
-tests.conftest module
----------------------
+.. include:: ../../README.md
+   :parser: myst
+   :start-after: (tests)=
+   :end-before: (docs)=
 
-.. automodule:: tests.conftest
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-tests.hydraulics module
------------------------
-
-.. automodule:: tests.hydraulics
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-tests.mts module
-----------------
-
-.. automodule:: tests.mts
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-tests.sts module
-----------------
-
-.. automodule:: tests.sts
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-tests.test\_setup module
-------------------------
-
-.. automodule:: tests.test_setup
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-Module contents
----------------
-
-.. automodule:: tests
-   :members:
-   :undoc-members:
-   :show-inheritance:

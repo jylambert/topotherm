@@ -1,16 +1,16 @@
-"""Postprocessing of the results from the optimization. This includes the 
-calculation of the diameter and mass flow of the pipes, the elimination of
+"""
+Postprocessing of the results from the optimization. This includes the
+calculation of the diameter and mass flow of the pipes, and the elimination of
 unused pipes and nodes.
 
-This module includes the following functions:
-    * calc_diam_and_velocity: Equations for the calculation of the diameter and
-        velocity of the pipes depending on the mass flow and the power of the
-        pipes
-    * sts: Postprocessing for the single time step model
-    * to_networkx_graph: Export the postprocessed, optimal district as a
-        networkx graph
-    * mts: Postprocessing for the multiple time step model
-
+Functions
+---------
+- ``calc_diam_and_velocity`` : Calculate pipe diameter and velocity depending
+  on the mass flow and pipe power.
+- ``sts`` : Postprocessing for the single time step model.
+- ``to_networkx_graph`` : Export the postprocessed, optimal district as a
+  NetworkX graph.
+- ``mts`` : Postprocessing for the multiple time step model.
 """
 
 from typing import Tuple
@@ -29,27 +29,27 @@ def diameter_and_velocity(
         mass_lin: float,
         settings: Settings) -> Tuple[float, float]:
     """
-    Equations for the calculation of the diameter and velocity of
-    the pipes depending on the mass flow and the power of the pipes.
+    Equations for calculating the diameter and velocity of a pipe based on
+    mass flow and power of the pipes
 
     Parameters
     ----------
     v : tuple of float
-        Tuple containing the velocity and diameter.
+        Tuple containing the velocity and diameter (``(velocity, diameter)``).
     mass_lin : float
-        Mass flow of the pipe.
+        Mass flow of the pipe (kg/s). 
     settings : Settings
-        Settings for the optimization.
+        Settings object containing water and piping parameters.
 
     Returns
     -------
     tuple of float
         Tuple containing:
 
-        - velocity : float
-            Calculated velocity of the pipe.
-        - diameter : float
-            Calculated diameter of the pipe.
+        - ``velocity`` : float
+            Calculated velocity of the pipe (m/s).
+        - ``diameter`` : float
+            Calculated diameter of the pipe (m).
     """
     vel, d = v
     reynolds = ((settings.water.density * vel * d)
@@ -72,28 +72,27 @@ def calculate_hydraulics(
         settings: Settings
         ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
-    Calculate the mass flow, diameter and velocity for each pipe
-    given a installed thermal power and supply and return temperatures in
-    settings.
+    Calculate mass flow, diameter, and velocity for each pipe given the
+    installed thermal power and the supply/return temperatures from ``settings``.
 
     Parameters
     ----------
     power : np.ndarray
         Installed thermal power for each pipe.
     settings : Settings
-        Settings for the optimization.
+        Settings object containing temperature setpoints and water properties.
 
     Returns
     -------
     tuple of np.ndarray
         Tuple containing:
 
-        - mass_flow : np.ndarray
-            Mass flow for each pipe.
-        - diameter  : np.ndarray
-            Diameter for each pipe.
-        - velocity  : np.ndarray
-            Velocity for each pipe.
+        - ``mass_flow`` : np.ndarray
+            Mass flow for each pipe (kg/s).
+        - ``diameter`` : np.ndarray
+            Pipe diameter (m).
+        - ``velocity`` : np.ndarray
+            Flow velocity (m/s).
     """
 
     delta_t = settings.temperatures.supply - settings.temperatures.return_
@@ -121,8 +120,8 @@ def sts(model: pyo.ConcreteModel,
     ):
     """
     Postprocessing for the single time step model. This includes the
-    calculation of the diameter and velocity of the pipes, the elimination of
-    unused pipes and nodes. Drops unused pipes and nodes.
+    calculation of the diameter and velocity of the pipes and the elimination
+    of unused pipes and nodes.
 
     Parameters
     ----------
@@ -138,6 +137,7 @@ def sts(model: pyo.ConcreteModel,
     dict
         Optimal variables and postprocessed data.
     """
+
 
     # Get the values from the model
     p_ij = np.array(pyo.value(model.P['ij', 'in', :, :]))
@@ -239,18 +239,26 @@ def sts(model: pyo.ConcreteModel,
 def mts(model: pyo.ConcreteModel,
         matrices: dict,
         settings: Settings) -> dict:
-    """Postprocessing for the multiple time step model. This includes the
-    calculation of the diameter and velocity of the pipes, the elimination of
-    unused pipes and nodes. Drops unused pipes and nodes.
-
-    Args:
-        model (pyo.ConcreteModel): solved pyomo model
-        matrices (dict): dict containing the matrices
-        settings (tt.settings.Settings): settings for the optimization
-
-    Returns:
-        dict: Optimal variables and postprocessed data
     """
+    Postprocessing for the multiple time step model. This includes the
+    calculation of the diameter and velocity of the pipes and the elimination
+    of unused pipes and nodes.
+
+    Parameters
+    ----------
+    model : pyo.ConcreteModel
+        Solved Pyomo model.
+    matrices : dict
+        Dictionary containing the matrices.
+    settings : tt.settings.Settings
+        Settings for the optimization.
+
+    Returns
+    -------
+    dict
+        Optimal variables and postprocessed data.
+    """
+
     # Get the values from the model
     p_ij = np.reshape(np.array(pyo.value(model.P['ij', 'in', :, :])),
                       (-1, matrices['q_c'].shape[1]))
@@ -368,21 +376,20 @@ def mts(model: pyo.ConcreteModel,
 
 def to_networkx_graph(matrices: dict) -> nx.DiGraph:
     """
-    Export the postprocessed, optimal district as a networkx graph.
+    Export the postprocessed, optimal district as a NetworkX graph.
     Includes the nodes and edges of the district, their length, installed
-    diameter and power.
+    diameter, and power.
 
     Parameters
     ----------
     matrices : dict
-        a dict containing the optimal matrix as output by topotherm.postprocessing.sts
-    matrices : dict
-        a dict containing the optimal matrix as output by topotherm.postprocessing.sts
+        Dictionary containing the optimal matrix as output by
+        ``topotherm.postprocessing.sts``.
 
     Returns
     -------
     nx.DiGraph
-        networkx graph
+        NetworkX directed graph.
     """
 
     G = nx.DiGraph()
@@ -415,25 +422,25 @@ def to_networkx_graph(matrices: dict) -> nx.DiGraph:
 def to_dataframe(matrices_optimal: dict,
                  matrices_init: dict) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """
-    Export the postprocessed, optimal district as a pandas DataFrame.
+    Export the postprocessed, optimal district as pandas DataFrames.
     Includes the nodes and edges of the district, their length, installed
-    diameter and power.
+    diameter, and power.
 
     Parameters
     ----------
     matrices_optimal : dict
-        Solved and cleaned matrices as output by `topotherm.postprocessing.sts`.
+        Solved and cleaned matrices as output by
+        ``topotherm.postprocessing.sts``.
     matrices_init : dict
-        Original matrices as output by `topotherm.fileio.load`.
+        Original matrices as output by ``topotherm.fileio.load``.
 
     Returns
     -------
-    nodes_df : pd.DataFrame
-        pandas DataFrame of nodes.
-    edges_df : pd.DataFrame
-        pandas DataFrame of edges.
+    nodes : pd.DataFrame
+        DataFrame of nodes.
+    edges : pd.DataFrame
+        DataFrame of edges.
     """
-
     # Create a DataFrame for the nodes
     nodes = pd.DataFrame(
         index=range(matrices_optimal['a_i'].shape[0]),

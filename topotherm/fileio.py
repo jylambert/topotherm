@@ -22,15 +22,15 @@ def load(path: os.PathLike) -> dict:
 
     Returns
     -------
-    result : dict
-        Matrices stored in keys:
+    dict
+        Matrices stored in the following keys:
 
-        - **a_i** : Incidence matrix for the pipes (rows: nodes, columns: edges).
-        - **a_p** : Adjacency matrix for the producers (rows: nodes, columns: supply ids).
-        - **a_c** : Adjacency matrix for the consumers (rows: nodes, columns: consumer ids).
-        - **Q_c** : Heat demand of the consumers in W.
-        - **L_i** : Length of edges.
-        - **rel_positions** : x, y coordinates of the nodes in the network.
+        - ``a_i`` : Incidence matrix for the pipes (rows: nodes, columns: edges).
+        - ``a_p`` : Adjacency matrix for the producers (rows: nodes, columns: supply IDs).
+        - ``a_c`` : Adjacency matrix for the consumers (rows: nodes, columns: consumer IDs).
+        - ``Q_c`` : Heat demand of the consumers in W.
+        - ``L_i`` : Length of edges.
+        - ``rel_positions`` : ``(x, y)`` coordinates of the nodes in the network.
     """
 
     def duplicate_columns(data: np.ndarray, minoccur: int = 2) -> list:

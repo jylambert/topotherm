@@ -148,6 +148,14 @@ dev = [
     "mypy",
 ]
 docs = [
-    "sphinx",
-    "sphinx-rtd-theme",
+  "sphinx>=7",
+  "sphinx-rtd-theme",
+  "sphinx-copybutton",
+  "sphinx-autoapi",
+  "myst-parser",
+  "linkify-it-py",
+  "sphinx-autodoc-typehints",
+  "matplotlib",           # if you want .. plot:: support
+  "sphinxcontrib-mermaid" # for mermaid diagrams
+  
 ]

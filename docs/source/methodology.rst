@@ -43,6 +43,7 @@ An iterative calculation (using SciPy) is performed to determine the maximum vel
 .. math:: 
   
   v_{max} = \sqrt{\frac{2 \cdot \Delta p_{max} \cdot d}{f \cdot \rho}}
+  
 After calculating the maximum speed the maximum flow rate can be calculated using (𝑚̇  = 𝜌 ⋅ 𝑣 ⋅ 𝑑² ⋅ 𝜋∕4)   
 
 To model the thermal behavior of an insulated pipe buried underground the temperature difference 𝛩 between the water temperature in the pipe and the outside temperature is introduced:
