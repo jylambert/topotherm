@@ -120,16 +120,7 @@ Pull request checklist
 - [ ] Docs updated if user-facing behaviour changed
 - [ ] Type hints and NumPy-style docstrings for public APIs
 - [ ] ``pre-commit`` (or ``ruff/isort/black``) ran cleanly
-- [ ] CHANGELOG entry (if you maintain one) or brief summary in PR description
-
-Design guidelines (model-specific)
-----------------------------------
-
-- Keep **public API** small and stable; prefer internal helpers for complex flows.
-- Separate **I/O**, **model building**, **solving**, and **post-processing** for clarity.
-- Validate inputs early; raise descriptive errors.
-- Avoid global state; prefer explicit parameters and return values.
-- Make functions **pure** where practical (easier to test).
+- [ ] brief summary in PR description
 
 Reporting bugs
 --------------
@@ -145,10 +136,11 @@ License & contributor certificate
 ---------------------------------
 
 By contributing, you agree your work will be released under the project license
-(e.g. MIT). Make sure you have the right to contribute the code and that third-party
+(MIT). Make sure you have the right to contribute the code and that third-party
 snippets are compatible with the license.
 
 [MIT](https://en.wikipedia.org/wiki/MIT_License), see LICENSE file.
+
 Credits & inspiration
 ---------------------
 
