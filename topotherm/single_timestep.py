@@ -1,9 +1,11 @@
-"""This module contains the optimization models for the single-timestep 
+"""
+This module contains the optimization models for the single-timestep
 district heating network design.
 
-The module contains the following functions:
-    * annuity: Calculate the annuity factor
-    * model: Create the optimization model for the single time step operation
+Functions
+---------
+- ``annuity`` : Calculate the annuity factor.
+- ``model`` : Create the optimization model for the single time-step operation.
 """
 
 import numpy as np
@@ -13,14 +15,20 @@ from topotherm.settings import Economics
 
 
 def annuity(c_i, n):
-    """Calculate the annuity factor.
+    """
+    Calculate the annuity factor.
 
-    Args:
-        c_i (float): Interest rate
-        n (float): Number of years
+    Parameters
+    ----------
+    c_i : float
+        Interest rate.
+    n : float
+        Number of years.
 
-    Returns:
-        float: annuity factor
+    Returns
+    -------
+    float
+        Annuity factor.
     """
     a = ((1 + c_i) ** n * c_i) / ((1 + c_i) ** n - 1)
     return a
@@ -32,27 +40,32 @@ def model(matrices: dict,
           regression_losses: dict,
           economics: Economics,
           optimization_mode: str):
-    """Create the optimization model for the thermo-hydraulic coupled with
-    single time step operation. 
-
-    Args:
-        matrices (dict): Dictionary with the matrices of the district heating
-            network with keys a_i, a_p, a_c, l_i, position, q_c
-        sets (dict): Dictionary with the sets for the optimization, obtained
-            from matrices
-        regression_inst (dict): Dictionary with the regression coefficients
-            for the thermal capacity
-        regression_losses (dict): Dictionary with the regression coefficients
-            for the heat losses
-        economics (topotherm.settings.Economics): Object with the economic
-            parameters
-        optimization_mode (str): Optimization mode, either 'economic' for
-            economic or 'forced' for forced operation
-
-    Returns:
-        mdl (pyomo.environ.ConcreteModel): pyomo model
     """
+    Create the optimization model for the thermo-hydraulic coupled with
+    single time step operation.
 
+    Parameters
+    ----------
+    matrices : dict
+        Dictionary with the matrices of the district heating network with keys
+        ``a_i``, ``a_p``, ``a_c``, ``l_i``, ``position``, ``q_c``.
+    sets : dict
+        Dictionary with the sets for the optimization, obtained from ``matrices``.
+    regression_inst : dict
+        Dictionary with the regression coefficients for the thermal capacity.
+    regression_losses : dict
+        Dictionary with the regression coefficients for the heat losses.
+    economics : topotherm.settings.Economics
+        Object with the economic parameters.
+    optimization_mode : str
+        Optimization mode, either ``'economic'`` for economic or ``'forced'``
+        for forced operation.
+
+    Returns
+    -------
+    pyomo.environ.ConcreteModel
+        pyomo model.
+    """
     # Check if the optimization mode is implemented
     if optimization_mode not in ['economic', 'forced', 'sensitivity']:
         raise NotImplementedError(

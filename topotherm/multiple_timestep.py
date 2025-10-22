@@ -11,7 +11,6 @@ import pyomo.environ as pyo
 
 from topotherm.settings import Economics
 
-
 def annuity(c_i: float, n: float) -> float:
     """
     Calculate the annuity factor.
@@ -19,17 +18,30 @@ def annuity(c_i: float, n: float) -> float:
     Parameters
     ----------
     c_i : float
-        Interest rate
+        Interest rate (as a decimal, e.g. ``0.05`` for 5%).
     n : float
-        Number of years
+        Number of years.
 
     Returns
     -------
     float
-        Annuity factor
+        Annuity factor.
+
+    Examples
+    --------
+    Calculate the annuity factor for a 5% interest rate over 10 years:
+
+    >>> annuity(0.05, 10)
+    0.129504...
+    
+    With a higher interest rate (10%) and the same duration:
+
+    >>> annuity(0.10, 10)
+    0.162745...
     """
     a = ((1 + c_i) ** n * c_i) / ((1 + c_i) ** n - 1)
     return a
+
 
 
 def model(matrices: dict,
@@ -40,30 +52,30 @@ def model(matrices: dict,
           optimization_mode: str) -> pyo.ConcreteModel:
     # Hyperlink to economics delete if settings not properly formated
     """
-    Create the optimization model for the thermo-hydraulic coupled with
+    Create the optimization model for the thermo-hydraulic system with
     multiple time step operation.
 
     Parameters
     ----------
     matrices : dict
-        Dictionary with the matrices of the district heating network with keys
-        `a_i`, `a_p`, `a_c`, `l_i`, `position`, `q_c`.
+        Matrices of the district heating network with keys
+        ``a_i``, ``a_p``, ``a_c``, ``l_i``, ``position``, ``q_c``.
     sets : dict
-        Dictionary with the sets for the optimization, obtained from `matrices`.
+        Sets for the optimization, obtained from ``matrices``.
     regression_inst : dict
-        Dictionary with the regression coefficients for the thermal capacity.
+        Regression coefficients for the thermal capacity.
     regression_losses : dict
-        Dictionary with the regression coefficients for the heat losses.
-    economics : topotherm.settings.Economics   
-        Object with the economic parameters.
+        Regression coefficients for the heat losses.
+    economics : topotherm.settings.Economics
+        Economic parameters of the system.
     optimization_mode : str
-        Optimization mode, either `'economic'` for economic or `'forced'` for
-        forced operation.
+        Optimization mode, either ``'economic'`` for economic optimization
+        or ``'forced'`` for forced operation.
 
     Returns
     -------
     pyo.ConcreteModel
-        Multiple time step optimization model.
+        Multiple time-step optimization model.
     """
 
     # Check if the optimization mode is implemented

@@ -15,24 +15,23 @@ def district(matrices: dict,
     Parameters
     ----------
     matrices : dict
-        Dictionary with the matrices of the district heating network with keys:
+        Matrices of the district heating network with keys:
 
-        - **a_i**       : Incidence matrix with rows: nodes, columns: edges.
-        - **a_p**       : Adjacency matrix for the producers with rows: nodes, columns: supply ids.
-        - **a_c**       : Adjacency matrix for the consumers with rows: nodes, columns: consumer ids.
-        - **l_i**       : Length of edges.
-        - **position**  : x, y coordinates of the nodes in the network.
-
-    diameter : list of float
-        Inner diameter of the pipes (default = [0]).
-
-    isnot_init : bool
-        True to plot after optimization, False for before (default = False).
+        - ``a_i`` : Incidence matrix (rows: nodes, columns: edges).
+        - ``a_p`` : Adjacency matrix for the producers (rows: nodes, columns: supply IDs).
+        - ``a_c`` : Adjacency matrix for the consumers (rows: nodes, columns: consumer IDs).
+        - ``l_i`` : Length of edges.
+        - ``position`` : ``(x, y)`` coordinates of the nodes in the network.
+    diameter : list of float, optional
+        Inner diameter of the pipes. Default is ``[0]``.
+    isnot_init : bool, optional
+        Whether to plot after optimization (``True``) or before (``False``).
+        Default is ``False``.
 
     Returns
     -------
     plt.Figure
-        Figure of the district.
+        Figure of the district heating network.
     """
 
 
@@ -125,9 +124,10 @@ def plot_networkx(n):
 
     Returns
     -------
-    fig : matplotlib.figure.Figure
+    matplotlib.figure.Figure
         Figure of the NetworkX graph.
     """
+
 
     fig, ax = plt.subplots(figsize=(15, 5))
 
