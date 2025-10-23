@@ -376,15 +376,14 @@ def mts(model: pyo.ConcreteModel,
 
 def to_networkx_graph(matrices: dict) -> nx.DiGraph:
     """
-    Export the postprocessed, optimal district as a NetworkX graph.
-    Includes the nodes and edges of the district, their length, installed
-    diameter, and power.
+    Convert incidence matrices to a directed NetworkX graph.
+    Includes the nodes and edges of the district, their length, and, if 
+    available, installed diameter, and power.
 
     Parameters
     ----------
     matrices : dict
-        Dictionary containing the optimal matrix as output by
-        ``topotherm.postprocessing.sts``.
+        Dictionary containing the incidence matrices as output by ``topotherm.postprocessing.sts`` or as input to the model.
 
     Returns
     -------
@@ -410,12 +409,34 @@ def to_networkx_graph(matrices: dict) -> nx.DiGraph:
 
     sources = np.argmax(matrices['a_i'] == 1, axis=0)  # First occurrence of 1 in each column
     targets = np.argmax(matrices['a_i'] == -1, axis=0)  # First occurrence of -1 in each column
+  
+    # Get existing to allow solved and unsolved incidence matrices
+    _data = ['l_i', 'd_i_0', 'p']
+    available_data = [k for k in _data if k in matrices.keys()]
+    available_matrices = [matrices[k].flatten() for k in available_data]
+    edges = np.column_stack([sources, targets] + available_matrices)
 
-    edges = np.column_stack((sources, targets, matrices['l_i'].flatten(), matrices['d_i_0'].flatten(), matrices['p'].flatten()))
+    # hacky solution, should maybe work dire
+    for row in edges:
+        u, v = row[0].astype(int), row[1].astype(int)
+        data = {}
+        idx = 2  # start after u, v
 
-    for u, v, weight, d, p in edges:
-        if p != 0:  # Directly avoid edges with p=0
-            G.add_edge(u.astype(int), v.astype(int), weight=weight, d=d, p=p)
+        for key in available_data:
+            val = row[idx]
+            idx += 1
+
+            if key == 'l_i':
+                data['l'] = val
+            elif key == 'd_i_0':
+                data['d'] = val
+            elif key == 'p':
+                data['p'] = val
+                if val == 0:  # Skip edges with p == 0
+                    break
+        else:
+            # Only add edge if loop didn’t break (i.e., p != 0 or p not present)
+            G.add_edge(u, v, **data)
 
     return G
 
