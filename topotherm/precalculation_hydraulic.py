@@ -223,7 +223,7 @@ def thermal_resistance(diameter: float,
 
     References
     ----------
-    Blommaert (2020), based on D'Eustachio (1957).
+    Planungshandbuch Fernwärme Version 1.3 (2021).
 
     Parameters
     ----------
@@ -248,29 +248,20 @@ def thermal_resistance(diameter: float,
     return thermal_resistance_pipe
 
 
-def heat_loss_pipe(mass_flow: float,
-                   length: float,
-                   temperature_in: float,
+def heat_loss_pipe(temperature_in: float,
                    thermal_resistance_pipe: float,
-                   ambient_temperature: float,
-                   cp_water: float) -> float:
+                   ambient_temperature: float) -> float:
     """
     Calculate the heat loss of a pipe.
 
     Parameters
     ----------
-    mass_flow : float
-        Mass flow in the pipe (kg/s).
-    length : float
-        Length of the pipe (m).
     temperature_in : float
         Temperature in the pipe (°C or K).
     thermal_resistance_pipe : float
         Thermal resistance of the pipe (m·K/W).
     ambient_temperature : float
         Ambient temperature (°C or K).
-    cp_water : float
-        Specific heat capacity of water (J/kg·K).
 
     Returns
     -------
@@ -278,14 +269,8 @@ def heat_loss_pipe(mass_flow: float,
         Heat loss of the pipe (W).
     """
     temp_diff_in = temperature_in - ambient_temperature
-    temp_diff_out = temp_diff_in * np.exp(
-        -length / (
-            mass_flow * cp_water * thermal_resistance_pipe
-            )
-        )
-    temperature_out = temp_diff_out + ambient_temperature
-    losses = mass_flow * cp_water * (
-        temperature_in - temperature_out) / length
+    losses = thermal_resistance_pipe * temp_diff_in
+
     return losses
 
 
@@ -366,18 +351,17 @@ def regression_heat_losses(settings: Settings,
         Regression factors for the linearization of the heat losses of the pipes.
     """
 
-    pipe_depth = np.ones(settings.piping.number_diameters)
-    pipe_length = 100*np.ones(settings.piping.number_diameters)
-    ratio = np.array(settings.piping.outer_diameter) / np.array(settings.piping.diameter)
-    res_pipe = thermal_resistance(np.array(settings.piping.diameter), ratio, pipe_depth, settings)
+    pipe_depth = np.ones(settings.piping.number_diameters) * settings.piping.depth
+    ratio = np.array(settings.piping.outer_diameter) / np.array(settings.piping.middle_diameter)
+    res_pipe = thermal_resistance(np.array(settings.piping.middle_diameter), ratio, pipe_depth, settings)
+
+    heat_loss = heat_loss_pipe(settings.temperatures.supply,
+                                res_pipe,
+                                settings.temperatures.ambient)
 
     mass_flow = thermal_capacity['mass_flow_max']
     maximal_power = thermal_capacity['power_flow_max']
 
-    heat_loss = np.zeros([settings.piping.number_diameters])
-
-    heat_loss = heat_loss_pipe(mass_flow, pipe_length, settings.temperatures.supply, res_pipe,
-                                settings.temperatures.ambient, settings.water.heat_capacity_cp)
     regression = stats.linregress(maximal_power/1000, heat_loss/1000)
 
     r = {}
