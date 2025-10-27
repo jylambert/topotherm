@@ -38,42 +38,54 @@ class Piping(BaseModel):
     """Piping properties for the linearization of piping."""
     diameter: List[float] = Field(
         default_factory=lambda: [
-            0.0216, 0.0285, 0.0372, 0.0431,
-            0.0545, 0.0703, 0.0825, 0.1071,
-            0.1325, 0.1603, 0.2101, 0.263,
-            0.3127, 0.3444, 0.3938
+            0.0291, 0.0372, 0.0431, 0.0545, 0.0703,
+            0.0825, 0.1071, 0.1325, 0.1603, 0.2101,
+            0.263, 0.3127, 0.3444, 0.3938, 0.4444,
+            0.4954, 0.5958
             ],
         description="List of all inner diameters of the available pipe sizes"
     )
 
+    middle_diameter: List[float] = Field(
+        default_factory=lambda: [
+            0.0337, 0.0424, 0.0483, 0.0603, 0.0761,
+            0.0889, 0.1143, 0.1397, 0.1683, 0.2191,
+            0.273, 0.3239, 0.3556, 0.4064, 0.457,
+            0.508, 0.61
+            ],
+        description="List of all middle diameters of the available pipe sizes"
+    )
+
     outer_diameter: List[float] = Field(
         default_factory=lambda: [
-            0.09, 0.09, 0.11, 0.11,
-            0.125, 0.14, 0.16, 0.2,
-            0.225, 0.25, 0.315, 0.4,
-            0.45, 0.5, 0.56
-            ],
+            0.09, 0.11, 0.11, 0.125, 0.14,
+            0.16, 0.2, 0.225, 0.25, 0.315,
+            0.4, 0.45, 0.5, 0.56, 0.63,
+            0.71, 0.8
+        ],
         description="List of all outer diameters of the available pipe sizes"
     )
 
     cost: List[float] = Field(
         default_factory=lambda: [
-            390, 400, 430, 464,
-            498, 537, 602, 670,
-            754, 886, 1171, 1184,
-            1197, 1401, 1755
+            718, 763, 786, 880, 907,
+            1061, 1090, 1256, 1332, 1836,
+            2036, 2183, 2651, 2902, 3345,
+            3580, 4507
             ],
         description="Cost of pipes"
     )
 
     number_diameters: int = Field(
-        15, description="Number of discrete diameters")
+        17, description="Number of discrete diameters")
     max_pr_loss: float = Field(
         250., description="Assumed pressure loss in Pa per meter")
     roughness: float = Field(
-        0.05e-3, description="Pipe roughness factor")
+        0.01e-3, description="Pipe roughness factor")
     thermal_conductivity: float = Field(
         0.024, description="Pipe thermal conductivity in W/mK")
+    depth: float = Field(
+        2, description="Depth of buried pipes in m (measured from surface to the middle of pipe)")
 
     @model_validator(mode='after')
     def check_length(self):
