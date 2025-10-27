@@ -23,7 +23,7 @@ class Water(BaseModel):
 class Ground(BaseModel):
     """Ground properties for the linearization of piping."""
     thermal_conductivity: float = Field(
-        2.4, description="Thermal conductivity of the ground")
+        1.2, description="Thermal conductivity of the ground")
 
 
 class Temperatures(BaseModel):
