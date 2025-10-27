@@ -115,10 +115,8 @@ class Solver(BaseModel):
         10000, description="Time limit for the optimization in seconds")
     log: str = Field("solver.log", description="Log file for the solver")
     # @TODO: add more solver options, pass them to the solver flexibly
-    
 
 
-# @TODO: remove flh from setting and incorporate into fileio when modelling consumer specific flh
 class Economics(BaseModel):
     """Economic properties for the optimization problem. Used for the
     optimization model."""
