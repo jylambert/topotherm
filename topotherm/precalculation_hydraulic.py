@@ -242,11 +242,9 @@ def thermal_resistance(diameter: float,
         Thermal resistance of the pipe (m·K/W).
     """
     outer_diameter = diameter * diameter_ratio
-    thermal_resistance_ground = (np.log(4 * depth / outer_diameter)
-                                 / (2 * np.pi
-                                    * settings.ground.thermal_conductivity))
-    thermal_resistance_insulation = np.log(diameter_ratio) / (2 * np.pi * settings.piping.thermal_conductivity)
-    thermal_resistance_pipe = thermal_resistance_insulation + thermal_resistance_ground
+    thermal_resistance_ground = np.log(8 * depth / outer_diameter) / settings.ground.thermal_conductivity
+    thermal_resistance_insulation = np.log(diameter_ratio) / settings.piping.thermal_conductivity
+    thermal_resistance_pipe = (2 * np.pi) / (thermal_resistance_insulation + thermal_resistance_ground)
     return thermal_resistance_pipe
 
 
