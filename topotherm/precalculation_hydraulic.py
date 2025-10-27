@@ -359,7 +359,6 @@ def regression_heat_losses(settings: Settings,
                                 res_pipe,
                                 settings.temperatures.ambient)
 
-    mass_flow = thermal_capacity['mass_flow_max']
     maximal_power = thermal_capacity['power_flow_max']
 
     regression = stats.linregress(maximal_power/1000, heat_loss/1000)
