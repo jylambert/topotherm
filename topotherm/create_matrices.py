@@ -273,6 +273,7 @@ def create_matrices(inputpath: dict, outputpath: str, buffer=2.5):
     # Create final arrays more efficiently
     pos = np.column_stack([gdf_nodes.geometry.x.values, gdf_nodes.geometry.y.values])
 
+    # @TODO: Can we somehow automate this? Easiest way -> Probably just put them into one column
     # This part needs to be adapted to the number of timesteps
     q_c = np.round(np.array([sinks_center["ts_0"],
                              sinks_center["ts_1"],
