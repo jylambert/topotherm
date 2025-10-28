@@ -5,31 +5,74 @@ from shapely.ops import nearest_points, split, snap
 from shapely.geometry import LineString, MultiPoint
 from scipy.spatial import cKDTree
 
-from topotherm.utils import create_dir
+from topotherm.utils import create_dir, find_duplicate_cols
 
 
-def duplicate_columns(data: np.ndarray, minoccur: int = 2) -> list:
+def create_connection_line(point, edges):
     """
-    Find duplicate columns in a numpy array.
+    Creates a connection line from a single point to multiple edges
 
     Parameters
     ----------
-    data : np.ndarray
-        Data to check for duplicates.
-    minoccur : int
-        Minimum number of occurrences to be considered a duplicate.
+    point: Single point which should be connected
+    edges: Geoseries of edges to which the point should be connected
 
     Returns
     -------
-    list
-        List of indices of duplicate columns.
+    line : A single linestring connecting the point to the nearest edge
     """
-    ind = np.lexsort(data)
-    diff = np.any(data.T[ind[1:]] != data.T[ind[:-1]], axis=1)
-    edges = np.where(diff)[0] + 1
-    result = np.split(ind, edges)
-    result = [group for group in result if len(group) >= minoccur]
-    return result
+    # Find the nearest point on the edges
+    nearest_geom = edges.distance(point).idxmin()
+    nearest_point = nearest_points(point, edges.iloc[nearest_geom])[1]
+    # Create a line connecting the point to the nearest point on the edge
+    return LineString([point, nearest_point])
+
+
+def create_nearest_point(point, edges):
+    """
+    Finds the nearest point on a geoseries of edges
+
+    Parameters
+    ----------
+    point: Single point which should be projected onto an edge
+    edges: Geoseries of edges onto which the point should be projected
+
+    Returns
+    -------
+    nearest point: A single nearest point object.
+    """
+    # Find the nearest point on the edges
+    nearest_geom = edges.distance(point).idxmin()
+    nearest_point = nearest_points(point, edges.iloc[nearest_geom])[1]
+    return nearest_point
+
+
+def create_edge_nearest_point_optimized(points1, points2):
+    """
+    Creates an edge for each points1 to the nearest points2
+
+    Parameters
+    ----------
+    points1: Series of points which should be connected to the nearest points2
+    points2: Series of points to which should be connected the points1
+
+    Returns
+    -------
+    lines_gs: Geoseries of lines connecting points1 to points2
+    """
+
+    # Extract coordinates from GeoSeries
+    coords1 = np.array(list(zip(points1.x, points1.y)))
+    coords2 = np.array(list(zip(points2.x, points2.y)))
+
+    # Use cKDTree for efficient nearest-neighbor search
+    tree = cKDTree(coords2)
+    distances, indices = tree.query(coords1)
+
+    # Create LineStrings connecting each point in points1 to the nearest point in points2
+    lines = [LineString([points1.iloc[i], points2.iloc[indices[i]]]) for i in range(len(points1))]
+
+    return gpd.GeoSeries(lines, crs=points1.crs if hasattr(points1, 'crs') else "EPSG:25832")
 
 
 def create_matrices(inputpath: dict, outputpath: str, buffer=2.5):
@@ -48,71 +91,6 @@ def create_matrices(inputpath: dict, outputpath: str, buffer=2.5):
     Parquet files, needed for the optimization of the district heating network
     Shapefiles of the nodes and edges of the district
     """
-
-    def create_connection_line(point, edges):
-        """
-        Creates a connection line from a single point to multiple edges
-
-        Parameters
-        ----------
-        point: Single point which should be connected
-        edges: Geoseries of edges to which the point should be connected
-
-        Returns
-        -------
-        line : A single linestring connecting the point to the nearest edge
-        """
-        # Find the nearest point on the edges
-        nearest_geom = edges.distance(point).idxmin()
-        nearest_point = nearest_points(point, edges.iloc[nearest_geom])[1]
-        # Create a line connecting the point to the nearest point on the edge
-        return LineString([point, nearest_point])
-
-    def create_nearest_point(point, edges):
-        """
-        Finds the nearest point on a geoseries of edges
-
-        Parameters
-        ----------
-        point: Single point which should be projected onto an edge
-        edges: Geoseries of edges onto which the point should be projected
-
-        Returns
-        -------
-        nearest point: A single nearest point object.
-        """
-        # Find the nearest point on the edges
-        nearest_geom = edges.distance(point).idxmin()
-        nearest_point = nearest_points(point, edges.iloc[nearest_geom])[1]
-        return nearest_point
-
-    def create_edge_nearest_point_optimized(points1, points2):
-        """
-        Creates an edge for each points1 to the nearest points2
-
-        Parameters
-        ----------
-        points1: Series of points which should be connected to the nearest points2
-        points2: Series of points to which should be connected the points1
-
-        Returns
-        -------
-        lines_gs: Geoseries of lines connecting points1 to points2
-        """
-
-        # Extract coordinates from GeoSeries
-        coords1 = np.array(list(zip(points1.x, points1.y)))
-        coords2 = np.array(list(zip(points2.x, points2.y)))
-
-        # Use cKDTree for efficient nearest-neighbor search
-        tree = cKDTree(coords2)
-        distances, indices = tree.query(coords1)
-
-        # Create LineStrings connecting each point in points1 to the nearest point in points2
-        lines = [LineString([points1.iloc[i], points2.iloc[indices[i]]]) for i in range(len(points1))]
-
-        return gpd.GeoSeries(lines, crs=points1.crs if hasattr(points1, 'crs') else "EPSG:25832")
-
     # Create the results folder
     create_dir(outputpath)
 
@@ -195,7 +173,7 @@ def create_matrices(inputpath: dict, outputpath: str, buffer=2.5):
     n_prod = len(sources)
 
     # Pre-allocate arrays for better performance
-    node_types = ['Int'] * n_internal + ['Prod'] * n_prod + ['Cons'] * n_houses
+    node_types = ['internal'] * n_internal + ['source'] * n_prod + ['sink'] * n_houses
     geometries = list(internal_nodes_merged_centroids.geometry) + list(sources.geometry) + list(sinks_center.geometry)
 
     gdf_nodes = gpd.GeoDataFrame({
@@ -273,18 +251,14 @@ def create_matrices(inputpath: dict, outputpath: str, buffer=2.5):
     # Create final arrays more efficiently
     pos = np.column_stack([gdf_nodes.geometry.x.values, gdf_nodes.geometry.y.values])
 
-    # @TODO: Can we somehow automate this? Easiest way -> Probably just put them into one column
-    # This part needs to be adapted to the number of timesteps
-    q_c = np.round(np.array([sinks_center["ts_0"],
-                             sinks_center["ts_1"],
-                             sinks_center["ts_2"],
-                             sinks_center["ts_3"]]), 2).transpose()
+    # Extract and sort time-step columns dynamically
+    ts_columns = sorted([col for col in sinks_center.columns if col.startswith("ts_")], key=lambda x: int(x.split('_')[1]))
+    flh_columns = sorted([col for col in sinks_center.columns if col.startswith("flh_")], key=lambda x: int(x.split('_')[1]))
 
-    flh = np.round(np.array([sinks_center["flh_0"],
-                             sinks_center["flh_1"],
-                             sinks_center["flh_2"],
-                             sinks_center["flh_3"]]), 2).transpose()
-    ##########
+    # Can we somehow automate this? Easiest way -> Probably just put them into one column
+    # Workaround: extract and sort all integers that start with flh_ or ts_
+    q_c = np.round(sinks_center[ts_columns].values.T, 2).T
+    flh = np.round(sinks_center[flh_columns].values.T, 2).T
 
     flh_prod = (np.round(np.array([(q_c*flh).sum(axis=0) / q_c.sum(axis=0)]), 2).transpose() * np.ones(2)).transpose()
 
@@ -293,9 +267,12 @@ def create_matrices(inputpath: dict, outputpath: str, buffer=2.5):
     mat['a_p'] = a_p
     mat['a_c'] = a_c
     mat['l_i'] = l_i
-    mat['position'] = pos
+    mat['positions'] = pos
+    mat['q_c'] = q_c
+    mat['flh_sinks'] = flh
+    mat['flh_sources'] = flh_prod
 
-    duplicates = duplicate_columns(mat['a_i'])
+    duplicates = find_duplicate_cols(mat['a_i'])
     # Remove duplicate nodes
     if duplicates:
         # Convert to numpy array for easier slicing
@@ -316,25 +293,20 @@ def create_matrices(inputpath: dict, outputpath: str, buffer=2.5):
         gdf_road = gdf_road.drop(index=delete_idx).reset_index(drop=True)
 
     print("Saving results...")
-    a_i = mat['a_i']
-    a_p = mat['a_p']
-    a_c = mat['a_c']
-    l_i = mat['l_i']
-    pos = mat['position']
 
     # Save results
     gdf_road.to_file(outputpath + "edges.shp")
     gdf_nodes.to_file(outputpath + "nodes.shp")
 
     # Save matrices with compression for smaller files
-    pd.DataFrame(a_i).to_parquet(outputpath + 'A_i.parquet')
-    pd.DataFrame(a_p).to_parquet(outputpath + 'A_p.parquet')
-    pd.DataFrame(a_c).to_parquet(outputpath + 'A_c.parquet')
-    pd.DataFrame(q_c).to_parquet(outputpath + 'Q_c.parquet')
-    pd.DataFrame(l_i).to_parquet(outputpath + 'L_i.parquet')
-    pd.DataFrame(flh).to_parquet(outputpath + 'flh_consumer.parquet')
-    pd.DataFrame(flh_prod).to_parquet(outputpath + 'flh_source.parquet')
-    pd.DataFrame(pos).to_parquet(outputpath + 'rel_positions.parquet')
+    pd.DataFrame(mat['a_i']).to_parquet(outputpath + 'a_i.parquet')
+    pd.DataFrame(mat['a_p']).to_parquet(outputpath + 'a_p.parquet')
+    pd.DataFrame(mat['a_c']).to_parquet(outputpath + 'a_c.parquet')
+    pd.DataFrame(q_c).to_parquet(outputpath + 'q_c.parquet')
+    pd.DataFrame(mat['l_i']).to_parquet(outputpath + 'l_i.parquet')
+    pd.DataFrame(flh).to_parquet(outputpath + 'flh_sinks.parquet')
+    pd.DataFrame(flh_prod).to_parquet(outputpath + 'flh_sources.parquet')
+    pd.DataFrame(mat['positions']).to_parquet(outputpath + 'positions.parquet')
 
     print("Processing complete!")
 

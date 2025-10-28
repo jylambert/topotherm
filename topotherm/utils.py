@@ -5,6 +5,7 @@ import shutil
 import pandas as pd
 import pyomo.environ as pyo
 from pyomo.core.base.componentuid import ComponentUID
+import numpy as np
 
 
 def create_dir(path: str) -> None:
@@ -67,3 +68,27 @@ def model_to_df(model):
 
     df = pd.Series(solution)
     return df
+
+
+def find_duplicate_cols(data: np.ndarray, minoccur: int = 2) -> list:
+    """
+    Find duplicate columns in a numpy array.
+
+    Parameters
+    ----------
+    data : np.ndarray
+        Data to check for duplicates.
+    minoccur : int
+        Minimum number of occurrences to be considered a duplicate.
+
+    Returns
+    -------
+    list
+        List of indices of duplicate columns.
+    """
+    ind = np.lexsort(data)
+    diff = np.any(data.T[ind[1:]] != data.T[ind[:-1]], axis=1)
+    edges = np.where(diff)[0] + 1
+    result = np.split(ind, edges)
+    result = [group for group in result if len(group) >= minoccur]
+    return result
