@@ -5,9 +5,7 @@ The input data has to be stored in parquet files and read with the function
 `load`.
 """
 
-import os
 from pathlib import Path
-
 
 import numpy as np
 import pandas as pd
@@ -18,7 +16,7 @@ FILES = {
         "a_i":      {"file": "a_i",  "dtype": int},
         "a_p":      {"file": "a_p",  "dtype": int},
         "a_c":      {"file": "a_c",  "dtype": int},
-        "length":   {"file": "l_i",  "dtype": float},
+        "l_i":   {"file": "l_i",  "dtype": float},
         "q_c":      {"file": "q_c",  "dtype": float},
         "flh_sinks": {"file": "flh_sinks", "dtype": float},
         "flh_sources": {"file": "flh_sources", "dtype": float},
@@ -42,7 +40,7 @@ def _load_one(path: Path, cfg: dict) -> np.ndarray:
     return arr
 
 
-def load(path: Path) -> dict:
+def load(basepath: Path, filenames: dict=None) -> dict:
     """
     Read the input data from the given path and return the matrices.
 
@@ -50,6 +48,9 @@ def load(path: Path) -> dict:
     ----------
     path : pathlib.Path
         Path to the input data.
+    filenames : dict (optional)
+        Dict containing filenames and optional import options". Example:
+        "flh_sources": {"file": "flh_sources", "dtype": float}
 
     Returns
     -------
@@ -59,20 +60,31 @@ def load(path: Path) -> dict:
         - ``a_i`` : Incidence matrix for the pipes (rows: nodes, columns: edges).
         - ``a_p`` : Adjacency matrix for the producers (rows: nodes, columns: supply IDs).
         - ``a_c`` : Adjacency matrix for the consumers (rows: nodes, columns: consumer IDs).
-        - ``q_c`` : Heat demand of the consumers in W.
-        - ``l_i`` : Length of edges.
-        - ``positions`` : ``(x, y)`` coordinates of the nodes in the network.
+        - ``q_c`` : Heat demand of the consumers for each time step in kW (rows: consumers, columns: time steps).
+        - ``l_i`` : Length of edges (rows: edges, columns: -).
+        - ``positions`` : ``(x, y)`` coordinates of the nodes in the network (rows: nodes, columns: [x coordinate, y coordinate]).
+        - ``flh_sources``: Full load hours of each source for each time step in h/year (rows: sources, columns: time steps)
+        - ``flh_sinks``: Full load hours of each sink, for each time steps in h/year (rows: consumers, columns: time steps)
     """
     r = {}
+    if filenames is not None:
+        _keys = [k for k in filenames.keys() if k not in FILES.keys()]
+        if len(_keys) > 0:
+            raise ValueError(f"Keys {_keys} passed in filenames are not valid. Accepted keys: {list(FILES.keys())}")
+        for key, val in FILES.items():
+            if key not in filenames.keys():
+                filenames[key] = val
+    else:
+        filenames = FILES
 
-    for key, val in FILES.items():
-        p = path / f"{val['file']}.parquet"
-        r[key] = _load_one(path=p, vfg=val)
+    for key, val in filenames.items():
+        p = basepath / f"{val['file']}.parquet"
+        r[key] = _load_one(path=p, cfg=val)
 
     # @TODO Implement real warnings/errors and implement checks for full load hours
     if (r['a_i'].sum(axis=0).sum() != 0) | (np.abs(r['a_i']).sum(axis=0).sum()/2 != np.shape(r['a_i'])[1]):
         print("Warning: The structure of A_i is not correct!")
-    elif (-r['a_p'].sum(axis=0).sum() != np.shape(a_p)[1]) | (np.abs(r['a_p']).sum(axis=0).sum() != np.shape(r['a_p'])[1]):
+    elif (-r['a_p'].sum(axis=0).sum() != np.shape(r['a_p'])[1]) | (np.abs(r['a_p']).sum(axis=0).sum() != np.shape(r['a_p'])[1]):
         print("Warning: The structure of A_p is not correct!")
     elif (np.abs(r['a_c']).sum(axis=0).sum() != np.shape(r['a_c'])[1]) | (r['a_c'].sum(axis=0).sum() != np.shape(r['a_c'])[1]):
         print("Warning: The structure of A_c is not correct!")

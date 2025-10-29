@@ -5,7 +5,7 @@ and constraints.
 import numpy as np
 
 
-def create(matrices):
+def create(matrices: dict) -> dict:
     """
     Create sets for the optimization. The sets are used to define variables
     and constraints. Depending on the matrices, the sets are computed with the

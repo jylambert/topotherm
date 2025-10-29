@@ -399,7 +399,7 @@ def to_networkx_graph(matrices: dict) -> nx.DiGraph:
     ges = (sums + prod).flatten()
     ges = (sums + prod).flatten()
 
-    positions = matrices['position']  # Avoid redundant indexing
+    positions = matrices['positions']  # Avoid redundant indexing
     colors = np.where(ges == 1, 'Red', np.where(ges == 0, 'Green', np.where(ges <= -1, 'Orange', None)))
     types = np.where(ges == 1, 'consumer', np.where(ges == 0, 'internal', np.where(ges <= -1, 'source', None)))
 
