@@ -1,3 +1,5 @@
+import logging
+
 import numpy as np
 import pandas as pd
 import geopandas as gpd
@@ -95,7 +97,7 @@ def create_matrices(inputpath: dict, outputpath: str, buffer=2.5):
     create_dir(outputpath)
 
     # Load shapefiles
-    print("Loading shapefiles...")
+    logging.info("Loading shapefiles...")
     inputpath_b = inputpath['sinks']
     inputpath_r = inputpath['roads']
     inputpath_s = inputpath['sources']
@@ -108,16 +110,16 @@ def create_matrices(inputpath: dict, outputpath: str, buffer=2.5):
     # Optimize road intersections processing
     road_intersections = roads.boundary.explode(ignore_index=False, index_parts=False).drop_duplicates()
 
-    print("Processing house centers...")
+    logging.info("Processing house centers...")
     # Create centroids more efficiently
     sinks_center = sinks.copy()
     sinks_center.geometry = sinks.centroid
 
-    print("Creating union...")
+    logging.info("Creating union...")
     # Optimize union creation
     union_src_snk = pd.concat([sinks_center[['geometry']], sources[['geometry']]], ignore_index=True)
 
-    print("Creating connection lines...")
+    logging.info("Creating connection lines...")
     # Create connection lines between sources and sinks to the roadnetwork
     connection_line = union_src_snk.geometry.apply(lambda point: create_connection_line(point, roads['geometry']))
     connection_nodes = connection_line.boundary.explode(ignore_index=False, index_parts=False)
@@ -126,7 +128,7 @@ def create_matrices(inputpath: dict, outputpath: str, buffer=2.5):
     matches = connection_nodes.isin(sinks_center.geometry)
     connection_nodes = connection_nodes[~matches].drop_duplicates()
 
-    print("Merging nearby nodes...")
+    logging.info("Merging nearby nodes...")
     # Optimize node merging
     merged = connection_nodes.buffer(buffer).union_all()
     if hasattr(merged, "geoms"):
@@ -139,11 +141,11 @@ def create_matrices(inputpath: dict, outputpath: str, buffer=2.5):
     merged["x"] = centroids.x
     merged["y"] = centroids.y
 
-    print("Projecting centroids...")
+    logging.info("Projecting centroids...")
     # RESTORE ORIGINAL LOGIC for centroid projection
     centroids_projected = centroids.geometry.apply(lambda point: create_nearest_point(point, roads['geometry']))
 
-    print("Splitting roads...")
+    logging.info("Splitting roads...")
     split_points = MultiPoint(list(centroids_projected.geometry))
     roads_union = roads.geometry.union_all()
 
@@ -157,7 +159,7 @@ def create_matrices(inputpath: dict, outputpath: str, buffer=2.5):
                        .explode(ignore_index=False, index_parts=False)
                        .drop_duplicates())
 
-    print("Processing internal nodes...")
+    logging.info("Processing internal nodes...")
     # Create a subset of all internal nodes (from roads, splitted roads and centroids)
     internal_nodes = pd.concat([road_intersections, centroids_projected, new_roads_nodes]).drop_duplicates()
     internal_nodes_merged = internal_nodes.buffer(10e-6).fillna(internal_nodes.geometry).union_all()
@@ -166,7 +168,7 @@ def create_matrices(inputpath: dict, outputpath: str, buffer=2.5):
     internal_nodes_merged = gpd.GeoDataFrame(geometry=internal_nodes_merged)
     internal_nodes_merged_centroids = internal_nodes_merged.centroid
 
-    print("Creating node and edge DataFrames...")
+    logging.info("Creating node and edge DataFrames...")
     # Create DataFrames more efficiently
     n_internal = len(internal_nodes_merged_centroids)
     n_houses = len(sinks_center)
@@ -181,11 +183,11 @@ def create_matrices(inputpath: dict, outputpath: str, buffer=2.5):
         'Node_ID': [f"Node_{i:05d}" for i in range(len(geometries))]
     }, geometry=geometries, crs="EPSG:25832")
 
-    print("Creating final connection lines...")
+    logging.info("Creating final connection lines...")
     connection_lines_final = create_edge_nearest_point_optimized(union_src_snk.geometry, internal_nodes)
     new_roads_edges = gpd.GeoSeries(roads_splitted, crs="EPSG:25832").explode(ignore_index=False, index_parts=False)
 
-    print("Processing edges...")
+    logging.info("Processing edges...")
     edges_total = pd.concat([new_roads_edges, connection_lines_final], ignore_index=True)
 
     # Remove short edges
@@ -198,7 +200,7 @@ def create_matrices(inputpath: dict, outputpath: str, buffer=2.5):
         'Road_ID': [f"Road_{i:05d}" for i in range(len(edges_total))]
     }, geometry=edges_total.geometry, crs="EPSG:25832")
 
-    print("Creating node-edge relationships...")
+    logging.info("Creating node-edge relationships...")
     n_nodes = len(gdf_nodes)
     n_roads = len(gdf_road)
     a_i = np.zeros([n_nodes, n_roads], dtype="int8")
@@ -236,7 +238,7 @@ def create_matrices(inputpath: dict, outputpath: str, buffer=2.5):
                     a_i[lu, j] = 1
                     a_i[r, j] = -1
 
-    print("Creating producer and consumer matrices...")
+    logging.info("Creating producer and consumer matrices...")
     # Create A_p
     gdf_nodes_prod = gdf_nodes[gdf_nodes['Type'] == 'Prod'].index
     a_p = np.zeros([len(gdf_nodes), len(gdf_nodes_prod)], dtype="int")
@@ -247,7 +249,7 @@ def create_matrices(inputpath: dict, outputpath: str, buffer=2.5):
     a_c = np.zeros([len(gdf_nodes), len(gdf_nodes_cons)], dtype="int")
     a_c[gdf_nodes_cons, range(len(gdf_nodes_cons))] = 1
 
-    print("Creating final arrays...")
+    logging.info("Creating final arrays...")
     # Create final arrays more efficiently
     pos = np.column_stack([gdf_nodes.geometry.x.values, gdf_nodes.geometry.y.values])
 
