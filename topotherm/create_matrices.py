@@ -1,3 +1,6 @@
+"""Module to create incidence matrices and geospatial data for district heating networks
+from given files."""
+
 import logging
 import os
 
@@ -122,34 +125,35 @@ def from_gisfiles(inputpaths: dict[str, os.PathLike],
     gdf_roads.to_file(outputpath + "edges.shp")
     gdf_nodes.to_file(outputpath + "nodes.shp")
 
-    # Save matrices with compression for smaller files
-    pd.DataFrame(mat['a_i']).to_parquet(outputpath + 'a_i.parquet')
-    pd.DataFrame(mat['a_p']).to_parquet(outputpath + 'a_p.parquet')
-    pd.DataFrame(mat['a_c']).to_parquet(outputpath + 'a_c.parquet')
-    pd.DataFrame(mat['q_c']).to_parquet(outputpath + 'q_c.parquet')
-    pd.DataFrame(mat['l_i']).to_parquet(outputpath + 'l_i.parquet')
-    pd.DataFrame(mat['flh_sinks']).to_parquet(outputpath + 'flh_sinks.parquet')
-    pd.DataFrame(mat['flh_sources']).to_parquet(outputpath + 'flh_sources.parquet')
-    pd.DataFrame(mat['positions']).to_parquet(outputpath + 'positions.parquet')
-    return 
+    for key, val in mat.items():
+        pd.DataFrame(val).to_parquet(outputpath / f"{key}.parquet")
+    return
+
 
 def process_geodata(sinks: gpd.GeoDataFrame,
                     roads: gpd.GeoDataFrame,
                     sources: gpd.GeoDataFrame,
-                    buffer: float=2.5):
+                    buffer: float=2.5,
+                    crs: str | int="EPSG:25832"):
     """Process geodata of sinks, roads, and sources to create nodes and edges,
     as well as incidence matrices for district heating network optimization.
+    Connects sources, sinks to the road network by shortest path, merges nearby
+    nodes, and splits roads at connection points.
 
     Parameters
     ----------
     sinks : gpd.GeoDataFrame
-        GeoDataFrame containing heat sink locations.
+        GeoDataFrame containing heat sink locations. Needs to have columns for
+        time series data (e.g., ``ts_0``, ``ts_1``, ...) of heating demand in kW 
+        and full load hours (e.g., ``flh_0``, ``flh_1``, ...) in h/year.
     roads : gpd.GeoDataFrame
         GeoDataFrame containing road network.
     sources : gpd.GeoDataFrame
         GeoDataFrame containing heat source locations.
     buffer : float
         Buffer radius in meters for aggregating connection lines.
+    crs : str | int
+        Coordinate reference system for all geodata.
     
     Returns
     -------
@@ -157,11 +161,10 @@ def process_geodata(sinks: gpd.GeoDataFrame,
         Incidence matrices and related data.
     gdf_nodes : gpd.GeoDataFrame
         Node information.
-    gdf_road : gpd.GeoDataFrame
+    gdf_edges : gpd.GeoDataFrame
         Edge information.
-
     """
-    print("Processing road intersections...")
+    logging.info("Processing road intersections...")
     # Optimize road intersections processing
     road_intersections = roads.boundary.explode(ignore_index=False, index_parts=False).drop_duplicates()
 
@@ -219,7 +222,7 @@ def process_geodata(sinks: gpd.GeoDataFrame,
     internal_nodes = pd.concat([road_intersections, centroids_projected, new_roads_nodes]).drop_duplicates()
     internal_nodes_merged = internal_nodes.buffer(10e-6).fillna(internal_nodes.geometry).union_all()
     internal_nodes_merged = internal_nodes_merged.geoms if hasattr(internal_nodes_merged, "geoms") else internal_nodes_merged
-    internal_nodes_merged = gpd.GeoSeries(internal_nodes_merged, crs="EPSG:25832")
+    internal_nodes_merged = gpd.GeoSeries(internal_nodes_merged, crs=crs)
     internal_nodes_merged = gpd.GeoDataFrame(geometry=internal_nodes_merged)
     internal_nodes_merged_centroids = internal_nodes_merged.centroid
 
@@ -236,11 +239,11 @@ def process_geodata(sinks: gpd.GeoDataFrame,
     gdf_nodes = gpd.GeoDataFrame({
         'Type': node_types,
         'Node_ID': [f"Node_{i:05d}" for i in range(len(geometries))]
-    }, geometry=geometries, crs="EPSG:25832")
+    }, geometry=geometries, crs=crs)
 
     logging.info("Creating final connection lines...")
     connection_lines_final = create_edge_nearest_point_optimized(union_src_snk.geometry, internal_nodes)
-    new_roads_edges = gpd.GeoSeries(roads_splitted, crs="EPSG:25832").explode(ignore_index=False, index_parts=False)
+    new_roads_edges = gpd.GeoSeries(roads_splitted, crs=crs).explode(ignore_index=False, index_parts=False)
 
     logging.info("Processing edges...")
     edges_total = pd.concat([new_roads_edges, connection_lines_final], ignore_index=True)
@@ -250,26 +253,28 @@ def process_geodata(sinks: gpd.GeoDataFrame,
     edges_total.drop(inplace=True, index=buffer_values.tolist())
     edges_total.reset_index(inplace=True, drop=True)
 
-    gdf_road = gpd.GeoDataFrame({
+    gdf_edges = gpd.GeoDataFrame({
         'Length': edges_total.length,
         'Road_ID': [f"Road_{i:05d}" for i in range(len(edges_total))]
-    }, geometry=edges_total.geometry, crs="EPSG:25832")
+    }, geometry=edges_total.geometry, crs=crs)
 
     logging.info("Creating node-edge relationships...")
     n_nodes = len(gdf_nodes)
-    n_roads = len(gdf_road)
-    a_i = np.zeros([n_nodes, n_roads], dtype="int8")
-    l_i = gdf_road['Length'].values
+    n_roads = len(gdf_edges)
+
+    mat = {}
+    mat['a_i'] = np.zeros([n_nodes, n_roads], dtype="int8")
+    mat['l_i'] = gdf_edges['Length'].values
 
     # Create lookup dictionary for faster access
     node_id_to_idx = {node_id: idx for idx, node_id in enumerate(gdf_nodes['Node_ID'])}
 
     # Pre-allocate u and v columns
-    gdf_road['u'] = ''
-    gdf_road['v'] = ''
+    gdf_edges['u'] = ''
+    gdf_edges['v'] = ''
 
-    for j, _ in enumerate(gdf_road['Road_ID']):
-        road_geom = gdf_road.iloc[j].geometry
+    for j, _ in enumerate(gdf_edges['Road_ID']):
+        road_geom = gdf_edges.iloc[j].geometry
         boundary_points = list(road_geom.boundary.geoms)
 
         if len(boundary_points) >= 2:
@@ -283,30 +288,28 @@ def process_geodata(sinks: gpd.GeoDataFrame,
                 u = u_candidates.iloc[0]['Node_ID']
                 v = v_candidates.iloc[0]['Node_ID']
 
-                gdf_road.loc[j, 'u'] = u
-                gdf_road.loc[j, 'v'] = v
+                gdf_edges.loc[j, ['u', 'v']] = (u, v)
 
                 lu = node_id_to_idx[u]
                 r = node_id_to_idx[v]
 
                 if lu != r:
-                    a_i[lu, j] = 1
-                    a_i[r, j] = -1
+                    mat['a_i'][lu, j] = 1
+                    mat['a_i'][r, j] = -1
 
     logging.info("Creating producer and consumer matrices...")
     # Create A_p
-    gdf_nodes_prod = gdf_nodes[gdf_nodes['Type'] == 'Prod'].index
-    a_p = np.zeros([len(gdf_nodes), len(gdf_nodes_prod)], dtype="int")
-    a_p[gdf_nodes_prod, range(len(gdf_nodes_prod))] = -1
+    gdf_nodes_prod = gdf_nodes[gdf_nodes['Type'] == 'source'].index
+    mat['a_p'] = np.zeros([len(gdf_nodes), len(gdf_nodes_prod)], dtype="int")
+    mat['a_p'][gdf_nodes_prod, range(len(gdf_nodes_prod))] = -1
 
     # Create A_c
-    gdf_nodes_cons = gdf_nodes[gdf_nodes['Type'] == 'Cons'].index
-    a_c = np.zeros([len(gdf_nodes), len(gdf_nodes_cons)], dtype="int")
-    a_c[gdf_nodes_cons, range(len(gdf_nodes_cons))] = 1
+    gdf_nodes_cons = gdf_nodes[gdf_nodes['Type'] == 'sink'].index
+    mat['a_c'] = np.zeros([len(gdf_nodes), len(gdf_nodes_cons)], dtype="int")
+    mat['a_c'][gdf_nodes_cons, range(len(gdf_nodes_cons))] = 1
 
     logging.info("Creating final arrays...")
-    # Create final arrays more efficiently
-    pos = np.column_stack([gdf_nodes.geometry.x.values, gdf_nodes.geometry.y.values])
+    mat['positions'] = np.column_stack([gdf_nodes.geometry.x.values, gdf_nodes.geometry.y.values])
 
     # Extract and sort time-step columns dynamically
     ts_columns = sorted([col for col in sinks_center.columns if col.startswith("ts_")], key=lambda x: int(x.split('_')[1]))
@@ -314,25 +317,13 @@ def process_geodata(sinks: gpd.GeoDataFrame,
 
     # Can we somehow automate this? Easiest way -> Probably just put them into one column
     # Workaround: extract and sort all integers that start with flh_ or ts_
-    q_c = np.round(sinks_center[ts_columns].values.T, 2).T
-    flh = np.round(sinks_center[flh_columns].values.T, 2).T
-
-    flh_prod = (np.round(np.array([(q_c*flh).sum(axis=0) / q_c.sum(axis=0)]), 2).transpose() * np.ones(2)).transpose()
-
-    mat = {}
-    mat['a_i'] = a_i
-    mat['a_p'] = a_p
-    mat['a_c'] = a_c
-    mat['l_i'] = l_i
-    mat['positions'] = pos
-    mat['q_c'] = q_c
-    mat['flh_sinks'] = flh
-    mat['flh_sources'] = flh_prod
+    mat['q_c'] = np.round(sinks_center[ts_columns].values.T, 2).T
+    mat['flh_sinks'] = np.round(sinks_center[flh_columns].values.T, 2).T
+    mat['flh_sources'] = (np.round(np.array([(mat['q_c']*mat['flh_sinks']).sum(axis=0) / mat['q_c'].sum(axis=0)]), 2).transpose() * np.ones(2)).transpose()
 
     duplicates = find_duplicate_cols(mat['a_i'])
-    # Remove duplicate nodes
+
     if duplicates:
-        # Convert to numpy array for easier slicing
         dup_arr = np.array(duplicates)
         # Compare the weights l_i at each duplicate pair
         left_vals = mat['l_i'][dup_arr[:, 0]]
@@ -340,8 +331,6 @@ def process_geodata(sinks: gpd.GeoDataFrame,
 
         # Keep the larger one -> delete the smaller
         delete_idx = np.where(left_vals > right_vals, dup_arr[:, 0], dup_arr[:, 1])
-
-        # Unique + sorted indices for deletion
         delete_idx = np.unique(delete_idx)
 
         # Delete in one shot

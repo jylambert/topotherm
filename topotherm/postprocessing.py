@@ -390,7 +390,6 @@ def to_networkx_graph(matrices: dict) -> nx.DiGraph:
     nx.DiGraph
         NetworkX directed graph.
     """
-
     G = nx.DiGraph()
 
     # Add the nodes to the graph
@@ -416,7 +415,8 @@ def to_networkx_graph(matrices: dict) -> nx.DiGraph:
     available_matrices = [matrices[k].flatten() for k in available_data]
     edges = np.column_stack([sources, targets] + available_matrices)
 
-    # hacky solution, should maybe work dire
+    # hacky solution, should maybe work directly with networkx functions 
+    # TODO
     for row in edges:
         u, v = row[0].astype(int), row[1].astype(int)
         data = {}
