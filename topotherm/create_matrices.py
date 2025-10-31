@@ -1,4 +1,5 @@
 import logging
+import os
 
 import numpy as np
 import pandas as pd
@@ -49,7 +50,7 @@ def create_nearest_point(point, edges):
     return nearest_point
 
 
-def create_edge_nearest_point_optimized(points1, points2):
+def create_edge_nearest_point_optimized(points1, points2, crs="EPSG:25832"):
     """
     Creates an edge for each points1 to the nearest points2
 
@@ -69,43 +70,97 @@ def create_edge_nearest_point_optimized(points1, points2):
 
     # Use cKDTree for efficient nearest-neighbor search
     tree = cKDTree(coords2)
-    distances, indices = tree.query(coords1)
+    _, indices = tree.query(coords1)
 
     # Create LineStrings connecting each point in points1 to the nearest point in points2
     lines = [LineString([points1.iloc[i], points2.iloc[indices[i]]]) for i in range(len(points1))]
 
-    return gpd.GeoSeries(lines, crs=points1.crs if hasattr(points1, 'crs') else "EPSG:25832")
+    return gpd.GeoSeries(lines, crs=points1.crs if hasattr(points1, 'crs') else crs)
 
 
-def create_matrices(inputpath: dict, outputpath: str, buffer=2.5):
+def from_gisfiles(inputpaths: dict[str, os.PathLike],
+                  outputpath: str | os.PathLike,
+                  buffer: float=2.5,
+                  crs: str | int="EPSG:25832"):
     """
-    Creates from a set of shapefiles ()
+    Creates from a set of GIS file, such as shapefiles or gepackage files.
+    Needs three files as input: roads, heat sources and heat sinks.
 
     Parameters
     ----------
-    inputpath: Path to the initial shape files for the street layout (roads.shp), heat sinks (heat_sinks.shp)
-               and heat sources (heat_sources.shp) as a dictionary. Matrices can also be Geopackages
-    outputpath: Path to the result folder
-    buffer: Radius of the buffer layer in meter, which is used to aggregate connection lines
+    inputpaths: dict[str, os.PathLike]
+        Path to the initial shape files for the street layout, heat sinks and heat sources
+        as a dictionary. Matrices can also be Geopackages. Example:
+        {"roads": "path/to/roads.shp",
+        "sinks": "path/to/sinks.shp",
+        "sources": "path/to/sources.shp"}
+    outputpath: str | os.PathLike
+        Path to the result folder
+    buffer: float
+        Radius of the buffer layer in meter, which is used to aggregate connection lines
+    crs: str | int
+        Coordinate reference system to which all files are projected. Default is
+        "EPSG:25832" (ETRS89 / UTM zone 32N)
 
     Returns
     -------
-    Parquet files, needed for the optimization of the district heating network
-    Shapefiles of the nodes and edges of the district
+    None
+        saves parquet files to the outputpath needed for the optimization of the
+        district heating network and nodes and edges files.
     """
-    # Create the results folder
     create_dir(outputpath)
 
-    # Load shapefiles
     logging.info("Loading shapefiles...")
-    inputpath_b = inputpath['sinks']
-    inputpath_r = inputpath['roads']
-    inputpath_s = inputpath['sources']
+    sinks = gpd.read_file(inputpaths['sinks']).to_crs(crs)
+    roads = gpd.read_file(inputpaths['roads']).to_crs(crs)
+    sources = gpd.read_file(inputpaths['sources']).to_crs(crs)
 
-    sinks = gpd.read_file(inputpath_b).to_crs("EPSG:25832")
-    roads = gpd.read_file(inputpath_r).to_crs("EPSG:25832")
-    sources = gpd.read_file(inputpath_s).to_crs("EPSG:25832")
+    logging.info("Processing geodata...")
+    mat, gdf_nodes, gdf_roads = process_geodata(sinks, roads, sources, buffer)
 
+    logging.info("Saving results...")
+    gdf_roads.to_file(outputpath + "edges.shp")
+    gdf_nodes.to_file(outputpath + "nodes.shp")
+
+    # Save matrices with compression for smaller files
+    pd.DataFrame(mat['a_i']).to_parquet(outputpath + 'a_i.parquet')
+    pd.DataFrame(mat['a_p']).to_parquet(outputpath + 'a_p.parquet')
+    pd.DataFrame(mat['a_c']).to_parquet(outputpath + 'a_c.parquet')
+    pd.DataFrame(mat['q_c']).to_parquet(outputpath + 'q_c.parquet')
+    pd.DataFrame(mat['l_i']).to_parquet(outputpath + 'l_i.parquet')
+    pd.DataFrame(mat['flh_sinks']).to_parquet(outputpath + 'flh_sinks.parquet')
+    pd.DataFrame(mat['flh_sources']).to_parquet(outputpath + 'flh_sources.parquet')
+    pd.DataFrame(mat['positions']).to_parquet(outputpath + 'positions.parquet')
+    return 
+
+def process_geodata(sinks: gpd.GeoDataFrame,
+                    roads: gpd.GeoDataFrame,
+                    sources: gpd.GeoDataFrame,
+                    buffer: float=2.5):
+    """Process geodata of sinks, roads, and sources to create nodes and edges,
+    as well as incidence matrices for district heating network optimization.
+
+    Parameters
+    ----------
+    sinks : gpd.GeoDataFrame
+        GeoDataFrame containing heat sink locations.
+    roads : gpd.GeoDataFrame
+        GeoDataFrame containing road network.
+    sources : gpd.GeoDataFrame
+        GeoDataFrame containing heat source locations.
+    buffer : float
+        Buffer radius in meters for aggregating connection lines.
+    
+    Returns
+    -------
+    mat : dict
+        Incidence matrices and related data.
+    gdf_nodes : gpd.GeoDataFrame
+        Node information.
+    gdf_road : gpd.GeoDataFrame
+        Edge information.
+
+    """
     print("Processing road intersections...")
     # Optimize road intersections processing
     road_intersections = roads.boundary.explode(ignore_index=False, index_parts=False).drop_duplicates()
@@ -136,7 +191,7 @@ def create_matrices(inputpath: dict, outputpath: str, buffer=2.5):
     else:
         merged_geoms = [merged]
 
-    merged = gpd.GeoDataFrame(geometry=merged_geoms, crs="EPSG:25832")
+    merged = gpd.GeoDataFrame(geometry=merged_geoms, crs=crs)
     centroids = merged.centroid
     merged["x"] = centroids.x
     merged["y"] = centroids.y
@@ -153,7 +208,7 @@ def create_matrices(inputpath: dict, outputpath: str, buffer=2.5):
     snapped_roads = snap(roads_union, split_points, tolerance=1e-6)
     roads_splitted = split(snapped_roads, split_points)
 
-    new_roads_nodes = (gpd.GeoSeries(roads_splitted, crs="EPSG:25832")
+    new_roads_nodes = (gpd.GeoSeries(roads_splitted, crs=crs)
                        .explode(ignore_index=False, index_parts=False)
                        .boundary
                        .explode(ignore_index=False, index_parts=False)
@@ -213,7 +268,7 @@ def create_matrices(inputpath: dict, outputpath: str, buffer=2.5):
     gdf_road['u'] = ''
     gdf_road['v'] = ''
 
-    for j, road_id in enumerate(gdf_road['Road_ID']):
+    for j, _ in enumerate(gdf_road['Road_ID']):
         road_geom = gdf_road.iloc[j].geometry
         boundary_points = list(road_geom.boundary.geoms)
 
@@ -294,22 +349,4 @@ def create_matrices(inputpath: dict, outputpath: str, buffer=2.5):
         mat['a_i'] = np.delete(mat['a_i'], delete_idx, axis=1)
         gdf_road = gdf_road.drop(index=delete_idx).reset_index(drop=True)
 
-    print("Saving results...")
-
-    # Save results
-    gdf_road.to_file(outputpath + "edges.shp")
-    gdf_nodes.to_file(outputpath + "nodes.shp")
-
-    # Save matrices with compression for smaller files
-    pd.DataFrame(mat['a_i']).to_parquet(outputpath + 'a_i.parquet')
-    pd.DataFrame(mat['a_p']).to_parquet(outputpath + 'a_p.parquet')
-    pd.DataFrame(mat['a_c']).to_parquet(outputpath + 'a_c.parquet')
-    pd.DataFrame(q_c).to_parquet(outputpath + 'q_c.parquet')
-    pd.DataFrame(mat['l_i']).to_parquet(outputpath + 'l_i.parquet')
-    pd.DataFrame(flh).to_parquet(outputpath + 'flh_sinks.parquet')
-    pd.DataFrame(flh_prod).to_parquet(outputpath + 'flh_sources.parquet')
-    pd.DataFrame(mat['positions']).to_parquet(outputpath + 'positions.parquet')
-
-    print("Processing complete!")
-
-    return
+    return mat, gdf_nodes, gdf_road
