@@ -34,7 +34,7 @@ def annuity(c_i, n):
     return a
 
 
-def model(matrices: dict,
+def create(matrices: dict,
           sets: dict,
           regression_inst: dict,
           regression_losses: dict,
