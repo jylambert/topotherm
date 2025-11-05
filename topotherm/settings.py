@@ -1,6 +1,7 @@
 """This file contains all the settings for the optimization problem and should
 be modified and adapted to each case through a .yaml file (see examples)."""
 
+import logging
 import os
 import warnings
 from typing import List, Union
@@ -129,6 +130,38 @@ class Piping(BaseModel):
             'cost': [p.cost for p in self.diameters],
         }
 
+                
+    def set_from_dict(self, data: dict[int, dict[str, float]]) -> None:
+        """Set costs, inner, outer, jacket from a dictionary with DN as keys.
+        If a DN is not found, it is added. If it exists, the corresponding
+        property is updated and if not all are defined, the previous value is kept."""
+        diameters = []
+        for dn, props in data.items():
+            if dn in self.dns:
+                pipe = self.get_by_dn(dn)
+                if pipe is not None:
+                    pipe.inner = props.get('inner', pipe.inner)
+                    pipe.outer = props.get('outer', pipe.outer)
+                    pipe.jacket = props.get('jacket', pipe.jacket)
+                    pipe.cost = props.get('cost', pipe.cost)
+                    diameters.append(pipe)
+                    logging.debug("Updated existing pipe DN%i with properties %s", dn, props)
+            else:
+                required = ['inner', 'outer', 'jacket', 'cost']
+                missing = [k for k in required if k not in props]
+                if missing:
+                    raise ValueError(f"New DN {dn} missing required properties: {missing}")
+                diameters.append(
+                    PipeDiameter(
+                        dn=dn,
+                        inner=props['inner'],
+                        outer=props['outer'],
+                        jacket=props['jacket'],
+                        cost=props['cost']
+                    )
+                )
+        self.diameters = sorted(diameters, key=lambda p: p.inner)
+ 
     @property
     def dns(self) -> List[str | int]:
         """Get list of DN identifiers in sorted order."""
