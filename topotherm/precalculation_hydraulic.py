@@ -296,7 +296,7 @@ def regression_thermal_capacity(settings: Settings) -> dict:
 
     velocity_max = np.zeros(settings.piping.number_diameters)  # initialize array
     # iterate over all diameters
-    for i, diam in enumerate(settings.piping.diameter):
+    for i, diam in enumerate(settings.piping.get_diameter_lists()['inner']):
         velocity_max[i] = max_flow_velocity(V_INIT,
                                             diam,
                                             settings.piping.roughness,
@@ -352,8 +352,8 @@ def regression_heat_losses(settings: Settings,
     """
 
     pipe_depth = np.ones(settings.piping.number_diameters) * settings.piping.depth
-    ratio = np.array(settings.piping.outer_diameter) / np.array(settings.piping.middle_diameter)
-    res_pipe = thermal_resistance(np.array(settings.piping.middle_diameter), ratio, pipe_depth, settings)
+    ratio = np.array(settings.piping.jacket) / np.array(settings.piping.outer)
+    res_pipe = thermal_resistance(np.array(settings.piping.outer), ratio, pipe_depth, settings)
 
     heat_loss = heat_loss_pipe(settings.temperatures.supply,
                                 res_pipe,
@@ -368,6 +368,6 @@ def regression_heat_losses(settings: Settings,
     r['b'] = np.round(regression.intercept, 6)
     r['a'] = np.round(regression.slope, 10)
     r['r2'] = regression.rvalue**2
-    r['heat_loss'] = heat_loss
+    r['heat_loss'] = heat_loss / 1000  # in kW
 
     return r
