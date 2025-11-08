@@ -296,7 +296,7 @@ def regression_thermal_capacity(settings: Settings) -> dict:
 
     velocity_max = np.zeros(settings.piping.number_diameters)  # initialize array
     # iterate over all diameters
-    for i, diam in enumerate(settings.piping.get_diameter_lists()['inner']):
+    for i, diam in enumerate(settings.piping.inner):
         velocity_max[i] = max_flow_velocity(V_INIT,
                                             diam,
                                             settings.piping.roughness,
@@ -304,7 +304,7 @@ def regression_thermal_capacity(settings: Settings) -> dict:
                                             settings.water).item()
 
     r['mass_flow_max'] = mass_flow(velocity_max,
-                                   np.array(settings.piping.diameter),
+                                   np.array(settings.piping.inner),
                                    settings.water.density)
 
     r['power_flow_max'] = np.zeros([settings.piping.number_diameters])  # init
@@ -316,7 +316,7 @@ def regression_thermal_capacity(settings: Settings) -> dict:
         settings.temperatures.return_,
         settings.water.heat_capacity_cp)
     regression = stats.linregress(r['power_flow_max']/1000,
-                                  np.array(settings.piping.cost))
+                                  np.array(settings.piping.inner))
 
     r['a'] = np.round(regression.slope, 6)
     r['b'] = np.round(regression.intercept, 3)

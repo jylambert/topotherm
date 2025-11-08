@@ -1,6 +1,6 @@
 from . import utils
 from . import fileio
-from . import precalculation_hydraulic
+from . import hydraulic
 from . import postprocessing
 from . import settings
 from . import models

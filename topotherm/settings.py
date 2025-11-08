@@ -97,11 +97,43 @@ class Piping(BaseModel):
     depth: float = Field(
         2, gt=0.99, description="Depth of buried steel pipes in m (measured from surface to outer)")
 
-    @model_validator(mode='after')
+
     def sort_diameters(self):
         """Automatically sort diameters by inner diameter."""
         self.diameters = sorted(self.diameters, key=lambda p: p.inner)
         return self
+
+    @computed_field
+    @property
+    def cost(self) -> list[float]:
+        """Property that returns a list of cost per meter of each pipe
+        diameter, sorted by diameter size
+        """
+        return self.get_diameter_lists()['cost']
+
+    @computed_field
+    @property
+    def inner(self) -> list[float]:
+        """Property that returns a list inner steel pipe diameters in m of each pipe,
+        sorted by diameter size
+        """
+        return self.get_diameter_lists()['inner']
+
+    @computed_field
+    @property
+    def outer(self) -> list[float]:
+        """Property that returns a list outer steel pipes diameter in m of each pipe,
+        sorted by diameter size
+        """
+        return self.get_diameter_lists()['outer']
+
+    @computed_field
+    @property
+    def jacket(self) -> list[float]:
+        """Property that returns a list outer jacket pipe diameter in m of each pipe,
+        sorted by diameter size
+        """
+        return self.get_diameter_lists()['jacket']
 
     @computed_field
     @property
