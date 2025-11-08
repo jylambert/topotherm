@@ -87,6 +87,7 @@ indent-width = 4
 target-version = "py313"
 
 [tool.ruff.lint]
+# TODO fix pre-commit workflows, including ruff, black and isort
 # Enable Pyflakes (`F`) and a subset of the pycodestyle (`E`) codes by default.
 # Unlike Flake8, Ruff doesn't enable pycodestyle warnings (`W`) or
 # McCabe complexity (`C901`) by default.
@@ -146,16 +147,19 @@ dev = [
     "pytest",
     "ruff",
     "mypy",
+    "pre-commit",
+    "black",
+    "isort"
 ]
 docs = [
-  "sphinx>=7",
-  "sphinx-rtd-theme",
-  "sphinx-copybutton",
-  "sphinx-autoapi",
-  "myst-parser",
-  "linkify-it-py",
-  "sphinx-autodoc-typehints",
-  "matplotlib",           # if you want .. plot:: support
-  "sphinxcontrib-mermaid" # for mermaid diagrams
+    "sphinx>=7",
+    "sphinx-rtd-theme",
+    "sphinx-copybutton",
+    "sphinx-autoapi",
+    "myst-parser",
+    "linkify-it-py",
+    "sphinx-autodoc-typehints",
+    "matplotlib",           # if you want .. plot:: support
+    "sphinxcontrib-mermaid" # for mermaid diagrams
   
 ]

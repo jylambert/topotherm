@@ -336,6 +336,6 @@ def process_geodata(sinks: gpd.GeoDataFrame,
         # Delete in one shot
         mat['l_i'] = np.delete(mat['l_i'], delete_idx, axis=0)
         mat['a_i'] = np.delete(mat['a_i'], delete_idx, axis=1)
-        gdf_road = gdf_road.drop(index=delete_idx).reset_index(drop=True)
+        gdf_edges = gdf_edges.drop(index=delete_idx).reset_index(drop=True)
 
-    return mat, gdf_nodes, gdf_road
+    return mat, gdf_nodes, gdf_edges

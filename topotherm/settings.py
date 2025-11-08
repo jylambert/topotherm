@@ -6,7 +6,7 @@ import os
 import warnings
 from typing import List, Union
 
-from pydantic import BaseModel, Field, field_validator, computed_field, model_validator
+from pydantic import BaseModel, Field, field_validator, computed_field
 import yaml
 
 class Water(BaseModel):
