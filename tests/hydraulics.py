@@ -41,5 +41,3 @@ def test_regression():
     assert r_heat_loss['a'] == approx(4.348000e-07, rel=0.01)
     assert r_heat_loss['b'] == approx(0.02189, rel=0.01)
     assert r_heat_loss['r2'] == approx(0.658745, rel=0.01)
-
-

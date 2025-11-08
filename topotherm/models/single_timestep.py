@@ -12,26 +12,7 @@ import numpy as np
 import pyomo.environ as pyo
 
 from topotherm.settings import Economics
-
-
-def annuity(c_i, n):
-    """
-    Calculate the annuity factor.
-
-    Parameters
-    ----------
-    c_i : float
-        Interest rate.
-    n : float
-        Number of years.
-
-    Returns
-    -------
-    float
-        Annuity factor.
-    """
-    a = ((1 + c_i) ** n * c_i) / ((1 + c_i) ** n - 1)
-    return a
+from topotherm.models.calc import annuity
 
 
 def create(matrices: dict,
