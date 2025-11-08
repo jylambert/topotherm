@@ -85,7 +85,7 @@ def load(basepath: Path, filenames: dict=None) -> dict:
     if (r['a_i'].sum(axis=0).sum() != 0) | (np.abs(r['a_i']).sum(axis=0).sum()/2 != np.shape(r['a_i'])[1]):
         print("Warning: The structure of A_i is not correct!")
     elif (-r['a_p'].sum(axis=0).sum() != np.shape(r['a_p'])[1]) | (np.abs(r['a_p']).sum(axis=0).sum() != np.shape(r['a_p'])[1]):
-        print("Warning: The structure of A_p is not correct!")
+            print("Warning: The structure of A_p is not correct!")
     elif (np.abs(r['a_c']).sum(axis=0).sum() != np.shape(r['a_c'])[1]) | (r['a_c'].sum(axis=0).sum() != np.shape(r['a_c'])[1]):
         print("Warning: The structure of A_c is not correct!")
     elif (np.shape(r['a_i'])[0] != np.shape(r['a_p'])[0]) | (np.shape(r['a_i'])[0] != np.shape(r['a_c'])[0]):

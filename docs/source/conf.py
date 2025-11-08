@@ -18,10 +18,10 @@ ROOT = DOCS_DIR.parent                                # repo root
 sys.path.insert(0, str(ROOT))
 
 
-project = 'Topotherm'
+project = 'topotherm'
 copyright = '2025, Lambert, Jerry and Ceruti, Amedeo'
 author = 'Jerry Lambert & Amedeo Ceruti'
-release = '0.4.1'
+release = '0.6.0'
 
 
 # -- General configuration ---------------------------------------------------
