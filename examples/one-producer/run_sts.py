@@ -69,8 +69,8 @@ def main(filepath, outputpath, plots=True, solver='gurobi', mode='economic'):
     # modify either in code or in the config file
     settings.economics.source_c_inv = [0.]  # no investment costs for sources
 
-    model_sets = tt.sets.create(mat)
-    model = tt.single_timestep.model(
+    model_sets = tt.models.sets.create(mat)
+    model = tt.models.single_timestep.create(
         matrices=mat,
         sets=model_sets,
         regression_inst=r_thermal_cap,

@@ -161,5 +161,4 @@ docs = [
     "sphinx-autodoc-typehints",
     "matplotlib",           # if you want .. plot:: support
     "sphinxcontrib-mermaid" # for mermaid diagrams
-  
 ]

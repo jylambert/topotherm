@@ -31,7 +31,7 @@ Set up a development environment
 --------------------------------
 
 We recommend conda/mamba, but any virtual env works.
-
+# TODO check this
 .. code-block:: bash
 
    # clone your fork (or the main repo if you have push rights)
@@ -62,7 +62,7 @@ Coding style & conventions
   - `ruff` (or `flake8`) for linting
 
 If you enabled ``pre-commit``, these run automatically. Otherwise:
-
+# TODO check this
 .. code-block:: bash
 
    ruff check .           # or: flake8
@@ -80,10 +80,11 @@ We use ``pytest``. Always run tests locally before opening a PR.
    pip install -e ".[dev]"
 
    # run tests
-   pytest -q
+   pytest
 
    # (optional) coverage report
    pytest --maxfail=1 --disable-warnings -q --cov=topotherm --cov-report=term-missing
+   # TODO CHECK THIS
 
 Add or update documentation
 ---------------------------

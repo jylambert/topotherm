@@ -14,6 +14,20 @@ from scipy.spatial import cKDTree
 from topotherm.utils import create_dir, find_duplicate_cols
 
 
+# required information of nodes and edges input
+COLUMNS_NODES_DF = [
+    "x", "y",  # coordinates of each nodes. no overlaps
+    "nodetype",  # either "sink", "source", "junction"
+    "ts",  # at least one column containing the power demand of each sink for each time step. Example: ts_0 = 10
+    "flh",  # at least one column with the full loaf hours in kWh/kWp of each sink
+    # "existing"
+]
+
+COLUMN_EDGES_DF = [
+    "x_start", "y_start",  # starting coordinates of the edge
+    "x_end", "y_end"  # ending coordinates. crs needs to be equal to nodes
+]
+
 def create_connection_line(point, edges):
     """
     Creates a connection line from a single point to multiple edges
@@ -119,7 +133,7 @@ def from_gisfiles(inputpaths: dict[str, os.PathLike],
     sources = gpd.read_file(inputpaths['sources']).to_crs(crs)
 
     logging.info("Processing geodata...")
-    mat, gdf_nodes, gdf_roads = process_geodata(sinks, roads, sources, buffer)
+    mat, gdf_nodes, gdf_roads = from_geodf(sinks, roads, sources, buffer)
 
     logging.info("Saving results...")
     gdf_roads.to_file(outputpath + "edges.shp")
@@ -130,7 +144,30 @@ def from_gisfiles(inputpaths: dict[str, os.PathLike],
     return
 
 
-def process_geodata(sinks: gpd.GeoDataFrame,
+def from_df(nodes: pd.DataFrame,
+            edges: pd.DataFrame) -> tuple(gpd.GeoDataFrame, gpd.GeoDataFrame):
+    """Converts a pd.DataFrame containting nodes and one containing edges
+    to two geodataframes that can be converted to input matrices. The matrices
+    are a requirement to run the optimization models.
+
+    If edges are not connected to the sinks and sources, they will be connected
+    by shortest path distance.
+
+    Args:
+        nodes (pd.DataFrame): Nodes df containing information on sinks, sources and junctions
+        edges (pd.DataFrame): Edges df containing information on how all nodes are
+            connected to eachother.
+
+    Returns:
+        (gpd.GeoDataFrame, gpd.GeoDataFrame): converted nodes and edges as gdf. 
+    """
+    # TODO: write script to convert from df to gdf
+    
+
+    return gdf_nodes, gdf_edges
+
+
+def from_geodf(sinks: gpd.GeoDataFrame,
                     roads: gpd.GeoDataFrame,
                     sources: gpd.GeoDataFrame,
                     buffer: float=2.5,
@@ -293,6 +330,7 @@ def process_geodata(sinks: gpd.GeoDataFrame,
                 lu = node_id_to_idx[u]
                 r = node_id_to_idx[v]
 
+                # TODO split up here to enable dataframe import
                 if lu != r:
                     mat['a_i'][lu, j] = 1
                     mat['a_i'][r, j] = -1
@@ -336,6 +374,6 @@ def process_geodata(sinks: gpd.GeoDataFrame,
         # Delete in one shot
         mat['l_i'] = np.delete(mat['l_i'], delete_idx, axis=0)
         mat['a_i'] = np.delete(mat['a_i'], delete_idx, axis=1)
-        gdf_edges = gdf_edges.drop(index=delete_idx).reset_index(drop=True)
+        gdf_edges = gdf_edges.drop(index=delete_idx).reset_index(drop=True)  # TODO when split, needs to be updated separately
 
     return mat, gdf_nodes, gdf_edges
