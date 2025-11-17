@@ -1,11 +1,10 @@
-.. _tests:
-.. _tests-page:
-
 Tests
 =====
 
-.. include:: ../../README.md
-   :parser: myst
-   :start-after: (tests)=
-   :end-before: (docs)=
+To run the test, first install development dependencies::
 
+    pip install .[dev]
+
+Then run the tests::
+
+    pytest tests

@@ -1,15 +1,8 @@
-.. _description:
-.. _why-should-i-use-this:
-.. _how-to-cite:
-.. _getting-started:
-.. _requirements:
-
-.. _description-page:
-
 Description
 ===========
 
-.. include:: ../../README.md
-   :parser: myst
-   :start-after: (description)=
-   :end-before: (install)=
+To run the model, several incidence matrices have to be formulated.
+Then, the linear regression parameters can be calculated for a given
+supply, ambient, and return temperature of the network.
+
+A Pyomo model is then set up and solved with the solver of your choice.

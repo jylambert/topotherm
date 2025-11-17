@@ -35,7 +35,7 @@ extensions = [
     'sphinx.ext.viewcode',      # add "view source"
     'sphinx.ext.intersphinx',   # link to external docs
     'sphinx_copybutton',        # copy button in code blocks 
-    'myst_parser',
+    # 'myst_parser', we need this for markdown, if all works delete
     'autoapi.extension',
     ]
 # Prefer NumPy-style sections
@@ -49,11 +49,15 @@ autodoc_typehints = 'description'    # move type hints under params/returns
 always_document_param_types = True    # Sphinx ≥ 7
 
 autosummary_generate = True
-myst_enable_extensions = [
-    "colon_fence",
-    "deflist",
-    "linkify",
-]
+# myst_enable_extensions = [
+#     "colon_fence",
+#     "deflist",
+#     "linkify",
+# ]
+
+# make clear we only want to use .rst and index
+source_suffix = ".rst"
+root_doc = "index"  
 
 templates_path = ['_templates']
 exclude_patterns = []
