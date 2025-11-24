@@ -110,7 +110,7 @@ Git workflow
 2. Keep changes focused; small PRs are faster to review.
 3. Sync with main before you open the PR:
    ``git fetch upstream && git rebase upstream/main`` (or merge).
-4. Write good commit messages (imperative mood, explain why, not just what).
+4. Write good commit messages (explain why, not just what).
    Conventional Commits (e.g. ``fix:``, ``feat:``, ``docs:``) are welcome but not required.
 5. Push and open a Draft PR early if you want feedback.
 

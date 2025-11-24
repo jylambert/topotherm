@@ -152,8 +152,7 @@ def from_gisfiles(
     return
 
 
-def from_df(
-    nodes: pd.DataFrame, edges: pd.DataFrame):
+def from_df(nodes: pd.DataFrame, edges: pd.DataFrame):
     """Converts a pd.DataFrame containting nodes and one containing edges
     to two geodataframes that can be converted to input matrices. The matrices
     are a requirement to run the optimization models.

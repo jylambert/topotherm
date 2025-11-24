@@ -333,11 +333,11 @@ def regression_thermal_capacity(settings: Settings) -> dict:
         settings.water.heat_capacity_cp,
     )
     regression = stats.linregress(
-        r["power_flow_max"] / 1000, np.array(settings.piping.inner)
+        r["power_flow_max"] / 1000, np.array(settings.piping.cost)
     )
 
-    r["a"] = np.round(regression.slope, 6)
-    r["b"] = np.round(regression.intercept, 3)
+    r["a"] = np.round(regression.slope, 8)
+    r["b"] = np.round(regression.intercept, 4)
     r["r2"] = regression.rvalue**2
 
     # Determine maximal power flow  in kw

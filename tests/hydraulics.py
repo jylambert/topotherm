@@ -24,8 +24,8 @@ def test_feed_line_temp():
 def test_regression():
     """Test thermal capacity and thermal losses regression"""
     r_thermal_cap = hydraulic.regression_thermal_capacity(settings)
-    assert r_thermal_cap["a"] == approx(0.0173, rel=0.01)
-    assert r_thermal_cap["b"] == approx(1153.0, rel=0.01)
+    assert r_thermal_cap["a"] == approx(0.0174, rel=0.01)
+    assert r_thermal_cap["b"] == approx(1154.0, rel=0.01)
     assert r_thermal_cap["r2"] == approx(0.9049, rel=0.01)
     # heat loss regression
     r_heat_loss = hydraulic.regression_heat_losses(
@@ -33,6 +33,6 @@ def test_regression():
     )
 
     # assert that each params item is within 1% of the expected value
-    assert r_heat_loss["a"] == approx(4.348000e-07, rel=0.01)
-    assert r_heat_loss["b"] == approx(0.02189, rel=0.01)
-    assert r_heat_loss["r2"] == approx(0.658745, rel=0.01)
+    assert r_heat_loss["a"] == approx(1.341e-07, rel=0.01)
+    assert r_heat_loss["b"] == approx(0.0263, rel=0.01)
+    assert r_heat_loss["r2"] == approx(0.597, rel=0.01)
