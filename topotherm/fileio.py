@@ -9,19 +9,19 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+
 from topotherm.utils import find_duplicate_cols
 
-
 FILES = {
-        "a_i":      {"file": "a_i",  "dtype": int},
-        "a_p":      {"file": "a_p",  "dtype": int},
-        "a_c":      {"file": "a_c",  "dtype": int},
-        "l_i":   {"file": "l_i",  "dtype": float},
-        "q_c":      {"file": "q_c",  "dtype": float},
-        "flh_sinks": {"file": "flh_sinks", "dtype": float},
-        "flh_sources": {"file": "flh_sources", "dtype": float},
-        "positions": {"file": "positions", "cols": (-2, -1), "dtype": float},
-    }
+    "a_i": {"file": "a_i", "dtype": int},
+    "a_p": {"file": "a_p", "dtype": int},
+    "a_c": {"file": "a_c", "dtype": int},
+    "l_i": {"file": "l_i", "dtype": float},
+    "q_c": {"file": "q_c", "dtype": float},
+    "flh_sinks": {"file": "flh_sinks", "dtype": float},
+    "flh_sources": {"file": "flh_sources", "dtype": float},
+    "positions": {"file": "positions", "cols": (-2, -1), "dtype": float},
+}
 
 
 def _load_one(path: Path, cfg: dict) -> np.ndarray:
@@ -40,7 +40,7 @@ def _load_one(path: Path, cfg: dict) -> np.ndarray:
     return arr
 
 
-def load(basepath: Path, filenames: dict=None) -> dict:
+def load(basepath: Path, filenames: dict = None) -> dict:
     """
     Read the input data from the given path and return the matrices.
 
@@ -70,7 +70,9 @@ def load(basepath: Path, filenames: dict=None) -> dict:
     if filenames is not None:
         _keys = [k for k in filenames.keys() if k not in FILES.keys()]
         if len(_keys) > 0:
-            raise ValueError(f"Keys {_keys} passed in filenames are not valid. Accepted keys: {list(FILES.keys())}")
+            raise ValueError(
+                f"Keys {_keys} passed in filenames are not valid. Accepted keys: {list(FILES.keys())}"
+            )
         for key, val in FILES.items():
             if key not in filenames.keys():
                 filenames[key] = val
@@ -82,27 +84,35 @@ def load(basepath: Path, filenames: dict=None) -> dict:
         r[key] = _load_one(path=p, cfg=val)
 
     # @TODO Implement real warnings/errors and implement checks for full load hours
-    if (r['a_i'].sum(axis=0).sum() != 0) | (np.abs(r['a_i']).sum(axis=0).sum()/2 != np.shape(r['a_i'])[1]):
+    if (r["a_i"].sum(axis=0).sum() != 0) | (
+        np.abs(r["a_i"]).sum(axis=0).sum() / 2 != np.shape(r["a_i"])[1]
+    ):
         print("Warning: The structure of A_i is not correct!")
-    elif (-r['a_p'].sum(axis=0).sum() != np.shape(r['a_p'])[1]) | (np.abs(r['a_p']).sum(axis=0).sum() != np.shape(r['a_p'])[1]):
-            print("Warning: The structure of A_p is not correct!")
-    elif (np.abs(r['a_c']).sum(axis=0).sum() != np.shape(r['a_c'])[1]) | (r['a_c'].sum(axis=0).sum() != np.shape(r['a_c'])[1]):
+    elif (-r["a_p"].sum(axis=0).sum() != np.shape(r["a_p"])[1]) | (
+        np.abs(r["a_p"]).sum(axis=0).sum() != np.shape(r["a_p"])[1]
+    ):
+        print("Warning: The structure of A_p is not correct!")
+    elif (np.abs(r["a_c"]).sum(axis=0).sum() != np.shape(r["a_c"])[1]) | (
+        r["a_c"].sum(axis=0).sum() != np.shape(r["a_c"])[1]
+    ):
         print("Warning: The structure of A_c is not correct!")
-    elif (np.shape(r['a_i'])[0] != np.shape(r['a_p'])[0]) | (np.shape(r['a_i'])[0] != np.shape(r['a_c'])[0]):
+    elif (np.shape(r["a_i"])[0] != np.shape(r["a_p"])[0]) | (
+        np.shape(r["a_i"])[0] != np.shape(r["a_c"])[0]
+    ):
         print("Warning: Number of nodes doesn't correspond!")
-    elif np.shape(r['q_c'])[0] != np.shape(r['a_c'])[1]:
+    elif np.shape(r["q_c"])[0] != np.shape(r["a_c"])[1]:
         print("Warning: Length of Q_c doesn't match shape of A_c!")
-    elif np.shape(r['l_i'])[0] != np.shape(r['a_i'])[1]:
+    elif np.shape(r["l_i"])[0] != np.shape(r["a_i"])[1]:
         print("Warning: Length of Q_c doesn't match shape of A_c!")
-    elif np.shape(r['positions'])[0] != np.shape(r['a_i'])[0]:
+    elif np.shape(r["positions"])[0] != np.shape(r["a_i"])[0]:
         print("Warning: Position doesn't match with the number of nodes!")
-    elif len(find_duplicate_cols(r['a_i'])) != 0:
+    elif len(find_duplicate_cols(r["a_i"])) != 0:
         print("Warning: There are duplicate columns in A_i, we took care of it!")
-        delete_col = find_duplicate_cols(r['a_i'])
-        if r['l_i'][delete_col[0][0]] > r['l_i'][delete_col[0][1]]:
-            np.delete(r['l_i'], delete_col[0][0], axis=0)
-            np.delete(r['a_i'], delete_col[0][0], axis=1)
+        delete_col = find_duplicate_cols(r["a_i"])
+        if r["l_i"][delete_col[0][0]] > r["l_i"][delete_col[0][1]]:
+            np.delete(r["l_i"], delete_col[0][0], axis=0)
+            np.delete(r["a_i"], delete_col[0][0], axis=1)
         else:
-            np.delete(r['l_i'], delete_col[0][1], axis=0)
-            np.delete(r['a_i'], delete_col[0][1], axis=1)
+            np.delete(r["l_i"], delete_col[0][1], axis=0)
+            np.delete(r["a_i"], delete_col[0][1], axis=1)
     return r

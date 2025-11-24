@@ -1,11 +1,18 @@
-.. _docs:
+Docs
+====
 
-.. _documentation-page:
+Activate the topotherm environment::
 
-Documentation
-=============
+    conda activate topotherm
+    # or: mamba activate topotherm
+    # or: source .venv/bin/activate
 
-.. include:: ../../README.md
-   :parser: myst
-   :start-after: (docs)=
-   :end-before: (license)=
+Install documentation dependencies::
+
+    pip install .[docs]
+
+Build the HTML documentation::
+
+    sphinx-build -b html docs/source docs/build/html
+
+Then open ``docs/build/html/index.html``.

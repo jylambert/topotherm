@@ -2,10 +2,10 @@
 import os
 import shutil
 
+import numpy as np
 import pandas as pd
 import pyomo.environ as pyo
 from pyomo.core.base.componentuid import ComponentUID
-import numpy as np
 
 
 def create_dir(path: str) -> None:
@@ -35,18 +35,18 @@ def solver_to_df(result, model):
     # https://stackoverflow.com/questions/45034035/meaning-of-time-in-pyomos-results-json
 
     dfslvr = pd.DataFrame()
-    slvr_res = result['Solver'][0]
+    slvr_res = result["Solver"][0]
     try:
-        dfslvr.loc['Termination condition', 0] = slvr_res['Termination condition']
-        dfslvr.loc['Termination condition', 'unit'] = '-'
-        dfslvr.loc['User Time', 0] = slvr_res['User time']
-        dfslvr.loc['User Time', 'unit'] = 's'
-        dfslvr.loc['Wall Time', 0] = slvr_res['Wall time']
-        dfslvr.loc['Wall Time', 'unit'] = 's'
-        dfslvr.loc['Objective', 0] = pyo.value(model.obj)
-        dfslvr.loc['Objective', 'unit'] = 'eur/y'
+        dfslvr.loc["Termination condition", 0] = slvr_res["Termination condition"]
+        dfslvr.loc["Termination condition", "unit"] = "-"
+        dfslvr.loc["User Time", 0] = slvr_res["User time"]
+        dfslvr.loc["User Time", "unit"] = "s"
+        dfslvr.loc["Wall Time", 0] = slvr_res["Wall time"]
+        dfslvr.loc["Wall Time", "unit"] = "s"
+        dfslvr.loc["Objective", 0] = pyo.value(model.obj)
+        dfslvr.loc["Objective", "unit"] = "eur/y"
     except KeyError:
-        print('Solver output not as expected. Check the solver output.')
+        print("Solver output not as expected. Check the solver output.")
         return slvr_res
     return dfslvr
 

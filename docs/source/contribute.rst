@@ -52,11 +52,11 @@ We recommend conda/mamba, but any virtual env works.
 Coding style & conventions
 --------------------------
 
-- **Python version**: 3.10+ (match project config/CI)
-- **Type hints**: required in public APIs. Keep them descriptive.
-- **Docstrings**: NumPy-style (Sphinx is configured with ``napoleon``).
-- **Imports**: standard library → third-party → local; avoid unused imports.
-- **Formatting/linting** (recommended):
+- Python version: 3.10+ (match project config/CI)
+- Type hints: required in public APIs. Keep them descriptive.
+- Docstrings: NumPy-style (Sphinx is configured with ``napoleon``).
+- Imports: standard library → third-party → local; avoid unused imports.
+- Formatting/linting (recommended):
   - `black` for code formatting
   - `isort` for imports
   - `ruff` (or `flake8`) for linting
@@ -105,14 +105,14 @@ Build docs locally:
 Git workflow
 ------------
 
-1. **Fork** the repository and create a topic branch:
+1. Fork the repository and create a topic branch:
    ``git checkout -b feature/short-description``.
-2. **Keep changes focused**; small PRs are faster to review.
-3. **Sync** with main before you open the PR:
+2. Keep changes focused; small PRs are faster to review.
+3. Sync with main before you open the PR:
    ``git fetch upstream && git rebase upstream/main`` (or merge).
-4. **Write good commit messages** (imperative mood, explain *why*, not just *what*).
+4. Write good commit messages (explain why, not just what).
    Conventional Commits (e.g. ``fix:``, ``feat:``, ``docs:``) are welcome but not required.
-5. **Push** and open a **Draft PR** early if you want feedback.
+5. Push and open a Draft PR early if you want feedback.
 
 Pull request checklist
 ----------------------
