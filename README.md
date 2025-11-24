@@ -3,7 +3,6 @@
 topotherm is a pyomo-based open-source optimization model for
 district heating network design.
 
-(intro)=
 ## Intro
 
 Topotherm is a pyomo-based mixed-integer linear programming district heating
@@ -14,7 +13,6 @@ publication available at:
 
 >  Lambert, Jerry and Ceruti, Amedeo and Spliethoff, Hartmut, Benchmark of Mixed-Integer Linear Programming Formulations for District Heating Network Design. Energy, Volume 308, 2024, 132885, ISSN 0360-5442, https://doi.org/10.1016/j.energy.2024.132885
 
-(feature-overview)=
 ## Feature overview
 
 * Single time-step topology and piping optimization.
@@ -27,69 +25,61 @@ publication available at:
 might have to be rewritten (utils.py)
 * Plotting functions included
 
-```{only} not html
 ## Contents
 
-- topotherm
-  - {ref}`Intro <intro>`
-  - {ref}`Feature overview <feature-overview>`
-  - {ref}`Description <description>`
-  - {ref}`Why should I use this? <why-should-i-use-this>`
-  - {ref}`How to cite <how-to-cite>`
-  - {ref}`Getting Started <getting-started>`
-    - {ref}`Requirements <requirements>`
-  - {ref}`Install <install>`
-    - {ref}`Python <python>`
-    - {ref}`Anaconda or mamba <anaconda-or-mamba>`
-  - {ref}`Solver <solver-readme>`
-    - {ref}`Gurobi <gurobi>`
-    - {ref}`Open-source Alternatives <open-source-alternatives>`
-  - {ref}`Usage <usage>`
-  - {ref}`Tests <tests>`
-  - {ref}`Docs <docs>`
-  
+- [topotherm](#topotherm)
+  - [Intro](#intro)
+  - [Feature overview](#feature-overview)
+  - [Contents](#contents)
+  - [Description](#description)
+  - [Why should I use this?](#why-should-i-use-this)
+  - [How to cite](#how-to-cite)
+  - [Install](#install)
+    - [Requirements](#requirements)
+    - [Installation process](#installation-process)
+    - [Python](#python)
+    - [Anaconda](#anaconda)
+  - [Solver](#solver)
+    - [Gurobi](#gurobi)
+    - [Open-source Alternatives](#open-source-alternatives)
+  - [Usage](#usage)
+  - [Contribute](#contribute)
+  - [Tests](#tests)
+  - [Docs](#docs)
+  - [License](#license)
 
-``` 
-
-(description)=
 ## Description
 
 To run the model, several incidence matrices have to be formulated. Then, the linear regression
 parameters can be calculated for a given supply, ambient and return temperature of the network.
 A pyomo model is then set up and solved with the solver of your choice.
 
-(why-should-i-use-this)=
 ## Why should I use this?
 
 Topotherm has the best scaling properties of multiple open-source models and
 has been benchmarked and validated.
 
-(how-to-cite)=
 ## How to cite
 
 >  Lambert, Jerry and Ceruti, Amedeo and Spliethoff, Hartmut, Benchmark of Mixed-Integer Linear Programming Formulations for District Heating Network Design. Energy, Volume 308, 2024, 132885, ISSN 0360-5442, https://doi.org/10.1016/j.energy.2024.132885
 
-(getting-started)=
-## Getting Started
+## Install
 
-This repository needs a PC capable to run python and its standard libraries.
-
-(requirements)=
 ### Requirements
 
-* Anaconda, mamba or venv
+* Git (optional)
+* A package manager (optional)
+* Python, anaconda, mamba or similar
 
-(install)=
-## Install
+### Installation process
 
 Use git to clone this repository into your computer. Then, install topotherm
 with a package manager such as Anaconda, or directly with Python.
 
 ```bash
 git clone https://github.com/jylambert/topotherm.git
+```
 
-
-(python)=
 ### Python
 
 ```python
@@ -99,8 +89,7 @@ pip install .
 
 This can also be done with venv or equivalent.
 
-(anaconda-or-mamba)=
-### Anaconda or mamba
+### Anaconda
 
 We recommend to install the dependencies with anaconda or mamba:
 
@@ -110,17 +99,14 @@ mamba env create -f environment.yml -n topotherm
 mamba activate topotherm
 ```
 
-(solver-readme)=
 ## Solver
 
-(gurobi)=
 ### Gurobi
 
 The results in the paper were obtained with the commercial solver gurobi.
 A free academic license is available and can be installed by following
 the documentation [here](https://support.gurobi.com/hc/en-us/articles/360044290292-How-do-I-install-Gurobi-for-Python-).
 
-(open-source-alternatives)=
 ### Open-source Alternatives
 
 You can try the code on smaller benchmarks with several open source solvers,
@@ -131,18 +117,14 @@ mamba activate topotherm
 mamba install -c conda-forge pyscipopt
 ```
 
-(usage)=
 ## Usage
 
-Generate the input incidence matrices for the district with .parquet format (see example).
-Then, modify and run the either one of the three scripts in that folder.
+In general, the users need to generate the required input incidence matrices for the district they want to run. Some examples are provided in the examples folder.These can  be modified to each new case study if necessary.
 
 ```bash
 cd examples
 python run_sts.py
 ```
-
-(contribute)=
 
 ## Contribute
 
@@ -150,7 +132,6 @@ Pull requests and any feedback regarding the code are very welcome. For major
 changes, please open an issue first to discuss what you would like to change.
 
 
-(tests)=
 ## Tests
 
 To run the tests, use pytest.
@@ -160,7 +141,6 @@ pip install .[dev]
 pytest tests
 ```
 
-(docs)=
 ## Docs
 
 Activate the topotherm environment:
@@ -181,7 +161,7 @@ Build the HTML documentation from the repository root:
 sphinx-build -b html docs/source docs/build/html
 # then open: docs/build/html/index.html
 ```
-(license)=
+
 ## License
 
 [MIT](https://en.wikipedia.org/wiki/MIT_License), see LICENSE file.
