@@ -30,7 +30,7 @@ def create(
     ----------
     matrices : dict
         Matrices of the district heating network with keys
-        ``a_i``, ``a_p``, ``a_c``, ``l_i``, ``position``, ``q_c``.
+        ``a_i``, ``a_p``, ``a_c``, ``l_i``, ``positions``, ``q_c``.
     sets : dict
         Sets for the optimization, obtained from ``matrices``.
     regression_inst : dict
@@ -356,7 +356,7 @@ def create(
                 sum(
                     sum(
                         m.lambda_b[j]
-                        * matrices["flh_consumer"][k, t]
+                        * matrices["flh_sinks"][k, t]
                         * matrices["q_c"][k, t]
                         for k, j in m.consumer_edges
                     )
@@ -379,7 +379,7 @@ def create(
         expr=mdl.revenue
         == sum(
             sum(
-                mdl.lambda_b[j] * matrices["flh_consumer"][k, t] * matrices["q_c"][k, t]
+                mdl.lambda_b[j] * matrices["flh_sinks"][k, t] * matrices["q_c"][k, t]
                 for k, j in mdl.consumer_edges
             )
             for t in mdl.set_t
@@ -396,7 +396,7 @@ def create(
             sum(
                 mdl.P_source[k, t]
                 * economics.source_price[k][t]
-                * matrices["flh_source"][k][t]
+                * matrices["flh_sources"][k][t]
                 for k in mdl.set_n_p
             )
             for t in mdl.set_t

@@ -7,7 +7,8 @@ from matplotlib.lines import Line2D
 
 
 def district(
-    matrices: dict, diameter: list[float] = [0], isnot_init: bool = False
+    matrices: dict, diameter: list[float] = [0],
+    isnot_init: bool = False  # todo: drop to simplify the function
 ) -> plt.Figure:
     """
     Plot the district heating network with the given matrices.
@@ -21,7 +22,7 @@ def district(
         - ``a_p`` : Adjacency matrix for the producers (rows: nodes, columns: supply IDs).
         - ``a_c`` : Adjacency matrix for the consumers (rows: nodes, columns: consumer IDs).
         - ``l_i`` : Length of edges.
-        - ``position`` : ``(x, y)`` coordinates of the nodes in the network.
+        - ``positions`` : ``(x, y)`` coordinates of the nodes in the network.
     diameter : list of float, optional
         Inner diameter of the pipes. Default is ``[0]``.
     isnot_init : bool, optional
@@ -79,12 +80,12 @@ def district(
     fig0, ax = plt.subplots(figsize=(2 * 90 * cm, 2 * 60 * cm), layout="constrained")
     if isnot_init:
         nx.draw_networkx_nodes(
-            G, matrices["position"], node_color=node_colors, node_size=55, ax=ax
+            G, matrices["positions"], node_color=node_colors, node_size=55, ax=ax
         )
         for edge in G.edges(data="weight"):
             nx.draw_networkx_edges(
                 G,
-                matrices["position"],
+                matrices["positions"],
                 edgelist=[edge],
                 width=edge[2],
                 ax=ax,
@@ -93,7 +94,7 @@ def district(
     else:
         nx.draw(
             G,
-            matrices["position"],
+            matrices["positions"],
             node_color=node_colors,
             node_size=55,
             with_labels=False,
@@ -108,7 +109,7 @@ def district(
             [0],
             marker="o",
             color="w",
-            label="Consumer",
+            label="Sink",
             markerfacecolor="LightBlue",
             markersize=15,
         ),

@@ -158,7 +158,7 @@ def sts(model: pyo.ConcreteModel, matrices: dict, settings: Settings):
             # assign the heat demand to the connected consumer if lambda is 1
             q_c_opt[a_c_idx[0], :] = lambda_ij[e] * matrices["q_c"][a_c_idx[0], :]
             flh_c_opt[a_c_idx[0], :] = (
-                lambda_ij[e] * matrices["flh_consumer"][a_c_idx[0], :]
+                lambda_ij[e] * matrices["flh_sinks"][a_c_idx[0], :]
             )
         elif d == "ji":
             a_i_idx = np.where(matrices["a_i"][:, e] == 1)
@@ -167,7 +167,7 @@ def sts(model: pyo.ConcreteModel, matrices: dict, settings: Settings):
                 raise ValueError("Error in the incidence matrix!")
             q_c_opt[a_c_idx[0], :] = lambda_ji[e] * matrices["q_c"][a_c_idx[0], :]
             flh_c_opt[a_c_idx[0], :] = (
-                lambda_ji[e] * matrices["flh_consumer"][a_c_idx[0], :]
+                lambda_ji[e] * matrices["flh_sinks"][a_c_idx[0], :]
             )
 
     # Remove nonzero elements row-wise
@@ -178,12 +178,12 @@ def sts(model: pyo.ConcreteModel, matrices: dict, settings: Settings):
     if np.shape(matrices["a_p"])[1] == 1:
         p_source_inst_opt = p_source_inst
         p_source_opt = p_source
-        flh_s_opt = matrices["flh_source"]
+        flh_s_opt = matrices["flh_sources"]
     else:
         # clean up the sources to exclude 0 power sources
         p_source_inst_opt = p_source_inst[p_source_inst != 0]
         p_source_opt = p_source[p_source_inst != 0]
-        flh_s_opt = matrices["flh_source"][p_source_inst != 0, :]
+        flh_s_opt = matrices["flh_sources"][p_source_inst != 0, :]
 
     # Adjust Incidence Matrix for further postprocessing
     for q, _ in enumerate(lambda_ij):
@@ -203,7 +203,7 @@ def sts(model: pyo.ConcreteModel, matrices: dict, settings: Settings):
     valid_rows = matrices["a_i"].any(axis=1)
 
     p_lin_opt = p_lin[valid_columns]
-    pos_opt = matrices["position"][valid_rows, :]
+    pos_opt = matrices["positions"][valid_rows, :]
     a_c_opt = matrices["a_c"][valid_rows, :]
     a_c_opt = a_c_opt[:, a_c_opt.any(axis=0)]
     a_p_opt = matrices["a_p"][valid_rows, :]
@@ -220,7 +220,7 @@ def sts(model: pyo.ConcreteModel, matrices: dict, settings: Settings):
         "l_i": l_i_opt,
         "d_i_0": d_lin,
         "m_i_0": m_lin,
-        "position": pos_opt,
+        "positions": pos_opt,
         "p": p_lin_opt,
         "flh_c_opt": flh_c_opt,
         "flh_s_opt": flh_s_opt,
@@ -292,7 +292,7 @@ def mts(model: pyo.ConcreteModel, matrices: dict, settings: Settings) -> dict:
             # assign the heat demand to the connected consumer if lambda is 1
             q_c_opt[a_c_idx[0], :] = lambda_b[e] * matrices["q_c"][a_c_idx[0], :]
             flh_c_opt[a_c_idx[0], :] = (
-                lambda_b[e] * matrices["flh_consumer"][a_c_idx[0], :]
+                lambda_b[e] * matrices["flh_sinks"][a_c_idx[0], :]
             )
         elif d == "ji":
             a_i_idx = np.where(matrices["a_i"][:, e] == 1)
@@ -301,7 +301,7 @@ def mts(model: pyo.ConcreteModel, matrices: dict, settings: Settings) -> dict:
                 raise ValueError("Error in the incidence matrix!")
             q_c_opt[a_c_idx[0], :] = lambda_b[e] * matrices["q_c"][a_c_idx[0], :]
             flh_c_opt[a_c_idx[0], :] = (
-                lambda_b[e] * matrices["flh_consumer"][a_c_idx[0], :]
+                lambda_b[e] * matrices["flh_sinks"][a_c_idx[0], :]
             )
 
     # Remove nonzero elements row-wise
@@ -312,11 +312,11 @@ def mts(model: pyo.ConcreteModel, matrices: dict, settings: Settings) -> dict:
     if np.shape(matrices["a_p"])[1] == 1:
         p_source_inst_opt = p_source_inst
         p_source_opt = p_source
-        flh_s_opt = matrices["flh_source"]
+        flh_s_opt = matrices["flh_sources"]
     else:
         p_source_inst_opt = p_source_inst[p_source_inst != 0]
         p_source_opt = p_source[p_source_inst != 0, :]
-        flh_s_opt = matrices["flh_source"][p_source_inst != 0, :]
+        flh_s_opt = matrices["flh_sources"][p_source_inst != 0, :]
 
     # Adaption of Incidence Matrix for further postprocessing
     for q in model.set_n_i:
@@ -342,7 +342,7 @@ def mts(model: pyo.ConcreteModel, matrices: dict, settings: Settings) -> dict:
     p_ji_opt = p_ji[valid_columns, :]
     lambda_ij_opt = lambda_ij[valid_columns, :]
     lambda_ji_opt = lambda_ji[valid_columns, :]
-    pos_opt = matrices["position"][valid_rows, :]
+    pos_opt = matrices["positions"][valid_rows, :]
     a_c_opt = matrices["a_c"][valid_rows, :]
     a_c_opt = a_c_opt[:, a_c_opt.any(axis=0)]
     a_p_opt = matrices["a_p"][valid_rows, :]
@@ -479,31 +479,29 @@ def to_dataframe(
     edges : pd.DataFrame
         DataFrame of edges.
     """
-    # Create a DataFrame for the nodes
     nodes = pd.DataFrame(
         index=range(matrices_optimal["a_i"].shape[0]),
         columns=["type_", "x", "y", "demand", "total_installed_power"],
         data=None,
     )
 
-    # Calculate the sum of matrices
     sum_ac = matrices_optimal["a_c"].sum(axis=1)
     sum_ap = matrices_optimal["a_p"].T.sum(axis=0)
     total_sum = np.array(sum_ac + sum_ap).flatten()
 
-    # Assign types based on the sum
+    # Assign types based on the sum of incidence matrices
     nodes["type_"] = [
-        "consumer" if x == 1 else "internal" if x == 0 else "source" for x in total_sum
+        "sink" if x == 1 else "internal" if x == 0 else "source" for x in total_sum
     ]
-    nodes["x"] = matrices_optimal["position"][:, 0]
-    nodes["y"] = matrices_optimal["position"][:, 1]
+    nodes["x"] = matrices_optimal["positions"][:, 0]
+    nodes["y"] = matrices_optimal["positions"][:, 1]
 
     # TODO: inherit in some way the consumer and producer id so that you don't have to search for it
     # in the original matrices, reducing the need to import them.
     sources_nodes = nodes.type_ == "source"
     positions_sources = nodes.loc[sources_nodes, ["x", "y"]].values
     matches = np.all(
-        matrices_init["position"][:, None, :] == positions_sources[None, :, :], axis=2
+        matrices_init["positions"][:, None, :] == positions_sources[None, :, :], axis=2
     )
     original_source_nodes = np.where(matches)[0]
     original_source_prods = np.where(
@@ -515,17 +513,17 @@ def to_dataframe(
         "p_s_inst_opt"
     ][original_source_prods].sum()
 
-    consumer_nodes = nodes[nodes.type_ == "consumer"].index
+    consumer_nodes = nodes[nodes.type_ == "sink"].index
     positions_consumers = nodes.loc[consumer_nodes, ["x", "y"]].values
     matches = np.all(
-        matrices_init["position"][:, None, :] == positions_consumers[None, :, :], axis=2
+        matrices_init["positions"][:, None, :] == positions_consumers[None, :, :], axis=2
     )
     original_consumer_nodes = np.where(matches)[0]
     original_consumer_edges = np.where(
         matrices_init["a_c"][original_consumer_nodes, :] == 1
     )[1]
     nodes.loc[consumer_nodes, "demand"] = (
-        (matrices_init["q_c"] * matrices_init["flh_consumer"])[original_consumer_edges]
+        (matrices_init["q_c"] * matrices_init["flh_sinks"])[original_consumer_edges]
         .sum(axis=1)
         .squeeze()
     )
@@ -543,20 +541,19 @@ def to_dataframe(
             f'Error in the incidence matrix! Demand {nodes.demand.sum()} != total demand {matrices_optimal["q_c"].sum()}'
         )
 
-    # Create a DataFrame for the edges
     edges = pd.DataFrame()
     edges["start_node"] = np.argmax(matrices_optimal["a_i"] == 1, axis=0)
     edges["end_node"] = np.argmax(matrices_optimal["a_i"] == -1, axis=0)
-    edges["x_start"] = matrices_optimal["position"][edges["start_node"], 0]
-    edges["y_start"] = matrices_optimal["position"][edges["start_node"], 1]
-    edges["x_end"] = matrices_optimal["position"][edges["end_node"], 0]
-    edges["y_end"] = matrices_optimal["position"][edges["end_node"], 1]
+    edges["x_start"] = matrices_optimal["positions"][edges["start_node"], 0]
+    edges["y_start"] = matrices_optimal["positions"][edges["start_node"], 1]
+    edges["x_end"] = matrices_optimal["positions"][edges["end_node"], 0]
+    edges["y_end"] = matrices_optimal["positions"][edges["end_node"], 1]
     edges["length"] = matrices_optimal["l_i"]
     edges["diameter"] = matrices_optimal["d_i_0"]
     edges["power"] = matrices_optimal["p"]
-    edges.loc[:, "to_consumer"] = edges["end_node"].map(nodes["type_"]).eq("consumer")
+    edges.loc[:, "to_consumer"] = edges["end_node"].map(nodes["type_"]).eq("sink")
     edges.loc[:, "from_consumer"] = (
-        edges["start_node"].map(nodes["type_"]).eq("consumer")
+        edges["start_node"].map(nodes["type_"]).eq("sink")
     )
     if edges.to_consumer.sum() + edges.from_consumer.sum() != len(
         matrices_optimal["q_c"]

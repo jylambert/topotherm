@@ -173,11 +173,11 @@ def create(
         mdl.set_n_p,
         doc="Thermal capacity of the heat source",
         domain=pyo.NonNegativeReals,
-        bounds=lambda m, i: (
+        bounds=lambda _, i: (
             economics.source_min_power[i],
             economics.source_max_power[i],
         ),
-        initialize=lambda m, i: economics.source_max_power[i],
+        initialize=lambda _, i: economics.source_max_power[i],
     )
 
     # Definition of constraints
@@ -385,14 +385,14 @@ def create(
                 sum(
                     sum(
                         mdl.lambda_["ij", sets["a_i_in"][j].item()]
-                        * matrices["flh_consumer"][k, t]
+                        * matrices["flh_sinks"][k, t]
                         * matrices["q_c"][k, t]
                         for k in sets["a_c_out"][j]
                         if len(sets["a_i_in"][j]) > 0
                     )
                     + sum(
                         (mdl.lambda_["ji", sets["a_i_out"][j].item()])
-                        * matrices["flh_consumer"][k, t]
+                        * matrices["flh_sinks"][k, t]
                         * matrices["q_c"][k, t]
                         for k in sets["a_c_out"][j]
                         if len(sets["a_i_out"][j]) > 0
@@ -414,7 +414,7 @@ def create(
             sum(
                 mdl.P_source[k, t]
                 * economics.source_price[k][t]
-                * matrices["flh_source"][k, t]
+                * matrices["flh_sources"][k, t]
                 for k in mdl.set_n_p
             )
             for t in mdl.set_t

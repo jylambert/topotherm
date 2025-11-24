@@ -1,6 +1,6 @@
 import pandas as pd
 
-from topotherm import precalculation_hydraulic as precalc
+from topotherm import hydraulic
 from topotherm.settings import Settings
 
 settings = Settings()
@@ -10,7 +10,7 @@ settings.temperatures.return_ = 55
 
 # Optionally: calculate the supply temperatures for a given max supply t and
 # return temperature according to ambient temperature
-variable_feed_temp = precalc.determine_feed_line_temp(
+variable_feed_temp = hydraulic.determine_feed_line_temp(
     settings.temperatures.ambient,
     temp_sup_high=90,
     temp_sup_low=80,
@@ -24,9 +24,9 @@ print(variable_feed_temp)
 
 # Calculate regression coefficients for the thermal capacity and heat losses
 # thermal capacity regression and max power as well as part loads
-r_thermal_cap = precalc.regression_thermal_capacity(settings)
+r_thermal_cap = hydraulic.regression_thermal_capacity(settings)
 # heat loss regression
-r_heat_loss = precalc.regression_heat_losses(settings, thermal_capacity=r_thermal_cap)
+r_heat_loss = hydraulic.regression_heat_losses(settings, thermal_capacity=r_thermal_cap)
 
 # Save regression coefficients to csv file
 df_cap = pd.DataFrame({key: r_thermal_cap[key] for key in ["a", "b", "r2"]}, index=[0])

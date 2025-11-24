@@ -8,6 +8,7 @@ of the Chair of Energy Systems.
 """
 
 import os
+from pathlib import Path
 
 import pandas as pd
 import pyomo.environ as pyo
@@ -47,7 +48,7 @@ def main(filepath, outputpath, plots=True, solver="gurobi", mode="economic"):
     tt.utils.create_dir(outputpath)
 
     # Load the district
-    mat = tt.fileio.load(filepath)
+    mat = tt.fileio.load(Path(filepath))
     mat["q_c"] = mat["q_c"] / 1000  # convert to kW
 
     if plots:
