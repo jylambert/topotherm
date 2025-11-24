@@ -1,5 +1,5 @@
-"""Provides helper functions common to all models.
-"""
+"""Provides helper functions common to all models."""
+
 
 def annuity(c_i, n):
     """
@@ -23,7 +23,7 @@ def annuity(c_i, n):
 
     >>> annuity(0.05, 10)
     0.129504...
-    
+
     With a higher interest rate (10%) and the same duration:
 
     >>> annuity(0.10, 10)
