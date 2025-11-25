@@ -13,25 +13,12 @@ publication available at:
 
 >  Lambert, Jerry and Ceruti, Amedeo and Spliethoff, Hartmut, Benchmark of Mixed-Integer Linear Programming Formulations for District Heating Network Design. Energy, Volume 308, 2024, 132885, ISSN 0360-5442, https://doi.org/10.1016/j.energy.2024.132885
 
-## Feature overview
-
-* Single time-step topology and piping optimization.
-  * Multiple time-steps version additionally includes operation with variable
-  heating demands.
-  * Greenfield optimization
-  * Existing network in development.
-* Forced and economic expansion of the district heating network to consumers.
-* Supports all solvers of pyomo, but the output helper functions in utils.py
-might have to be rewritten (utils.py)
-* Plotting functions included
-
 ## Contents
 
 - [topotherm](#topotherm)
   - [Intro](#intro)
-  - [Feature overview](#feature-overview)
   - [Contents](#contents)
-  - [Description](#description)
+  - [Feature overview](#feature-overview)
   - [Why should I use this?](#why-should-i-use-this)
   - [How to cite](#how-to-cite)
   - [Install](#install)
@@ -48,11 +35,17 @@ might have to be rewritten (utils.py)
   - [Docs](#docs)
   - [License](#license)
 
-## Description
+## Feature overview
 
-To run the model, several incidence matrices have to be formulated. Then, the linear regression
-parameters can be calculated for a given supply, ambient and return temperature of the network.
-A pyomo model is then set up and solved with the solver of your choice.
+* Single time-step topology and piping optimization.
+  * Multiple time-steps version additionally includes operation with variable
+  heating demands.
+  * Greenfield optimization
+  * Existing network in development.
+* Forced and economic expansion of the district heating network to consumers.
+* Supports all solvers of pyomo, but the output helper functions in utils.py
+might have to be rewritten (utils.py)
+* Plotting functions included
 
 ## Why should I use this?
 
@@ -60,6 +53,8 @@ Topotherm has the best scaling properties of multiple open-source models and
 has been benchmarked and validated.
 
 ## How to cite
+
+Please cite our recent work:
 
 >  Lambert, Jerry and Ceruti, Amedeo and Spliethoff, Hartmut, Benchmark of Mixed-Integer Linear Programming Formulations for District Heating Network Design. Energy, Volume 308, 2024, 132885, ISSN 0360-5442, https://doi.org/10.1016/j.energy.2024.132885
 
@@ -119,7 +114,8 @@ mamba install -c conda-forge pyscipopt
 
 ## Usage
 
-In general, the users need to generate the required input incidence matrices for the district they want to run. Some examples are provided in the examples folder.These can  be modified to each new case study if necessary.
+In general, the users need to generate the required input incidence matrices for the district they want to run.
+Some examples are provided in the examples folder.These can  be modified to each new case study if necessary.
 
 ```bash
 cd examples
@@ -130,7 +126,6 @@ python run_sts.py
 
 Pull requests and any feedback regarding the code are very welcome. For major
 changes, please open an issue first to discuss what you would like to change.
-
 
 ## Tests
 
