@@ -7,6 +7,7 @@ of the Chair of Energy Systems. This is the example file for the MTS-Easy model.
 """
 
 import os
+from pathlib import Path
 
 import pandas as pd
 import pyomo.environ as pyo
@@ -47,7 +48,11 @@ def main(filepath, outputpath, plots=True, solver="gurobi", mode="forced"):
     tt.utils.create_dir(outputpath)
 
     # Load the district
-    mat = tt.fileio.load(filepath)
+    mat = tt.fileio.load(
+        Path(filepath),
+        filenames={"flh_sources": {"file": "flh_source", "dtype": float},
+                    "flh_sinks": {"file": "flh_consumer", "dtype": float}}
+    )
     mat["q_c"] = mat["q_c"] / 1000  # convert from W to kW
 
     if plots:
@@ -62,8 +67,8 @@ def main(filepath, outputpath, plots=True, solver="gurobi", mode="forced"):
     # modify either in code or in the config file
     settings.temperatures.supply = 90
 
-    model_sets = tt.sets.create(mat)
-    model = tt.multiple_timestep.model(
+    model_sets = tt.models.sets.create(mat)
+    model = tt.models.multi_timestep.create(
         matrices=mat,
         sets=model_sets,
         regression_inst=r_thermal_cap,

@@ -4,13 +4,13 @@ be modified and adapted to each case through a .yaml file (see examples)."""
 import logging
 import os
 import warnings
-from typing import List, Union
+from typing import List, Union, Any
 
 import yaml
 from pydantic import BaseModel, Field, computed_field, field_validator
 
 
-class Water(BaseModel):
+class Water(BaseModel, extra="forbid"):
     """Water properties for the linearization of piping."""
 
     dynamic_viscosity: float = Field(
@@ -24,7 +24,7 @@ class Water(BaseModel):
     )
 
 
-class Ground(BaseModel):
+class Ground(BaseModel, extra="forbid"):
     """Ground properties for the linearization of piping."""
 
     thermal_conductivity: float = Field(
@@ -32,7 +32,7 @@ class Ground(BaseModel):
     )
 
 
-class Temperatures(BaseModel):
+class Temperatures(BaseModel, extra="forbid"):
     """Temperatures for the linearization of piping, calculation of
     postprocessing."""
 
@@ -41,7 +41,7 @@ class Temperatures(BaseModel):
     return_: float = Field(55, description="Return temperature in °C")
 
 
-class PipeDiameter(BaseModel):
+class PipeDiameter(BaseModel, extra="forbid"):
     """Single pipe diameter specification, with documentation."""
 
     dn: int = Field(description="DN size identifier as int: 32 for DN32")
@@ -65,7 +65,7 @@ class PipeDiameter(BaseModel):
         return v
 
 
-class Piping(BaseModel):
+class Piping(BaseModel, extra="forbid"):
     """Piping properties for the linearization of piping.
     Defaults according to DIN EN 253, costs based on a literature
     and expert survey."""
@@ -214,7 +214,7 @@ class Piping(BaseModel):
         return [p.dn for p in self.diameters]
 
 
-class Solver(BaseModel):
+class Solver(BaseModel, extra="forbid"):
     """Solver properties for the optimization problem. Used for the
     optimization model."""
 
@@ -226,7 +226,7 @@ class Solver(BaseModel):
     # @TODO: add more solver options, pass them to the solver flexibly
 
 
-class Economics(BaseModel):
+class Economics(BaseModel, extra="forbid"):
     """Economic properties for the optimization problem. Used for the
     optimization model."""
 
@@ -261,7 +261,7 @@ class Economics(BaseModel):
     )
 
 
-class Settings(BaseModel):
+class Settings(BaseModel, extra="forbid"):
     """Class for the settings of the optimization problem which is passed
     to the regression, optimization model, and postprocessing."""
 
@@ -280,6 +280,7 @@ class Settings(BaseModel):
         piping: Piping = Piping(),
         solver: Solver = Solver(),
         economics: Economics = Economics(),
+        **kwargs: Any,
     ) -> None:
         super().__init__(
             water=water,

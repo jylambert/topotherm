@@ -362,7 +362,7 @@ def mts(model: pyo.ConcreteModel, matrices: dict, settings: Settings) -> dict:
         "lambda_ji_opt": lambda_ji_opt,
         "d_i_0": d_lin,
         "m_i_0": m_lin,
-        "position": pos_opt,
+        "positions": pos_opt,
         "p": p_lin_opt,
         "p_ij": p_ij_opt,
         "p_ji": p_ji_opt,
