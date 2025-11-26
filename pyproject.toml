@@ -129,7 +129,7 @@ docstring-code-format = false
 docstring-code-line-length = "dynamic"
 
 [tool.ruff.lint.pydocstyle]
-convention = "numpy"  # Since you're using numpy format
+convention = "numpy"
 
 [tool.mypy]
 python_version = "3.13"
