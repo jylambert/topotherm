@@ -29,7 +29,7 @@ keywords = [
 
 license = {file = "LICENSE"}
 
-requires-python = ">=3.10"
+requires-python = ">=3.10,<=3.13"
 dependencies = [
     "numpy",
     "pandas",
@@ -149,7 +149,8 @@ dev = [
     "mypy",
     "pre-commit",
     "black",
-    "isort"
+    "isort",
+    "highspy"  # for very small tests only, most uncomplicated install
 ]
 docs = [
     "sphinx>=7",
