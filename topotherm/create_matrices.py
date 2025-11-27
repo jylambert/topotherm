@@ -3,6 +3,7 @@ from files or dataframes."""
 
 import logging
 from pathlib import Path
+from typing import Tuple
 
 import geopandas as gpd
 import numpy as np
@@ -13,27 +14,27 @@ from shapely.ops import nearest_points, snap, split
 
 from topotherm.utils import create_dir, find_duplicate_cols
 
-# required information of nodes and edges input
-COLUMNS_NODES_DF = [
-    "x",
-    "y",  # coordinates of each nodes. no overlaps
-    "nodetype",  # either "sink", "source", "internal"
-    "ts",  # at least one column containing the power demand of each sink for each time step. Example: ts_0 = 10
-    "flh",  # at least one column with the full load hours in kWh/kWp of each sink
-    # "existing"
-]
+# # required information of nodes and edges input
+# _COLUMNS_NODES_DF = [
+#     "x",
+#     "y",  # coordinates of each nodes. no overlaps
+#     "nodetype",  # either "sink", "source", "internal"
+#     "ts",  # at least one column containing the power demand of each sink for each time step. Example: ts_0 = 10
+#     "flh",  # at least one column with the full load hours in kWh/kWp of each sink
+#     # "existing"
+# ]
 
-COLUMN_EDGES_DF = [
-    "x_start",
-    "y_start",  # starting coordinates of the edge
-    "x_end",
-    "y_end",  # ending coordinates. crs needs to be equal to nodes
-]
+# _COLUMN_EDGES_DF = [
+#     "x_start",
+#     "y_start",  # starting coordinates of the edge
+#     "x_end",
+#     "y_end",  # ending coordinates. crs needs to be equal to nodes
+# ]
 
-COLUMNS_GDF = [  # TODO implement
-    "ts_",  # columns with power demand in kW of each sink for each time step. Example: ts_0 = 10
-    "flh_",  # columns with the full load hours in kWh/kWp of each sink at time step. Example: flh_0 = 2000
-]
+# _COLUMNS_GDF = [  # TODO implement
+#     "ts_",  # columns with power demand in kW of each sink for each time step. Example: ts_0 = 10
+#     "flh_",  # columns with the full load hours in kWh/kWp of each sink at time step. Example: flh_0 = 2000
+# ]
 
 def create_connection_line(point, edges):
     """
@@ -61,8 +62,10 @@ def create_nearest_point(point, edges):
 
     Parameters
     ----------
-    point: Single point which should be projected onto an edge
-    edges: Geoseries of edges onto which the point should be projected
+    point:
+        Single point which should be projected onto an edge
+    edges:
+        Geoseries of edges onto which the point should be projected
 
     Returns
     -------
@@ -215,7 +218,9 @@ def from_gisfiles(
     return
 
 
-def from_dfs(nodes: pd.DataFrame, edges: pd.DataFrame):
+def from_dfs(nodes: pd.DataFrame,
+             edges: pd.DataFrame
+) -> Tuple[gpd.GeoDataFrame, gpd.GeoDataFrame]:
     """Converts a pd.DataFrame containting nodes and one containing edges
     to two geodataframes that can be converted to input matrices. The matrices
     are a requirement to run the optimization models.
@@ -223,16 +228,17 @@ def from_dfs(nodes: pd.DataFrame, edges: pd.DataFrame):
     If edges are not connected to the sinks and sources, they will be connected
     by shortest path distance.
 
-    Args:
+    Parameters
+    ----------
         nodes (pd.DataFrame): Nodes df containing information on sinks, sources and junctions
         edges (pd.DataFrame): Edges df containing information on how all nodes are
             connected to eachother.
 
-    Returns:
+    Returns
+    -------
         (gpd.GeoDataFrame, gpd.GeoDataFrame): converted nodes and edges as gdf.
     """
     # TODO: write script to convert from df to gdf
-
     return (gdf_nodes, gdf_edges)
 
 

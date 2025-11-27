@@ -29,6 +29,7 @@ release = "0.6.0"
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
+    'autoapi.extension',  # Must be included
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",  # automatic summary tables
     "sphinx.ext.napoleon",  # numpy/google style
@@ -38,6 +39,7 @@ extensions = [
     "sphinx_copybutton",  # copy button in code blocks
     # 'myst_parser', we need this for markdown, if all works delete
     "autoapi.extension",
+    "sphinx.ext.mathjax",
 ]
 # Prefer NumPy-style sections
 napoleon_google_docstring = False
@@ -69,7 +71,7 @@ autoapi_type = "python"
 # Point directly at your package in the repo root:
 autoapi_dirs = [str(ROOT / "topotherm")]
 autoapi_root = "autoapi"
-autoapi_add_toctree_entry = False
+autoapi_add_toctree_entry = True
 autoapi_options = [
     "members",
     "undoc-members",

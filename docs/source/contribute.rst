@@ -6,18 +6,18 @@ Contributing to Topotherm
 Thank you for considering a contribution! We welcome code, documentation,
 examples, bug reports, reviews, and ideas.
 
-If you’re new to contributing, a great first step is to open a small issue
+If you're new to contributing, a great first step is to open a small issue
 (or draft PR) describing what you plan to do. Maintainers will help you
 get it into shape.
 
 What can I contribute?
 ----------------------
 
-- **Bug reports & fixes** – minimal reproducer + expected vs. actual behaviour
-- **Features** – small, incremental features are easiest to review
-- **Documentation** – tutorials, examples, clarifications, typos
-- **Tests** – add tests that cover a bug or new behaviour
-- **Review** – test and comment on open pull requests
+- **Bug reports & fixes**: minimal reproducer + expected vs. actual behaviour
+- **Features**: small, incremental features are easiest to review
+- **Documentation**: tutorials, examples, clarifications, typos
+- **Tests**: add tests that cover a bug or new behaviour
+- **Review**: test and comment on open pull requests
 
 Where to get help
 -----------------
@@ -140,11 +140,11 @@ By contributing, you agree your work will be released under the project license
 (MIT). Make sure you have the right to contribute the code and that third-party
 snippets are compatible with the license.
 
-[MIT](https://en.wikipedia.org/wiki/MIT_License), see LICENSE file.
+MIT license: https://en.wikipedia.org/wiki/MIT_License, see `LICENSE` file.
 
 Credits & inspiration
 ---------------------
 
 Parts of this guide were inspired by high-quality open-source projects and their
-contribution guides, such as PyPSA’s “Contributing” documentation. See their docs
+contribution guides, such as PyPSA's “Contributing” documentation. See their docs
 for further examples and best practices.

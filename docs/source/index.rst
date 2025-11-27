@@ -9,17 +9,11 @@ district heating network design.
    :maxdepth: 2
 
    overview
-   intro
-   feature_overview
-   description
-   why_use
-   how_to_cite
-   getting_started
-   requirements
    install
-   solver
-   usage
-   tests
+   getting_started
    documentation
+   methodology
+   how_to_cite
+   tests
    contribute
    license
