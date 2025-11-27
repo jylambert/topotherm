@@ -7,8 +7,9 @@ from matplotlib.lines import Line2D
 
 
 def district(
-    matrices: dict, diameter: list[float] = [0],
-    isnot_init: bool = False  # todo: drop to simplify the function
+    matrices: dict,
+    diameter: list[float] = [0],
+    isnot_init: bool = False,  # todo: drop to simplify the function
 ) -> plt.Figure:
     """
     Plot the district heating network with the given matrices.

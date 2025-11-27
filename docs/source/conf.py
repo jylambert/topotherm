@@ -29,7 +29,7 @@ release = "0.6.0"
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
-    'autoapi.extension',  # Must be included
+    "autoapi.extension",  # Must be included
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",  # automatic summary tables
     "sphinx.ext.napoleon",  # numpy/google style

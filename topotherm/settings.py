@@ -4,7 +4,7 @@ be modified and adapted to each case through a .yaml file (see examples)."""
 import logging
 import os
 import warnings
-from typing import List, Union, Any
+from typing import Any, List, Union
 
 import yaml
 from pydantic import BaseModel, Field, computed_field, field_validator

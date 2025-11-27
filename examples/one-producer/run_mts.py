@@ -50,8 +50,10 @@ def main(filepath, outputpath, plots=True, solver="gurobi", mode="forced"):
     # Load the district
     mat = tt.fileio.load(
         Path(filepath),
-        filenames={"flh_sources": {"file": "flh_source", "dtype": float},
-                    "flh_sinks": {"file": "flh_consumer", "dtype": float}}
+        filenames={
+            "flh_sources": {"file": "flh_source", "dtype": float},
+            "flh_sinks": {"file": "flh_consumer", "dtype": float},
+        },
     )
     mat["q_c"] = mat["q_c"] / 1000  # convert from W to kW
 

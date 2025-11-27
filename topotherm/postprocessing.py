@@ -516,7 +516,8 @@ def to_dataframe(
     consumer_nodes = nodes[nodes.type_ == "sink"].index
     positions_consumers = nodes.loc[consumer_nodes, ["x", "y"]].values
     matches = np.all(
-        matrices_init["positions"][:, None, :] == positions_consumers[None, :, :], axis=2
+        matrices_init["positions"][:, None, :] == positions_consumers[None, :, :],
+        axis=2,
     )
     original_consumer_nodes = np.where(matches)[0]
     original_consumer_edges = np.where(
@@ -552,9 +553,7 @@ def to_dataframe(
     edges["diameter"] = matrices_optimal["d_i_0"]
     edges["power"] = matrices_optimal["p"]
     edges.loc[:, "to_consumer"] = edges["end_node"].map(nodes["type_"]).eq("sink")
-    edges.loc[:, "from_consumer"] = (
-        edges["start_node"].map(nodes["type_"]).eq("sink")
-    )
+    edges.loc[:, "from_consumer"] = edges["start_node"].map(nodes["type_"]).eq("sink")
     if edges.to_consumer.sum() + edges.from_consumer.sum() != len(
         matrices_optimal["q_c"]
     ):

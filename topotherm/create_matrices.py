@@ -36,6 +36,7 @@ from topotherm.utils import create_dir, find_duplicate_cols
 #     "flh_",  # columns with the full load hours in kWh/kWp of each sink at time step. Example: flh_0 = 2000
 # ]
 
+
 def create_connection_line(point, edges):
     """
     Creates a connection line from a single point to multiple edges
@@ -111,40 +112,48 @@ def create_edge_nearest_point_optimized(points1, points2, crs="EPSG:25832"):
 def _validate_sinks(gdf: gpd.GeoDataFrame) -> None:
     """
     Validates if the provided GeoDataFrame contains the required columns.
-    
+
     Parameters
     ----------
     gdf : gpd.GeoDataFrame
         The GeoDataFrame to validate.
-    
+
     Raises
     ------
     ValueError
         If any required columns are missing or invalid.
     """
     gdf_columns = set(gdf.columns)
-    
+
     # Identify ts_ and flh_ columns which are obligatory
     ts_columns = [col for col in gdf_columns if col.startswith("ts_")]
     flh_columns = [col for col in gdf_columns if col.startswith("flh_")]
-    
+
     # Defining only one of each is sufficient for single time step models
     if not ts_columns and "ts" not in gdf_columns:
-        raise ValueError("GeoDataFrame must contain at least one 'ts_' column or a 'ts' column.")
+        raise ValueError(
+            "GeoDataFrame must contain at least one 'ts_' column or a 'ts' column."
+        )
     if not flh_columns and "flh" not in gdf_columns:
-        raise ValueError("GeoDataFrame must contain at least one 'flh_' column or a 'flh' column.")
-    
+        raise ValueError(
+            "GeoDataFrame must contain at least one 'flh_' column or a 'flh' column."
+        )
+
     if ts_columns or flh_columns:
         ts_steps = _extract_timesteps(ts_columns, "ts_")
         flh_steps = _extract_timesteps(flh_columns, "flh_")
-        
+
         if ts_steps != flh_steps:
-            raise ValueError("The 'ts_' and 'flh_' columns must contain the same sequence of time steps.")
-        
+            raise ValueError(
+                "The 'ts_' and 'flh_' columns must contain the same sequence of time steps."
+            )
+
         expected_steps = list(range(len(ts_steps)))
         if ts_steps != expected_steps:
-            raise ValueError("Time step columns must start at 0 and increase by 1 without gaps.")
-    
+            raise ValueError(
+                "Time step columns must start at 0 and increase by 1 without gaps."
+            )
+
     if not all(gdf.geometry.type == "Point"):
         raise ValueError("All geometries in the GeoDataFrame must be of type 'Point'.")
 
@@ -157,7 +166,9 @@ def _extract_timesteps(columns: list[str], prefix: str) -> list[int]:
             timestep = int(col.split("_")[1])
             timesteps.append(timestep)
         except (IndexError, ValueError):
-            logging.warning(f"Column '{col}' has invalid format. Expected: '{prefix}<timestep>'.")
+            logging.warning(
+                f"Column '{col}' has invalid format. Expected: '{prefix}<timestep>'."
+            )
     return sorted(timesteps)
 
 
@@ -179,7 +190,7 @@ def from_gisfiles(
         {"roads": "path/to/roads.shp",
         "sinks": "path/to/sinks.shp",
         "sources": "path/to/sources.gpkg"}
-    outputpath: str | pathlib.Path 
+    outputpath: str | pathlib.Path
         Path to the result folder
     buffer: float
         Radius of the buffer layer in meter, which is used to aggregate connection lines
@@ -218,8 +229,8 @@ def from_gisfiles(
     return
 
 
-def from_dfs(nodes: pd.DataFrame,
-             edges: pd.DataFrame
+def from_dfs(
+    nodes: pd.DataFrame, edges: pd.DataFrame
 ) -> Tuple[gpd.GeoDataFrame, gpd.GeoDataFrame]:
     """Converts a pd.DataFrame containting nodes and one containing edges
     to two geodataframes that can be converted to input matrices. The matrices

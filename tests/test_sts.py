@@ -1,15 +1,18 @@
 from pathlib import Path
 
+import numpy as np
 import pyomo.environ as pyo
 from pytest import approx
-import numpy as np
 
 import topotherm as tt
 
-
 SOLVERS = ["scip", "gurobi", "cbc", "highs", "cplex", "glpk"]
-R_COSTS = {"power_flow_max_kW": np.array([6.9e+04]),
-                 "a": 0.018377, "b": 567.335, "power_flow_max_partload": 1}
+R_COSTS = {
+    "power_flow_max_kW": np.array([6.9e04]),
+    "a": 0.018377,
+    "b": 567.335,
+    "power_flow_max_partload": 1,
+}
 R_LOSS = {"a": 4.348e-07, "b": 0.02189}
 
 
@@ -57,7 +60,7 @@ def test_sts_eco(request):
     model_sets = tt.models.sets.create(mat)
     model = tt.models.single_timestep.create(
         matrices=mat,
-        sets=model_sets,    
+        sets=model_sets,
         regression_inst=R_COSTS,
         regression_losses=R_LOSS,
         economics=settings.economics,
