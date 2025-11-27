@@ -1,8 +1,8 @@
-"""Module to create incidence matrices and geospatial data for district heating networks
-from given files."""
+"""Module to create incidence matrices and geo-spatial data for district heating networks
+from files or dataframes."""
 
 import logging
-import os
+from pathlib import Path
 
 import geopandas as gpd
 import numpy as np
@@ -17,9 +17,9 @@ from topotherm.utils import create_dir, find_duplicate_cols
 COLUMNS_NODES_DF = [
     "x",
     "y",  # coordinates of each nodes. no overlaps
-    "nodetype",  # either "sink", "source", "junction"
+    "nodetype",  # either "sink", "source", "internal"
     "ts",  # at least one column containing the power demand of each sink for each time step. Example: ts_0 = 10
-    "flh",  # at least one column with the full loaf hours in kWh/kWp of each sink
+    "flh",  # at least one column with the full load hours in kWh/kWp of each sink
     # "existing"
 ]
 
@@ -30,6 +30,10 @@ COLUMN_EDGES_DF = [
     "y_end",  # ending coordinates. crs needs to be equal to nodes
 ]
 
+COLUMNS_GDF = [  # TODO implement
+    "ts_",  # columns with power demand in kW of each sink for each time step. Example: ts_0 = 10
+    "flh_",  # columns with the full load hours in kWh/kWp of each sink at time step. Example: flh_0 = 2000
+]
 
 def create_connection_line(point, edges):
     """
@@ -101,9 +105,62 @@ def create_edge_nearest_point_optimized(points1, points2, crs="EPSG:25832"):
     return gpd.GeoSeries(lines, crs=points1.crs if hasattr(points1, "crs") else crs)
 
 
+def _validate_sinks(gdf: gpd.GeoDataFrame) -> None:
+    """
+    Validates if the provided GeoDataFrame contains the required columns.
+    
+    Parameters
+    ----------
+    gdf : gpd.GeoDataFrame
+        The GeoDataFrame to validate.
+    
+    Raises
+    ------
+    ValueError
+        If any required columns are missing or invalid.
+    """
+    gdf_columns = set(gdf.columns)
+    
+    # Identify ts_ and flh_ columns which are obligatory
+    ts_columns = [col for col in gdf_columns if col.startswith("ts_")]
+    flh_columns = [col for col in gdf_columns if col.startswith("flh_")]
+    
+    # Defining only one of each is sufficient for single time step models
+    if not ts_columns and "ts" not in gdf_columns:
+        raise ValueError("GeoDataFrame must contain at least one 'ts_' column or a 'ts' column.")
+    if not flh_columns and "flh" not in gdf_columns:
+        raise ValueError("GeoDataFrame must contain at least one 'flh_' column or a 'flh' column.")
+    
+    if ts_columns or flh_columns:
+        ts_steps = _extract_timesteps(ts_columns, "ts_")
+        flh_steps = _extract_timesteps(flh_columns, "flh_")
+        
+        if ts_steps != flh_steps:
+            raise ValueError("The 'ts_' and 'flh_' columns must contain the same sequence of time steps.")
+        
+        expected_steps = list(range(len(ts_steps)))
+        if ts_steps != expected_steps:
+            raise ValueError("Time step columns must start at 0 and increase by 1 without gaps.")
+    
+    if not all(gdf.geometry.type == "Point"):
+        raise ValueError("All geometries in the GeoDataFrame must be of type 'Point'.")
+
+
+def _extract_timesteps(columns: list[str], prefix: str) -> list[int]:
+    """Extract and sort timestep numbers from column names."""
+    timesteps = []
+    for col in columns:
+        try:
+            timestep = int(col.split("_")[1])
+            timesteps.append(timestep)
+        except (IndexError, ValueError):
+            logging.warning(f"Column '{col}' has invalid format. Expected: '{prefix}<timestep>'.")
+    return sorted(timesteps)
+
+
 def from_gisfiles(
-    inputpaths: dict[str, os.PathLike],
-    outputpath: str | os.PathLike,
+    inputpaths: dict[str, str | Path],
+    outputpath: str | Path,
     buffer: float = 2.5,
     crs: str | int = "EPSG:25832",
 ):
@@ -114,12 +171,12 @@ def from_gisfiles(
     Parameters
     ----------
     inputpaths: dict[str, os.PathLike]
-        Path to the initial shape files for the street layout, heat sinks and heat sources
-        as a dictionary. Matrices can also be Geopackages. Example:
+        dict of paths to the geodata files for the street layout, heat sinks and
+        heat sources. Each file needs to be formatted correctly. Example:
         {"roads": "path/to/roads.shp",
         "sinks": "path/to/sinks.shp",
-        "sources": "path/to/sources.shp"}
-    outputpath: str | os.PathLike
+        "sources": "path/to/sources.gpkg"}
+    outputpath: str | pathlib.Path 
         Path to the result folder
     buffer: float
         Radius of the buffer layer in meter, which is used to aggregate connection lines
@@ -136,12 +193,18 @@ def from_gisfiles(
     create_dir(outputpath)
 
     logging.info("Loading shapefiles...")
+    if not all(key in inputpaths for key in ["sinks", "roads", "sources"]):
+        raise ValueError(
+            f"inputpaths keys {list(inputpaths.keys())} must contain 'sinks', 'roads', and 'sources'."
+        )
     sinks = gpd.read_file(inputpaths["sinks"]).to_crs(crs)
     roads = gpd.read_file(inputpaths["roads"]).to_crs(crs)
     sources = gpd.read_file(inputpaths["sources"]).to_crs(crs)
 
+    _validate_sinks(sinks)
+
     logging.info("Processing geodata...")
-    mat, gdf_nodes, gdf_roads = from_geodf(sinks, roads, sources, buffer)
+    mat, gdf_nodes, gdf_roads = from_gdfs(sinks, roads, sources, buffer)
 
     logging.info("Saving results...")
     gdf_roads.to_file(outputpath + "edges.shp")
@@ -152,7 +215,7 @@ def from_gisfiles(
     return
 
 
-def from_df(nodes: pd.DataFrame, edges: pd.DataFrame):
+def from_dfs(nodes: pd.DataFrame, edges: pd.DataFrame):
     """Converts a pd.DataFrame containting nodes and one containing edges
     to two geodataframes that can be converted to input matrices. The matrices
     are a requirement to run the optimization models.
@@ -173,7 +236,7 @@ def from_df(nodes: pd.DataFrame, edges: pd.DataFrame):
     return (gdf_nodes, gdf_edges)
 
 
-def from_geodf(
+def from_gdfs(
     sinks: gpd.GeoDataFrame,
     roads: gpd.GeoDataFrame,
     sources: gpd.GeoDataFrame,
