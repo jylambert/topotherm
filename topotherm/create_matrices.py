@@ -295,6 +295,7 @@ def from_gdfs(
         ignore_index=False, index_parts=False
     ).drop_duplicates()
 
+
     logging.info("Processing house centers...")
     # Create centroids more efficiently
     sinks_center = sinks.copy()

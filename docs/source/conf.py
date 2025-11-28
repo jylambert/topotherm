@@ -15,7 +15,6 @@ THIS_DIR = Path(__file__).resolve().parent  # docs/source
 DOCS_DIR = THIS_DIR.parent  # docs
 ROOT = DOCS_DIR.parent  # repo root
 
-# Add the root directory of your project to sys.path
 sys.path.insert(0, str(ROOT))
 
 

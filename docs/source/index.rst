@@ -1,4 +1,4 @@
-Topotherm documentation
+topotherm documentation
 =======================
 
 topotherm is a pyomo-based open-source optimization model for

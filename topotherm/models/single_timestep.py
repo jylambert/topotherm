@@ -12,16 +12,20 @@ import numpy as np
 import pyomo.environ as pyo
 
 from topotherm.models.calc import annuity
-from topotherm.settings import Economics
+from topotherm.settings import Economics, Settings
 
 
 def create(
     matrices: dict,
     sets: dict,
-    regression_inst: dict,
-    regression_losses: dict,
-    economics: Economics,
-    optimization_mode: str,
+    economics: Economics = Settings().economics,
+    optimization_mode: str = 'forced',
+    regression_inst: dict = {
+        "power_flow_max_kW": np.array([6.9e04]),
+        "a": 0.018377,
+        "b": 567.335,
+        "power_flow_max_partload": 1},
+    regression_losses: dict = {"a": 4.348e-07, "b": 0.02189}
 ):
     """
     Create the optimization model for the thermo-hydraulic coupled with
