@@ -9,10 +9,17 @@ from pyomo.core.base.componentuid import ComponentUID
 
 
 def create_dir(path: str) -> None:
-    """Creates a directory if it does not exist and deletes old results.
+    """
+    Creates a directory if it does not exist and deletes old results.
 
-    Args:
-        path (str): path to directory
+    Parameters
+    ----------
+    path : str
+        Path to directory.
+
+    Returns
+    -------
+    None
     """
     # create results directory
     if not os.path.exists(path):
@@ -28,8 +35,23 @@ def create_dir(path: str) -> None:
 
 
 def solver_to_df(result, model):
-    """Returns solver results in a dataframe. This needs to be adapted to the
-    solver output (gurobi vs cplex have different naming conventions)"""
+    """
+    Returns solver results in a dataframe. This needs to be adapted to the
+    solver output (gurobi vs cplex have different naming conventions).
+
+    Parameters
+    ----------
+    result : dict
+        Solver result dictionary produced by Pyomo.
+    model : pyomo.core.base.PyomoModel
+        Pyomo model instance.
+
+    Returns
+    -------
+    pandas.DataFrame or dict
+        DataFrame with solver statistics, or raw solver output if unexpected format.
+    """
+
 
     # Useful links:
     # https://stackoverflow.com/questions/45034035/meaning-of-time-in-pyomos-results-json
@@ -52,7 +74,20 @@ def solver_to_df(result, model):
 
 
 def model_to_df(model):
-    """Converts a solved pyomo model to a pandas dataframe."""
+    """
+    Converts a solved pyomo model to a pandas dataframe.
+
+    Parameters
+    ----------
+    model : pyomo.core.base.PyomoModel
+        Solved Pyomo model.
+
+    Returns
+    -------
+    pandas.Series
+        Series containing variable, parameter, and objective values.
+    """
+
     solution = {}
 
     # generate cuid names efficiently in bulk

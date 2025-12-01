@@ -55,6 +55,7 @@ class PipeDiameter(BaseModel, extra="forbid"):
     def check_middle_diameter(cls, v, info):
         """Ensure outer steel pipe diameter is between inner and jacket."""
         if "inner" in info.data and "jacket" in info.data:
+            #is here inner meant and not inter?
             _inner = info.data["innter"]
             _outer = info.data["jacket"]
             if not (_inner < v < _outer):
@@ -163,7 +164,9 @@ class Piping(BaseModel, extra="forbid"):
         """
         Get the diameter data as sorted lists (for backward compatibility).
 
-        Returns:
+        Returns
+        -------
+        dict[str, list[float]]
             Dictionary with keys: 'inner', 'outer', 'jacket', 'cost'
         """
         return {
@@ -174,9 +177,20 @@ class Piping(BaseModel, extra="forbid"):
         }
 
     def set_from_dict(self, data: dict[int, dict[str, float]]) -> None:
-        """Set costs, inner, outer, jacket from a dictionary with DN as keys.
+        """
+        Set costs, inner, outer, jacket from a dictionary with DN as keys.
         If a DN is not found, it is added. If it exists, the corresponding
-        property is updated and if not all are defined, the previous value is kept."""
+        property is updated and if not all are defined, the previous value is kept.
+
+        Parameters
+        ----------
+        data : dict[int, dict[str, float]]
+            Dictionary with DN as keys.
+
+        Returns
+        -------
+        None
+        """
         diameters = []
         for dn, props in data.items():
             if dn in self.dns:
@@ -293,7 +307,19 @@ class Settings(BaseModel, extra="forbid"):
 
 
 def load(file_path: Union[str, os.PathLike[str]]) -> Settings:
-    """Load the settings from a yaml file."""
+    """
+    Load the settings from a yaml file.
+
+    Parameters
+    ----------
+    file_path : str or os.PathLike
+        Path to the yaml settings file.
+
+    Returns
+    -------
+    Settings
+        Settings instance loaded from the file.
+    """
     with open(file_path, "r", encoding="utf-8") as file:
         data = yaml.safe_load(file)
     # check if there are keys which are not in the model

@@ -2,10 +2,6 @@
 This module contains the optimization models for the single-timestep
 district heating network design.
 
-Functions
----------
-- ``annuity`` : Calculate the annuity factor.
-- ``model`` : Create the optimization model for the single time-step operation.
 """
 
 import numpy as np

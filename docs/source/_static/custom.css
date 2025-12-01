@@ -1,0 +1,11 @@
+/* Allow table text to wrap instead of forcing horizontal scroll */
+.wy-table-responsive table td,
+.wy-table-responsive table th {
+    white-space: normal !important;
+}
+
+/* Optional: make long code/signatures wrap too */
+.wy-table-responsive table code {
+    white-space: pre-wrap !important;
+    word-break: break-word;
+}

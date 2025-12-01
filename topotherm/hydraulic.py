@@ -2,22 +2,6 @@
 This module contains functions for the thermo-hydraulic precalculation of the
 district heating network.
 
-Functions
----------
-- ``determine_feed_line_temp`` : Calculates the supply temperature of the grid
-  according to the outdoor temperature with a linear interpolation between the
-  turning points.
-- ``max_flow_velocity`` : Calculates the maximal flow velocity in the pipe.
-- ``mass_flow`` : Calculates the maximal mass flow in the pipe.
-- ``pipe_capacity`` : Calculates the maximal heat flow in the pipe.
-- ``capacity_to_diameter`` : Calculates the diameter of the pipe according to
-  the heat flow.
-- ``thermal_resistance`` : Calculates the thermal resistance of the pipe.
-- ``heat_loss_pipe`` : Calculates the heat loss of the pipe.
-- ``regression_thermal_capacity`` : Calculates the regression factors for the
-  linearization of the thermal capacity of the pipes.
-- ``regression_heat_losses`` : Calculates the regression factors for the
-  linearization of the heat losses of the pipes.
 """
 
 import numpy as np
@@ -35,8 +19,7 @@ def determine_feed_line_temp(
     temp_turn_low: float,
 ) -> float:
     """
-    Calculate the supply temperature of the grid according to the outdoor
-    temperature using linear interpolation between the threshold points.
+    Calculate the supply temperature of the grid according to the outdoor temperature using linear interpolation between the threshold points.
 
     Parameters
     ----------
