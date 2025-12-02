@@ -1,9 +1,6 @@
 """This module contains the optimization models for the multiple-timestep
 district heating network design.
 
-The module contains the following functions:
-    * annuity: Calculate the annuity factor
-    * model: Create the optimization model for the multiple time steps operation
 """
 
 import numpy as np
@@ -37,7 +34,7 @@ def create(
         Regression coefficients for the thermal capacity.
     regression_losses : dict
         Regression coefficients for the heat losses.
-    economics : topotherm.settings.Economics
+    economics : Economics
         Economic parameters of the system.
     optimization_mode : str
         Optimization mode, either ``'economic'`` for economic optimization

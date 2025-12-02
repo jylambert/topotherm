@@ -32,7 +32,7 @@ def district(
 
     Returns
     -------
-    plt.Figure
+    matplotlib.figure.Figure
         Figure of the district heating network.
     """
 

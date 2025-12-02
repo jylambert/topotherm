@@ -43,13 +43,17 @@ def create_connection_line(point, edges):
 
     Parameters
     ----------
-    point: Single point which should be connected
-    edges: Geoseries of edges to which the point should be connected
+    point :
+        Single point which should be connected
+    edges :
+        Geoseries of edges to which the point should be connected
 
     Returns
     -------
-    line : A single linestring connecting the point to the nearest edge
+    line :
+        A single linestring connecting the point to the nearest edge
     """
+
     # Find the nearest point on the edges
     nearest_geom = edges.distance(point).idxmin()
     nearest_point = nearest_points(point, edges.iloc[nearest_geom])[1]
@@ -63,15 +67,17 @@ def create_nearest_point(point, edges):
 
     Parameters
     ----------
-    point:
+    point :
         Single point which should be projected onto an edge
-    edges:
+    edges :
         Geoseries of edges onto which the point should be projected
 
     Returns
     -------
-    nearest point: A single nearest point object.
+    nearest_point :
+        A single nearest point object.
     """
+
     # Find the nearest point on the edges
     nearest_geom = edges.distance(point).idxmin()
     nearest_point = nearest_points(point, edges.iloc[nearest_geom])[1]
@@ -84,12 +90,15 @@ def create_edge_nearest_point_optimized(points1, points2, crs="EPSG:25832"):
 
     Parameters
     ----------
-    points1: Series of points which should be connected to the nearest points2
-    points2: Series of points to which should be connected the points1
+    points1 :
+        Series of points which should be connected to the nearest points2
+    points2 :
+        Series of points to which should be connected the points1
 
     Returns
     -------
-    lines_gs: Geoseries of lines connecting points1 to points2
+    lines_gs :
+        Geoseries of lines connecting points1 to points2
     """
 
     # Extract coordinates from GeoSeries
@@ -232,7 +241,8 @@ def from_gisfiles(
 def from_dfs(
     nodes: pd.DataFrame, edges: pd.DataFrame
 ) -> Tuple[gpd.GeoDataFrame, gpd.GeoDataFrame]:
-    """Converts a pd.DataFrame containting nodes and one containing edges
+    """
+    Converts a pd.DataFrame containting nodes and one containing edges
     to two geodataframes that can be converted to input matrices. The matrices
     are a requirement to run the optimization models.
 
@@ -241,14 +251,18 @@ def from_dfs(
 
     Parameters
     ----------
-        nodes (pd.DataFrame): Nodes df containing information on sinks, sources and junctions
-        edges (pd.DataFrame): Edges df containing information on how all nodes are
-            connected to eachother.
+    nodes : pd.DataFrame
+        Nodes df containing information on sinks, sources and junctions
+    edges : pd.DataFrame
+        Edges df containing information on how all nodes are
+        connected to eachother.
 
     Returns
     -------
-        (gpd.GeoDataFrame, gpd.GeoDataFrame): converted nodes and edges as gdf.
+    tuple of gpd.GeoDataFrame
+        converted nodes and edges as gdf.
     """
+
     # TODO: write script to convert from df to gdf
     return (gdf_nodes, gdf_edges)
 
@@ -294,7 +308,6 @@ def from_gdfs(
     road_intersections = roads.boundary.explode(
         ignore_index=False, index_parts=False
     ).drop_duplicates()
-
 
     logging.info("Processing house centers...")
     # Create centroids more efficiently

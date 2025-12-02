@@ -3,14 +3,6 @@ Postprocessing of the results from the optimization. This includes the
 calculation of the diameter and mass flow of the pipes, and the elimination of
 unused pipes and nodes.
 
-Functions
----------
-- ``calc_diam_and_velocity`` : Calculate pipe diameter and velocity depending
-  on the mass flow and pipe power.
-- ``sts`` : Postprocessing for the single time step model.
-- ``to_networkx_graph`` : Export the postprocessed, optimal district as a
-  NetworkX graph.
-- ``mts`` : Postprocessing for the multiple time step model.
 """
 
 from typing import Tuple
@@ -124,7 +116,7 @@ def sts(model: pyo.ConcreteModel, matrices: dict, settings: Settings):
         Solved Pyomo model.
     matrices : dict
         Dictionary containing the matrices.
-    settings : tt.settings.Settings
+    settings : Settings
         Settings for the optimization.
 
     Returns
@@ -172,7 +164,7 @@ def sts(model: pyo.ConcreteModel, matrices: dict, settings: Settings):
 
     # Remove nonzero elements row-wise
     q_c_opt = q_c_opt[q_c_opt.any(axis=1)]
-    flh_c_opt = np.zeros([matrices["a_c"].shape[1], len(model.set_t)])
+    flh_c_opt = flh_c_opt[flh_c_opt.any(axis=1)]
 
     # Postprocessing producers
     if np.shape(matrices["a_p"])[1] == 1:
@@ -244,7 +236,7 @@ def mts(model: pyo.ConcreteModel, matrices: dict, settings: Settings) -> dict:
         Solved Pyomo model.
     matrices : dict
         Dictionary containing the matrices.
-    settings : tt.settings.Settings
+    settings : Settings
         Settings for the optimization.
 
     Returns

@@ -1,5 +1,5 @@
-"""This example shows how to generated incidence matrices from geodataframes.
-"""
+"""This example shows how to generated incidence matrices from geodataframes."""
+
 from pathlib import Path
 
 import geopandas as gpd

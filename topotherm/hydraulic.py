@@ -1,30 +1,13 @@
 """
 This module contains functions for the thermo-hydraulic precalculation of the
 district heating network.
-
-Functions
----------
-- ``determine_feed_line_temp`` : Calculates the supply temperature of the grid
-  according to the outdoor temperature with a linear interpolation between the
-  turning points.
-- ``max_flow_velocity`` : Calculates the maximal flow velocity in the pipe.
-- ``mass_flow`` : Calculates the maximal mass flow in the pipe.
-- ``pipe_capacity`` : Calculates the maximal heat flow in the pipe.
-- ``capacity_to_diameter`` : Calculates the diameter of the pipe according to
-  the heat flow.
-- ``thermal_resistance`` : Calculates the thermal resistance of the pipe.
-- ``heat_loss_pipe`` : Calculates the heat loss of the pipe.
-- ``regression_thermal_capacity`` : Calculates the regression factors for the
-  linearization of the thermal capacity of the pipes.
-- ``regression_heat_losses`` : Calculates the regression factors for the
-  linearization of the heat losses of the pipes.
 """
 
 import numpy as np
 from scipy import stats
 from scipy.optimize import root
 
-from topotherm.settings import Settings
+from topotherm.settings import Settings, Water
 
 
 def determine_feed_line_temp(
@@ -35,8 +18,7 @@ def determine_feed_line_temp(
     temp_turn_low: float,
 ) -> float:
     """
-    Calculate the supply temperature of the grid according to the outdoor
-    temperature using linear interpolation between the threshold points.
+    Calculate the supply temperature of the grid according to the outdoor temperature using linear interpolation between the threshold points.
 
     Parameters
     ----------
@@ -82,11 +64,11 @@ def determine_feed_line_temp(
 
 
 def max_flow_velocity(
-    vel_init: float,
     diameter: float,
     roughness: float,
     max_spec_pressure_loss: float,
     water_parameters: Settings,
+    vel_init: float = 0.5,
 ) -> float:
     """
     Calculate the maximal flow velocity in a pipe based on the maximal
@@ -94,8 +76,6 @@ def max_flow_velocity(
 
     Parameters
     ----------
-    vel_init : float
-        Initial velocity (m/s).
     diameter : float
         Diameter of the pipe (m).
     roughness : float
@@ -104,6 +84,8 @@ def max_flow_velocity(
         Maximal specific pressure loss (Pa/m).
     water_parameters : Settings
         Water parameters instance.
+    vel_init : float, optional
+        Initial velocity (m/s).
 
     Returns
     -------
@@ -288,6 +270,59 @@ def heat_loss_pipe(
     return losses
 
 
+def calc_power_flow(
+    diameter: float,
+    roughness: float,
+    max_pressure_loss: float,
+    supply_temperature: float,
+    return_temperature: float,
+    water_properties: Water = Settings().water,
+) -> dict:
+    """Calculate maximum allowable power flow though a pipe given defined
+    boundary conditions.
+
+    Parameters
+    ----------
+    diameter : float
+        inner diameter of the steel pipe in m
+    roughness : float
+        steel pipe roughness in
+    max_pressure_loss : float
+        maximum pressure loss in Pa/m
+    supply_temperature : float
+        supply temperature in K or °C
+    return_temperature : float
+        return temperature in K or °C
+    water_properties : Settings.water, optional
+        water properties as defined by topotherm.settings.water, by default Settings().water
+
+    Returns
+    -------
+    dict
+        dict containing the maximal flow velocity, mass flow and power flow.
+    """
+    r = {}
+    r["max_velocity"] = max_flow_velocity(
+        diameter,
+        roughness,
+        max_pressure_loss,
+        water_properties,
+    )
+
+    r["max_mass_flow"] = mass_flow(
+        r["max_velocity"], diameter, water_properties.density
+    )
+
+    # do the regression for each diameter
+    r["max_power_flow"] = pipe_power(
+        r["max_mass_flow_max"],
+        supply_temperature,
+        return_temperature,
+        water_properties.heat_capacity_cp,
+    )
+    return r
+
+
 def regression_thermal_capacity(settings: Settings) -> dict:
     """
     Calculate the regression factors for the linearization of the thermal
@@ -304,15 +339,12 @@ def regression_thermal_capacity(settings: Settings) -> dict:
     dict
         Regression factors for the linearization (€/m).
     """
-    V_INIT = 0.5  # initial velocity for hydraulic calculations
-
     r = {}  # results of the regression
 
     velocity_max = np.zeros(settings.piping.number_diameters)  # initialize array
     # iterate over all diameters
     for i, diam in enumerate(settings.piping.inner):
         velocity_max[i] = max_flow_velocity(
-            V_INIT,
             diam,
             settings.piping.roughness,
             settings.piping.max_pr_loss,
@@ -324,14 +356,6 @@ def regression_thermal_capacity(settings: Settings) -> dict:
     )
 
     r["power_flow_max"] = np.zeros([settings.piping.number_diameters])  # init
-
-    # do the regression for each diameter
-    r["power_flow_max"] = pipe_power(
-        r["mass_flow_max"],
-        settings.temperatures.supply,
-        settings.temperatures.return_,
-        settings.water.heat_capacity_cp,
-    )
     regression = stats.linregress(
         r["power_flow_max"] / 1000, np.array(settings.piping.cost)
     )
@@ -346,6 +370,36 @@ def regression_thermal_capacity(settings: Settings) -> dict:
     # Part load according to outdoor temperature and feed line temperature
     # @TODO: refactor this
     r["power_flow_max_partload"] = 1
+    return r
+
+
+def calc_heat_loss(settings: Settings = Settings()) -> dict:
+    """Calculate the heat losses at the design point conditions of a given pipe.
+
+    Parameters
+    ----------
+    settings : Settings, optional
+        settings object detailing all necessary boundary conditions, by default Settings()
+
+    Returns
+    -------
+    dict
+        dictionary with the ratio of jacket diameter to outer steel pipe diamater,
+        the supply and ambient temperatures, the thermal resitances of soil and
+        insulation materials, and the total heat heat losses in W
+    """
+    r = {}
+
+    r["ratio"] = np.array(settings.piping.jacket) / np.array(settings.piping.outer)
+    r["thermal_resistance"] = thermal_resistance(
+        settings.piping.outer, r["ratio"], settings.piping.depth, settings
+    )
+
+    r["heat_loss"] = heat_loss_pipe(
+        settings.temperatures.supply,
+        r["thermal_resistance"],
+        settings.temperatures.ambient,
+    )
     return r
 
 

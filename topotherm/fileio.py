@@ -12,7 +12,7 @@ import pandas as pd
 
 from topotherm.utils import find_duplicate_cols
 
-FILES = {
+_FILES = {
     "a_i": {"file": "a_i", "dtype": int},
     "a_p": {"file": "a_p", "dtype": int},
     "a_c": {"file": "a_c", "dtype": int},
@@ -46,9 +46,9 @@ def load(basepath: Path, filenames: dict = None) -> dict:
 
     Parameters
     ----------
-    path : pathlib.Path
+    basepath : pathlib.Path
         Path to the input data.
-    filenames : dict (optional)
+    filenames : dict, optional
         Dict containing filenames and optional import options". Example:
         "flh_sources": {"file": "flh_sources", "dtype": float}
 
@@ -68,16 +68,16 @@ def load(basepath: Path, filenames: dict = None) -> dict:
     """
     r = {}
     if filenames is not None:
-        _keys = [k for k in filenames.keys() if k not in FILES.keys()]
+        _keys = [k for k in filenames.keys() if k not in _FILES.keys()]
         if len(_keys) > 0:
             raise ValueError(
-                f"Keys {_keys} passed in filenames are not valid. Accepted keys: {list(FILES.keys())}"
+                f"Keys {_keys} passed in filenames are not valid. Accepted keys: {list(_FILES.keys())}"
             )
-        for key, val in FILES.items():
+        for key, val in _FILES.items():
             if key not in filenames.keys():
                 filenames[key] = val
     else:
-        filenames = FILES
+        filenames = _FILES
 
     for key, val in filenames.items():
         p = basepath / f"{val['file']}.parquet"
