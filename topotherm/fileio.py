@@ -71,13 +71,13 @@ def load(basepath: Path, filenames: dict = None) -> dict:
         _keys = [k for k in filenames.keys() if k not in _FILES.keys()]
         if len(_keys) > 0:
             raise ValueError(
-                f"Keys {_keys} passed in filenames are not valid. Accepted keys: {list(FILES.keys())}"
+                f"Keys {_keys} passed in filenames are not valid. Accepted keys: {list(_FILES.keys())}"
             )
-        for key, val in FILES.items():
+        for key, val in _FILES.items():
             if key not in filenames.keys():
                 filenames[key] = val
     else:
-        filenames = FILES
+        filenames = _FILES
 
     for key, val in filenames.items():
         p = basepath / f"{val['file']}.parquet"

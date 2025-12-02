@@ -69,7 +69,6 @@ def max_flow_velocity(
     max_spec_pressure_loss: float,
     water_parameters: Settings,
     vel_init: float = 0.5,
-
 ) -> float:
     """
     Calculate the maximal flow velocity in a pipe based on the maximal
@@ -85,7 +84,7 @@ def max_flow_velocity(
         Maximal specific pressure loss (Pa/m).
     water_parameters : Settings
         Water parameters instance.
-    vel_init : float, optional 
+    vel_init : float, optional
         Initial velocity (m/s).
 
     Returns
@@ -272,15 +271,14 @@ def heat_loss_pipe(
 
 
 def calc_power_flow(
-        diameter: float,
-        roughness: float,
-        max_pressure_loss: float,
-        supply_temperature: float,
-        return_temperature: float,
-        water_properties: Water = Settings().water,
-
+    diameter: float,
+    roughness: float,
+    max_pressure_loss: float,
+    supply_temperature: float,
+    return_temperature: float,
+    water_properties: Water = Settings().water,
 ) -> dict:
-    """Calculate maximum allowable power flow though a pipe given defined 
+    """Calculate maximum allowable power flow though a pipe given defined
     boundary conditions.
 
     Parameters
@@ -288,7 +286,7 @@ def calc_power_flow(
     diameter : float
         inner diameter of the steel pipe in m
     roughness : float
-        steel pipe roughness in 
+        steel pipe roughness in
     max_pressure_loss : float
         maximum pressure loss in Pa/m
     supply_temperature : float
@@ -301,15 +299,15 @@ def calc_power_flow(
     Returns
     -------
     dict
-        dict containing the maximal flow velocity, mass flow and power flow. 
+        dict containing the maximal flow velocity, mass flow and power flow.
     """
     r = {}
     r["max_velocity"] = max_flow_velocity(
-            diameter,
-            roughness,
-            max_pressure_loss,
-            water_properties,
-        )
+        diameter,
+        roughness,
+        max_pressure_loss,
+        water_properties,
+    )
 
     r["max_mass_flow"] = mass_flow(
         r["max_velocity"], diameter, water_properties.density
@@ -347,7 +345,6 @@ def regression_thermal_capacity(settings: Settings) -> dict:
     # iterate over all diameters
     for i, diam in enumerate(settings.piping.inner):
         velocity_max[i] = max_flow_velocity(
-            V_INIT,
             diam,
             settings.piping.roughness,
             settings.piping.max_pr_loss,
@@ -376,9 +373,7 @@ def regression_thermal_capacity(settings: Settings) -> dict:
     return r
 
 
-def calc_heat_loss(
-    settings: Settings = Settings()
-) -> dict:
+def calc_heat_loss(settings: Settings = Settings()) -> dict:
     """Calculate the heat losses at the design point conditions of a given pipe.
 
     Parameters
@@ -391,7 +386,7 @@ def calc_heat_loss(
     dict
         dictionary with the ratio of jacket diameter to outer steel pipe diamater,
         the supply and ambient temperatures, the thermal resitances of soil and
-        insulation materials, and the total heat heat losses in W  
+        insulation materials, and the total heat heat losses in W
     """
     r = {}
 
@@ -401,10 +396,11 @@ def calc_heat_loss(
     )
 
     r["heat_loss"] = heat_loss_pipe(
-        settings.temperatures.supply, r["thermal_resistance"], settings.temperatures.ambient
+        settings.temperatures.supply,
+        r["thermal_resistance"],
+        settings.temperatures.ambient,
     )
     return r
-
 
 
 def regression_heat_losses(settings: Settings, thermal_capacity: dict) -> dict:

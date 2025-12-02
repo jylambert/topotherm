@@ -101,7 +101,6 @@ def create_edge_nearest_point_optimized(points1, points2, crs="EPSG:25832"):
         Geoseries of lines connecting points1 to points2
     """
 
-
     # Extract coordinates from GeoSeries
     coords1 = np.array(list(zip(points1.x, points1.y)))
     coords2 = np.array(list(zip(points2.x, points2.y)))
@@ -309,7 +308,6 @@ def from_gdfs(
     road_intersections = roads.boundary.explode(
         ignore_index=False, index_parts=False
     ).drop_duplicates()
-
 
     logging.info("Processing house centers...")
     # Create centroids more efficiently

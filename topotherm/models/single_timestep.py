@@ -15,13 +15,14 @@ def create(
     matrices: dict,
     sets: dict,
     economics: Economics = Settings().economics,
-    optimization_mode: str = 'forced',
+    optimization_mode: str = "forced",
     regression_inst: dict = {
         "power_flow_max_kW": np.array([6.9e04]),
         "a": 0.018377,
         "b": 567.335,
-        "power_flow_max_partload": 1},
-    regression_losses: dict = {"a": 4.348e-07, "b": 0.02189}
+        "power_flow_max_partload": 1,
+    },
+    regression_losses: dict = {"a": 4.348e-07, "b": 0.02189},
 ):
     """
     Create the optimization model for the thermo-hydraulic coupled with

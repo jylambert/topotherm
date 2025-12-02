@@ -52,7 +52,6 @@ def solver_to_df(result, model):
         DataFrame with solver statistics, or raw solver output if unexpected format.
     """
 
-
     # Useful links:
     # https://stackoverflow.com/questions/45034035/meaning-of-time-in-pyomos-results-json
 
