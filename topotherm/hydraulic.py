@@ -7,7 +7,7 @@ import numpy as np
 from scipy import stats
 from scipy.optimize import root
 
-from topotherm.settings import Settings, Water
+from topotherm.settings import Settings
 
 
 def determine_feed_line_temp(
@@ -271,53 +271,46 @@ def heat_loss_pipe(
 
 
 def calc_power_flow(
-    diameter: float,
-    roughness: float,
-    max_pressure_loss: float,
-    supply_temperature: float,
-    return_temperature: float,
-    water_properties: Water = Settings().water,
+    settings: Settings,
 ) -> dict:
     """Calculate maximum allowable power flow though a pipe given defined
-    boundary conditions.
+    boundary conditions. Needs an inner diameter, allowable pressure drop per m,
+    temperature gradient between supply and return, and material properties of
+    piping and water.
 
     Parameters
     ----------
-    diameter : float
-        inner diameter of the steel pipe in m
-    roughness : float
-        steel pipe roughness in
-    max_pressure_loss : float
-        maximum pressure loss in Pa/m
-    supply_temperature : float
-        supply temperature in K or °C
-    return_temperature : float
-        return temperature in K or °C
-    water_properties : Settings.water, optional
-        water properties as defined by topotherm.settings.water, by default Settings().water
+    settings: Settings
+        settings object detailing all necessary boundary conditions
 
     Returns
     -------
     dict
         dict containing the maximal flow velocity, mass flow and power flow.
     """
-    r = {}
-    r["max_velocity"] = max_flow_velocity(
-        diameter,
-        roughness,
-        max_pressure_loss,
-        water_properties,
+    r = {}  # results of the regression
+
+    r["velocity_max"] = np.zeros(settings.piping.number_diameters)  # initialize array
+    # iterate over all diameters
+    for i, diam in enumerate(settings.piping.inner):
+        r["velocity_max"][i] = max_flow_velocity(
+            diam,
+            settings.piping.roughness,
+            settings.piping.max_pr_loss,
+            settings.water,
+        ).item()
+
+    r["mass_flow_max"] = mass_flow(
+        r["velocity_max"], np.array(settings.piping.inner), settings.water.density
     )
 
-    r["max_mass_flow"] = mass_flow(
-        r["max_velocity"], diameter, water_properties.density
-    )
+    r["power_flow_max"] = np.zeros([settings.piping.number_diameters])  # init
 
-    r["max_power_flow"] = pipe_power(
-        r["max_mass_flow"],
-        supply_temperature,
-        return_temperature,
-        water_properties.heat_capacity_cp,
+    r["power_flow_max"] = pipe_power(
+        r["mass_flow_max"],
+        settings.temperatures.supply,
+        settings.temperatures.return_,
+        settings.water.heat_capacity_cp,
     )
     return r
 
@@ -330,37 +323,15 @@ def regression_thermal_capacity(settings: Settings) -> dict:
 
     Parameters
     ----------
-    settings : RegressionSettings
-        Regression settings instance.
+    settings : Settings
+        topotherm.settings.Settings object with all relevant parameters.
 
     Returns
     -------
     dict
         Regression factors for the linearization (€/m).
     """
-    r = {}  # results of the regression
-
-    velocity_max = np.zeros(settings.piping.number_diameters)  # initialize array
-    # iterate over all diameters
-    for i, diam in enumerate(settings.piping.inner):
-        velocity_max[i] = max_flow_velocity(
-            diam,
-            settings.piping.roughness,
-            settings.piping.max_pr_loss,
-            settings.water,
-        ).item()
-
-    r["mass_flow_max"] = mass_flow(
-        velocity_max, np.array(settings.piping.inner), settings.water.density
-    )
-
-    r["power_flow_max"] = np.zeros([settings.piping.number_diameters])  # init
-
-    r['power_flow_max'] = pipe_power(
-        r['mass_flow_max'],
-        settings.temperatures.supply,
-        settings.temperatures.return_,
-        settings.water.heat_capacity_cp)
+    r = calc_power_flow(settings)
     # calc. linear regression for the given boundary conditions
     regression = stats.linregress(
         r["power_flow_max"] / 1000, np.array(settings.piping.cost)
@@ -379,13 +350,13 @@ def regression_thermal_capacity(settings: Settings) -> dict:
     return r
 
 
-def calc_heat_loss(settings: Settings = Settings()) -> dict:
+def calc_heat_loss(settings: Settings) -> dict:
     """Calculate the heat losses at the design point conditions of a given pipe.
 
     Parameters
     ----------
-    settings : Settings, optional
-        settings object detailing all necessary boundary conditions, by default Settings()
+    settings : Settings
+        settings object detailing all necessary boundary conditions
 
     Returns
     -------
