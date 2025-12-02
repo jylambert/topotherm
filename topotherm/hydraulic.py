@@ -313,9 +313,8 @@ def calc_power_flow(
         r["max_velocity"], diameter, water_properties.density
     )
 
-    # do the regression for each diameter
     r["max_power_flow"] = pipe_power(
-        r["max_mass_flow_max"],
+        r["max_mass_flow"],
         supply_temperature,
         return_temperature,
         water_properties.heat_capacity_cp,
@@ -356,6 +355,13 @@ def regression_thermal_capacity(settings: Settings) -> dict:
     )
 
     r["power_flow_max"] = np.zeros([settings.piping.number_diameters])  # init
+
+    r['power_flow_max'] = pipe_power(
+        r['mass_flow_max'],
+        settings.temperatures.supply,
+        settings.temperatures.return_,
+        settings.water.heat_capacity_cp)
+    # calc. linear regression for the given boundary conditions
     regression = stats.linregress(
         r["power_flow_max"] / 1000, np.array(settings.piping.cost)
     )
@@ -422,25 +428,13 @@ def regression_heat_losses(settings: Settings, thermal_capacity: dict) -> dict:
         Regression factors for the linearization of the heat losses of the pipes.
     """
 
-    pipe_depth = np.ones(settings.piping.number_diameters) * settings.piping.depth
-    ratio = np.array(settings.piping.jacket) / np.array(settings.piping.outer)
-    res_pipe = thermal_resistance(
-        np.array(settings.piping.outer), ratio, pipe_depth, settings
-    )
-
-    heat_loss = heat_loss_pipe(
-        settings.temperatures.supply, res_pipe, settings.temperatures.ambient
-    )
-
+    r = calc_heat_loss(settings)
     maximal_power = thermal_capacity["power_flow_max"]
 
-    regression = stats.linregress(maximal_power / 1000, heat_loss / 1000)
-
-    r = {}
-
+    regression = stats.linregress(maximal_power / 1000, r["heat_loss"] / 1000)
     r["b"] = np.round(regression.intercept, 6)
     r["a"] = np.round(regression.slope, 10)
     r["r2"] = regression.rvalue**2
-    r["heat_loss"] = heat_loss / 1000  # in kW
+    r["heat_loss"] = r["heat_loss"] / 1000  # in kW
 
     return r
