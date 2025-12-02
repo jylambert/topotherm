@@ -163,9 +163,8 @@ def sts(model: pyo.ConcreteModel, matrices: dict, settings: Settings):
             )
 
     # Remove nonzero elements row-wise
-    #this function ok? after calculating flh_c_opt we dann poblate flh_.. with zeros
     q_c_opt = q_c_opt[q_c_opt.any(axis=1)]
-    flh_c_opt = np.zeros([matrices["a_c"].shape[1], len(model.set_t)])
+    flh_c_opt = flh_c_opt[flh_c_opt.any(axis=1)]
 
     # Postprocessing producers
     if np.shape(matrices["a_p"])[1] == 1:

@@ -55,8 +55,7 @@ class PipeDiameter(BaseModel, extra="forbid"):
     def check_middle_diameter(cls, v, info):
         """Ensure outer steel pipe diameter is between inner and jacket."""
         if "inner" in info.data and "jacket" in info.data:
-            #is here inner meant and not inter?
-            _inner = info.data["innter"]
+            _inner = info.data["inner"]
             _outer = info.data["jacket"]
             if not (_inner < v < _outer):
                 raise ValueError(
