@@ -1,4 +1,5 @@
 """Test the single time step optimization workflow."""
+
 from pathlib import Path
 
 import numpy as np

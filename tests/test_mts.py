@@ -8,7 +8,6 @@ from pytest import approx
 
 import topotherm as tt
 
-
 SOLVERS = ["scip", "gurobi", "cbc", "highs", "cplex", "glpk"]
 R_COSTS = {
     "power_flow_max_kW": np.array([6.9e04]),
@@ -23,7 +22,6 @@ def test_mts_forced(request):
     """Main function to run the optimization"""
     solver_name = request.config.getoption("--solver")
     assert solver_name in SOLVERS, f"Unsupported solver: {solver_name}"
-    # Load the district
     current_path = Path(__file__).parent
     mat = tt.fileio.load(current_path / "test_data")
     # dummy demands for mts
@@ -31,9 +29,7 @@ def test_mts_forced(request):
     mat["flh_sinks"][:, :-1] = mat["flh_sinks"][:, 0].reshape(-1, 1) * 0.4
     mat["flh_sinks"][:, 0] = mat["flh_sinks"][:, 0] * 0.6
 
-    # import settings
     settings = tt.settings.load(current_path / "test_data" / "config_mts.yaml")
-
     model_sets = tt.models.sets.create(mat)
     model = tt.models.multi_timestep.create(
         matrices=mat,
@@ -44,30 +40,23 @@ def test_mts_forced(request):
         optimization_mode="forced",
     )
 
-    # Optimization initialization
     opt = pyo.SolverFactory(solver_name)
     opt.options["mipgap"] = 0.01
     opt.options["timelimit"] = 3600
-
     result = opt.solve(model, tee=True)
     assert result.solver.status == pyo.SolverStatus.ok
-    # assert that the objective value is less than 2% away from the expected
-    # value
     assert abs(pyo.value(model.obj)) == approx(683.0, rel=0.02)
 
 
 def test_mts_eco(request):
-# def test_mts_eco():
     """Main function to run the optimization"""
     solver_name = request.config.getoption("--solver")
     assert solver_name in SOLVERS, f"Unsupported solver: {solver_name}"
-    # Load the district
     current_path = Path(__file__).parent
     mat = tt.fileio.load(current_path / "test_data")
     mat["q_c"][:, :-1] = mat["q_c"][:, 0].reshape(-1, 1) * 0.7
     mat["flh_sinks"][:, :-1] = mat["flh_sinks"][:, 0].reshape(-1, 1) * 0.4
     mat["flh_sinks"][:, 0] = mat["flh_sinks"][:, 0] * 0.6
-    # import settings
     settings = tt.settings.load(current_path / "test_data" / "config_mts.yaml")
 
     model_sets = tt.models.sets.create(mat)
@@ -80,7 +69,6 @@ def test_mts_eco(request):
         optimization_mode="economic",
     )
 
-    # Optimization initialization
     opt = pyo.SolverFactory(solver_name)
     opt.options["mipgap"] = 0.01
     opt.options["timelimit"] = 3600
@@ -88,4 +76,3 @@ def test_mts_eco(request):
     result = opt.solve(model, tee=True)
     assert result.solver.status == pyo.SolverStatus.ok
     assert pyo.value(model.obj) == approx(-907.7, rel=0.02)
-    # assert (abs(pyo.value(model.obj)) - 4.01854e+04) < 0.02 * 4.01854e+04
