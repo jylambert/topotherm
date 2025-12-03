@@ -6,17 +6,15 @@ This file is used to optimize district heating systems with the tool topotherm
 of the Chair of Energy Systems.
 """
 
-import os
+from pathlib import Path 
 
 import pandas as pd
 import pyomo.environ as pyo
 
 import topotherm as tt
 
-DATAPATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
-OUTPUTPATH = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "results", "sts_forced"
-)
+DATAPATH = Path(__file__).parent / "data"
+OUTPUTPATH = Path(__file__).parent / "results"
 # regression coefficients for thermal capacity and heat losses
 REGRESSION = "regression.csv"
 PLOTS = True  # plot districts before and after optimization
@@ -50,7 +48,7 @@ def main(filepath, outputpath, plots=True, solver="gurobi", mode="forced"):
 
     if plots:
         f = tt.plotting.district(mat, isnot_init=False)  # Save initial District
-        f.savefig(os.path.join(outputpath, "district_initial.svg"), bbox_inches="tight")
+        f.savefig(outputpath / "district_initial.svg", bbox_inches="tight")
 
     # regression
     r_thermal_cap, r_heat_loss = read_regression(filepath / REGRESSION, 0)
@@ -61,8 +59,8 @@ def main(filepath, outputpath, plots=True, solver="gurobi", mode="forced"):
     # for several parameters.
     settings = tt.settings.load(filepath / "config.yaml")
     # model creation
-    model_sets = tt.sets.create(mat)
-    model = tt.single_timestep.model(
+    model_sets = tt.models.sets.create(mat)
+    model = tt.models.single_timestep.create(
         matrices=mat,
         sets=model_sets,
         regression_inst=r_thermal_cap,
@@ -96,12 +94,15 @@ def main(filepath, outputpath, plots=True, solver="gurobi", mode="forced"):
 
     # iterate over opt_mats and save each matrix as parquet file
     for key, value in opt_mats.items():
-        pd.DataFrame(value).to_parquet(outputpath / f"{key}.parquet"))
+        pd.DataFrame(value).to_parquet(outputpath / f"{key}.parquet")
 
     # Save figure optimized districts
     if plots:
         f = tt.plotting.district(opt_mats, diameter=opt_mats["d_i_0"], isnot_init=True)
         f.savefig(outputpath / "district_optimal.svg", bbox_inches="tight")
+
+    # convert to networkx directed graph
+    _ = tt.postprocessing.to_networkx_graph(opt_mats)
 
 
 if __name__ == "__main__":
@@ -110,6 +111,6 @@ if __name__ == "__main__":
         outputpath=OUTPUTPATH,
         plots=PLOTS,
         solver=SOLVER,
-        mode="forced",
+        mode="economic",
     )
     print(f"Finished {OUTPUTPATH}")
