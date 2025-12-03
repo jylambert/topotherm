@@ -15,26 +15,25 @@ Get the Code
 ----------------
 
 Use git to clone topotherm to your computer or download and unzip the files.
-Then, install topotherm with a package manager such as Anaconda, or directly with Python.
 
 Clone the repository::
 
     git clone https://github.com/jylambert/topotherm.git
 
-----------------
-Python Installer
-----------------
+----------------------
+Install with Python
+----------------------
 
-Navigate into the repository and install Topotherm::
+Navigate into the repository and install topotherm::
 
     cd topotherm
     pip install .
 
 This can also be done inside ``venv`` or equivalent.
 
---------------------
-Anaconda or Mamba
---------------------
+-------------------------------
+Install with Anaconda or Mamba
+-------------------------------
 
 We recommend installing dependencies using Anaconda or Mamba::
 
@@ -60,7 +59,7 @@ After installing gurobi, the python interface for the corresponding version
 needs to be installed, following the documentation:
 https://support.gurobi.com/hc/en-us/articles/360044290292-How-do-I-install-Gurobi-for-Python-.
 
-Open-Source Alternatives
+Open Source Alternatives
 ------------------------
 
 You can try the code on smaller districts with several open source solvers,

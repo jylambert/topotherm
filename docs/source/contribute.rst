@@ -1,6 +1,6 @@
 .. _contributing:
 
-Contributing to Topotherm
+Contributing to topotherm
 =========================
 
 Thank you for considering a contribution! We welcome code, documentation,
@@ -13,10 +13,10 @@ get it into shape.
 What can I contribute?
 ----------------------
 
-- **Bug reports & fixes**: minimal reproducer + expected vs. actual behaviour
+- **Bug reports & fixes**: minimal reproducer + expected vs. actual behavior
 - **Features**: small, incremental features are easiest to review
 - **Documentation**: tutorials, examples, clarifications, typos
-- **Tests**: add tests that cover a bug or new behaviour
+- **Tests**: add tests that cover a bug or new behavior
 - **Review**: test and comment on open pull requests
 
 Where to get help
@@ -118,7 +118,7 @@ Pull request checklist
 ----------------------
 
 - [ ] Tests added/updated and pass locally (``pytest``)
-- [ ] Docs updated if user-facing behaviour changed
+- [ ] Docs updated if user-facing behavior changed
 - [ ] Type hints and NumPy-style docstrings for public APIs
 - [ ] ``pre-commit`` (or ``ruff/isort/black``) ran cleanly
 - [ ] brief summary in PR description
@@ -131,7 +131,7 @@ Please include:
 - Topotherm version and Python version
 - OS, solver, and any relevant dependencies
 - Minimal reproducible example (code + tiny data)
-- Expected vs. actual behaviour and full traceback
+- Expected vs. actual behavior and full traceback
 
 License & contributor certificate
 ---------------------------------
