@@ -7,7 +7,7 @@ import topotherm as tt
 
 def test_gis_import():
     """Test GIS data import and matrix creation."""
-    test_data_path = Path(__file__).resolve() / parent / "test_data"
+    test_data_path = Path(__file__).resolve().parent / "test_data"
     config_path = test_data_path / "config.yaml"
     config = tt.create_matrices.from_gisfiles(
         inputpaths={

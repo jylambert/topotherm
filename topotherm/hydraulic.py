@@ -3,6 +3,8 @@ This module contains functions for the thermo-hydraulic precalculation of the
 district heating network.
 """
 
+from typing import Tuple
+
 import numpy as np
 from scipy import stats
 from scipy.optimize import root
@@ -92,6 +94,7 @@ def max_flow_velocity(
     float
         Maximal flow velocity (m/s).
     """
+
     def vel_calculation(var):
         """Function to calculate the maximal flow velocity in the pipe"""
         vel = var
@@ -408,3 +411,91 @@ def regression_heat_losses(settings: Settings, thermal_capacity: dict) -> dict:
     r["heat_loss"] = r["heat_loss"] / 1000  # in kW
 
     return r
+
+
+def diameter_and_velocity(
+    v: Tuple[float, float], mass_lin: float, settings: Settings
+) -> Tuple[float, float]:
+    """
+    Equations for calculating the diameter and velocity of a pipe based on
+    mass flow and power of the pipes
+
+    Parameters
+    ----------
+    v : tuple of float
+        Tuple containing the velocity and diameter (``(velocity, diameter)``).
+    mass_lin : float
+        Mass flow of the pipe (kg/s).
+    settings : Settings
+        Settings object containing water and piping parameters.
+
+    Returns
+    -------
+    tuple of float
+        Tuple containing:
+
+        - ``velocity`` : float
+            Calculated velocity of the pipe (m/s).
+        - ``diameter`` : float
+            Calculated diameter of the pipe (m).
+    """
+    vel, d = v
+    reynolds = (settings.water.density * vel * d) / settings.water.dynamic_viscosity
+    # friction factor
+    f = (
+        -1.8
+        * np.log10((settings.piping.roughness / (3.7 * d)) ** 1.11 + 6.9 / reynolds)
+    ) ** -2
+    # eq. for diameter
+    eq1 = vel - np.sqrt(
+        (2 * settings.piping.max_pr_loss * d) / (f * settings.water.density)
+    )
+    # eq. for velocity
+    eq2 = mass_lin - settings.water.density * vel * (np.pi / 4) * d**2
+    return [eq1, eq2]
+
+
+def calculate_hydraulics_from_power(
+    power: np.ndarray, settings: Settings
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Calculate mass flow, diameter, and velocity for each pipe given the
+    installed thermal power and the supply/return temperatures from ``settings``.
+
+    Parameters
+    ----------
+    power : np.ndarray
+        Installed thermal power for each pipe.
+    settings : Settings
+        Settings object containing temperature setpoints and water properties.
+
+    Returns
+    -------
+    tuple of np.ndarray
+        Tuple containing:
+
+        - ``mass_flow`` : np.ndarray
+            Mass flow for each pipe (kg/s).
+        - ``diameter`` : np.ndarray
+            Pipe diameter (m).
+        - ``velocity`` : np.ndarray
+            Flow velocity (m/s).
+    """
+
+    delta_t = settings.temperatures.supply - settings.temperatures.return_
+
+    # Compute mass flow rate for all pipes m = P / (cp * deltaT)
+    m_dot = power * 1e3 / (settings.water.heat_capacity_cp * delta_t)
+
+    # helper function for solving per pipe
+    def solve_per_pipe(m):
+        sol = root(
+            lambda v: diameter_and_velocity(v, m, settings), (0.5, 0.02), method="lm"
+        )
+        return sol.x if sol.success else (np.nan, np.nan)
+
+    # Vectorized solving
+    results = np.array([solve_per_pipe(m) for m in m_dot])
+    vel, d = results.T
+
+    return m_dot, d, vel

@@ -18,7 +18,6 @@ import pyomo.environ as pyo
 import topotherm as tt
 from topotherm.hydraulic import regression_heat_losses, regression_thermal_capacity
 
-
 DATAPATH = Path(__file__).parent / "data"
 OUTPUTPATH = Path(__file__).parent / "results"
 PLOTS = True  # plot districts before and after optimization
@@ -64,9 +63,9 @@ def main(filepath, outputpath, plots=False, solver="gurobi", mode="forced"):
         model_sets = tt.models.sets.create(mat)
         # define the amount of heat that needs to be supplied, while leaving
         # open which sinks to connect
-        model_sets["q_c_tot"] = (
-            mat["flh_sinks"] * mat["q_c"]
-        ).sum() * share_q_c_tot[run]
+        model_sets["q_c_tot"] = (mat["flh_sinks"] * mat["q_c"]).sum() * share_q_c_tot[
+            run
+        ]
         model_sets["lambda_b_previous"] = np.zeros(model_sets["a_i_shape"][1])
 
         # The following if section is only needed, if the built-up of the district should be consecutive and
@@ -74,7 +73,8 @@ def main(filepath, outputpath, plots=False, solver="gurobi", mode="forced"):
         if run != 0:
             variant_previous = "district_sensitivity_" + str(run - 1)
             lambda_b_previous = pd.read_parquet(
-                outputpath / variant_previous / "lambda_b_orig.parquet")
+                outputpath / variant_previous / "lambda_b_orig.parquet"
+            )
             model_sets["lambda_b_previous"] = lambda_b_previous.to_numpy().reshape(-1)
 
         # create output dir for every sub-iteration
@@ -102,7 +102,9 @@ def main(filepath, outputpath, plots=False, solver="gurobi", mode="forced"):
         tt.utils.model_to_df(model).to_csv(outputpath_sens / "results.csv", sep=";")
 
         # save solver results
-        tt.utils.solver_to_df(result, model).to_csv(outputpath_sens / "solver.csv", sep=";")
+        tt.utils.solver_to_df(result, model).to_csv(
+            outputpath_sens / "solver.csv", sep=";"
+        )
 
         opt_mats = tt.postprocessing.sts(model=model, matrices=mat, settings=settings)
 
@@ -115,7 +117,8 @@ def main(filepath, outputpath, plots=False, solver="gurobi", mode="forced"):
             f = tt.plotting.district(
                 opt_mats, diameter=opt_mats["d_i_0"], isnot_init=True
             )
-            f.savefig(outputpath_sens / "district_optimal.svg",
+            f.savefig(
+                outputpath_sens / "district_optimal.svg",
                 bbox_inches="tight",
             )
 

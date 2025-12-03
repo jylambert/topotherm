@@ -7,7 +7,6 @@ This file is used to optimize district heating systems with the tool topotherm
 of the Chair of Energy Systems.
 """
 
-import os
 from pathlib import Path
 
 import pandas as pd
@@ -15,11 +14,8 @@ import pyomo.environ as pyo
 
 import topotherm as tt
 
-DATAPATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data_sts")
-OUTPUTPATH = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "results", "sts_forced"
-)
-
+DATAPATH = Path(__file__).parent / "data_sts"
+OUTPUTPATH = Path(__file__).parent / "results" / "sts_forced"
 # regression coefficients for thermal capacity and heat losses
 REGRESSION = "regression.csv"
 PLOTS = True  # plot districts before and after optimization
@@ -53,13 +49,13 @@ def main(filepath, outputpath, plots=True, solver="gurobi", mode="economic"):
 
     if plots:
         f = tt.plotting.district(mat, isnot_init=False)  # Save initial District
-        f.savefig(os.path.join(outputpath, "district_initial.svg"), bbox_inches="tight")
+        f.savefig(outputpath / "district_initial.svg", bbox_inches="tight")
 
     # regression
-    r_thermal_cap, r_heat_loss = read_regression(os.path.join(filepath, REGRESSION), 0)
+    r_thermal_cap, r_heat_loss = read_regression(filepath / REGRESSION, 0)
 
     # import settings
-    settings = tt.settings.load(os.path.join(filepath, "config.yaml"))
+    settings = tt.settings.load(filepath / "config.yaml")
 
     # modify either in code or in the config file
     settings.economics.source_c_inv = [0.0]  # no investment costs for sources
@@ -78,45 +74,45 @@ def main(filepath, outputpath, plots=True, solver="gurobi", mode="economic"):
     opt = pyo.SolverFactory(solver)
     opt.options["mipgap"] = settings.solver.mip_gap
     opt.options["timelimit"] = settings.solver.time_limit
-    opt.options["logfile"] = os.path.join(outputpath, "optimization.log")
+    opt.options["logfile"] = str(outputpath / "optimization.log")
 
     result = opt.solve(model, tee=True)
 
     assert (
         result.solver.termination_condition == pyo.TerminationCondition.optimal
-    ), f"Optimization failed with termination condition {result.solver.termination_condition}"
+    ), f"Optimization failed with condition {result.solver.termination_condition}"
 
     # Save model results to csv
     dfres = tt.utils.model_to_df(model)
-    dfres.to_csv(os.path.join(outputpath, "results.csv"), sep=";")
+    dfres.to_csv(outputpath / "results.csv", sep=";")
 
     # save solver results
     dfsol = tt.utils.solver_to_df(result, model)
-    dfsol.to_csv(os.path.join(outputpath, "solver.csv"), sep=";")
+    dfsol.to_csv(outputpath / "solver.csv", sep=";")
 
     opt_mats = tt.postprocessing.sts(model=model, matrices=mat, settings=settings)
 
     node_data, edge_data = tt.postprocessing.to_dataframe(opt_mats, mat)
-    node_data.to_csv(os.path.join(outputpath, "node_data.csv"), sep=";")
-    edge_data.to_csv(os.path.join(outputpath, "edge_data.csv"), sep=";")
+    node_data.to_csv(outputpath / "node_data.csv", sep=";")
+    edge_data.to_csv(outputpath / "edge_data.csv", sep=";")
 
     # iterate over opt_mats and save each matrix as parquet file
     for key, value in opt_mats.items():
-        pd.DataFrame(value).to_parquet(os.path.join(outputpath, key + ".parquet"))
+        pd.DataFrame(value).to_parquet(outputpath / f"{key}.parquet")
 
     # Save figure optimized districts
     if plots:
         f = tt.plotting.district(opt_mats, diameter=opt_mats["d_i_0"], isnot_init=True)
-        f.savefig(os.path.join(outputpath, "district_optimal.svg"), bbox_inches="tight")
+        f.savefig(outputpath / "district_optimal.svg", bbox_inches="tight")
 
     # create networkx graph object
-    network = tt.postprocessing.to_networkx_graph(opt_mats)
+    _ = tt.postprocessing.to_networkx_graph(opt_mats)
 
 
 if __name__ == "__main__":
     main(
-        filepath=os.path.join(DATAPATH),
-        outputpath=os.path.join(OUTPUTPATH),
+        filepath=DATAPATH,
+        outputpath=OUTPUTPATH,
         plots=PLOTS,
         solver=SOLVER,
         mode="forced",

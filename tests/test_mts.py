@@ -1,4 +1,5 @@
-"""Test the single time step optimization workflow."""
+"""Test the multiple timestep optimization modeling workflow."""
+
 from pathlib import Path
 
 import numpy as np
@@ -6,6 +7,7 @@ import pyomo.environ as pyo
 from pytest import approx
 
 import topotherm as tt
+
 
 SOLVERS = ["scip", "gurobi", "cbc", "highs", "cplex", "glpk"]
 R_COSTS = {
@@ -17,19 +19,23 @@ R_COSTS = {
 R_LOSS = {"a": 4.348e-07, "b": 0.02189}
 
 
-def test_sts_forced(request):
+def test_mts_forced(request):
     """Main function to run the optimization"""
     solver_name = request.config.getoption("--solver")
     assert solver_name in SOLVERS, f"Unsupported solver: {solver_name}"
     # Load the district
-    datapath = Path(__file__).resolve().parent / "test_data"
-    mat = tt.fileio.load(datapath)
+    current_path = Path(__file__).parent
+    mat = tt.fileio.load(current_path / "test_data")
+    # dummy demands for mts
+    mat["q_c"][:, :-1] = mat["q_c"][:, 0].reshape(-1, 1) * 0.7
+    mat["flh_sinks"][:, :-1] = mat["flh_sinks"][:, 0].reshape(-1, 1) * 0.4
+    mat["flh_sinks"][:, 0] = mat["flh_sinks"][:, 0] * 0.6
 
     # import settings
-    settings = tt.settings.load(datapath / "config.yaml")
+    settings = tt.settings.load(current_path / "test_data" / "config_mts.yaml")
 
     model_sets = tt.models.sets.create(mat)
-    model = tt.models.single_timestep.create(
+    model = tt.models.multi_timestep.create(
         matrices=mat,
         sets=model_sets,
         regression_inst=R_COSTS,
@@ -40,26 +46,32 @@ def test_sts_forced(request):
 
     # Optimization initialization
     opt = pyo.SolverFactory(solver_name)
-    opt.options["mipgap"] = 0.0001
+    opt.options["mipgap"] = 0.01
+    opt.options["timelimit"] = 3600
 
     result = opt.solve(model, tee=True)
     assert result.solver.status == pyo.SolverStatus.ok
+    # assert that the objective value is less than 2% away from the expected
+    # value
+    assert abs(pyo.value(model.obj)) == approx(683.0, rel=0.02)
 
-    tt.postprocessing.sts(model, mat, settings)
-    assert pyo.value(model.obj) == approx(-990.8, rel=0.01)
 
-
-def test_sts_eco(request):
+def test_mts_eco(request):
+# def test_mts_eco():
     """Main function to run the optimization"""
     solver_name = request.config.getoption("--solver")
     assert solver_name in SOLVERS, f"Unsupported solver: {solver_name}"
-
-    datapath = Path(__file__).resolve().parent / "test_data"
-    mat = tt.fileio.load(datapath)
-    settings = tt.settings.load(datapath / "config.yaml")
+    # Load the district
+    current_path = Path(__file__).parent
+    mat = tt.fileio.load(current_path / "test_data")
+    mat["q_c"][:, :-1] = mat["q_c"][:, 0].reshape(-1, 1) * 0.7
+    mat["flh_sinks"][:, :-1] = mat["flh_sinks"][:, 0].reshape(-1, 1) * 0.4
+    mat["flh_sinks"][:, 0] = mat["flh_sinks"][:, 0] * 0.6
+    # import settings
+    settings = tt.settings.load(current_path / "test_data" / "config_mts.yaml")
 
     model_sets = tt.models.sets.create(mat)
-    model = tt.models.single_timestep.create(
+    model = tt.models.multi_timestep.create(
         matrices=mat,
         sets=model_sets,
         regression_inst=R_COSTS,
@@ -70,9 +82,10 @@ def test_sts_eco(request):
 
     # Optimization initialization
     opt = pyo.SolverFactory(solver_name)
-    opt.options["mipgap"] = 0.0001
+    opt.options["mipgap"] = 0.01
+    opt.options["timelimit"] = 3600
 
     result = opt.solve(model, tee=True)
     assert result.solver.status == pyo.SolverStatus.ok
-    assert pyo.value(model.obj) == approx(-1436, rel=0.01)
-    tt.postprocessing.sts(model, mat, settings)
+    assert pyo.value(model.obj) == approx(-907.7, rel=0.02)
+    # assert (abs(pyo.value(model.obj)) - 4.01854e+04) < 0.02 * 4.01854e+04

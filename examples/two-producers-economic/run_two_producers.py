@@ -6,7 +6,7 @@ This file is used to optimize district heating systems with the tool topotherm
 of the Chair of Energy Systems.
 """
 
-from pathlib import Path 
+from pathlib import Path
 
 import pandas as pd
 import pyomo.environ as pyo
