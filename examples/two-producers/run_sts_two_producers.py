@@ -53,13 +53,13 @@ def main(filepath, outputpath, plots=True, solver="gurobi", mode="forced"):
         f.savefig(os.path.join(outputpath, "district_initial.svg"), bbox_inches="tight")
 
     # regression
-    r_thermal_cap, r_heat_loss = read_regression(os.path.join(filepath, REGRESSION), 0)
+    r_thermal_cap, r_heat_loss = read_regression(filepath / REGRESSION, 0)
 
     # import settings
     # CAREFUL, the settings file is different for each example, the two
     # producers example uses a list with length 2 for the producers
     # for several parameters.
-    settings = tt.settings.load(os.path.join(filepath, "config.yaml"))
+    settings = tt.settings.load(filepath / "config.yaml")
     # model creation
     model_sets = tt.sets.create(mat)
     model = tt.single_timestep.model(
@@ -75,38 +75,39 @@ def main(filepath, outputpath, plots=True, solver="gurobi", mode="forced"):
     opt = pyo.SolverFactory(solver)
     opt.options["mipgap"] = settings.solver.mip_gap
     opt.options["timelimit"] = settings.solver.time_limit
-    opt.options["logfile"] = os.path.join(outputpath, "optimization.log")
+    opt.options["logfile"] = str(outputpath / "optimization.log")
 
     # Solve the optimization problem
     result = opt.solve(model, tee=True)
 
     # Save model results to csv
-    dfres = tt.utils.model_to_df(model)
-    dfres.to_csv(os.path.join(outputpath, "results.csv"), sep=";")
+    tt.utils.model_to_df(model).to_csv(outputpath / "results.csv", sep=";")
 
     # save solver results
-    dfsol = tt.utils.solver_to_df(result, model)
-    dfsol.to_csv(os.path.join(outputpath, "solver.csv"), sep=";")
+    tt.utils.solver_to_df(result, model).to_csv(outputpath / "solver.csv", sep=";")
 
     # Postprocessing of the optimization results
     opt_mats = tt.postprocessing.sts(model=model, matrices=mat, settings=settings)
 
+    # you can export the model results to dataframes for nodes and edges
     node_data, edge_data = tt.postprocessing.to_dataframe(opt_mats, mat)
+    print(node_data.head())
+    print(edge_data.head())
 
     # iterate over opt_mats and save each matrix as parquet file
     for key, value in opt_mats.items():
-        pd.DataFrame(value).to_parquet(os.path.join(outputpath, key + ".parquet"))
+        pd.DataFrame(value).to_parquet(outputpath / f"{key}.parquet"))
 
     # Save figure optimized districts
     if plots:
         f = tt.plotting.district(opt_mats, diameter=opt_mats["d_i_0"], isnot_init=True)
-        f.savefig(os.path.join(outputpath, "district_optimal.svg"), bbox_inches="tight")
+        f.savefig(outputpath / "district_optimal.svg", bbox_inches="tight")
 
 
 if __name__ == "__main__":
     main(
-        filepath=os.path.join(DATAPATH),
-        outputpath=os.path.join(OUTPUTPATH),
+        filepath=DATAPATH,
+        outputpath=OUTPUTPATH,
         plots=PLOTS,
         solver=SOLVER,
         mode="forced",

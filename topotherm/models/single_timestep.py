@@ -55,7 +55,10 @@ def create(
         raise NotImplementedError(
             "Optimization mode %s not implemented" % optimization_mode
         )
-
+    if optimization_mode == "sensitivity":
+        if "q_c_tot" not in sets.keys():
+            raise ValueError("total amount of heat demand to cover q_c_tot needs"
+                             " to be defined")
     # Initialize model
     mdl = pyo.ConcreteModel()
 
@@ -316,60 +319,43 @@ def create(
     if optimization_mode == "sensitivity":
 
         def total_energy_qc(m):
-            return (
-                sum(
-                    sum(
-                        m.lambda_["ij", j]
-                        * matrices["q_c"][
-                            np.where(
-                                matrices["a_c"][
-                                    np.where(matrices["a_i"][:, j] == -1)[0], :
-                                ][0]
-                                == 1
-                            )[0],
-                            t,
-                        ]
-                        * matrices["flh_consumer"][
-                            np.where(
-                                matrices["a_c"][
-                                    np.where(matrices["a_i"][:, j] == -1)[0], :
-                                ][0]
-                                == 1
-                            )[0],
-                            t,
-                        ]
-                        for j in mdl.set_con_ij
+            total = 0
+            
+            for t in mdl.set_t:
+                # 'ij' direction
+                for j in mdl.set_con_ij:
+                    # nodes incoming in ij: a_i[:, j] == -1 
+                    neg_indices = np.where(matrices['a_i'][:, j] == -1)[0]
+                    # consumer indices in ij directions at negative nodes
+                    sink_indices = np.where(matrices['a_c'][neg_indices, :][0] == 1)[0]
+                    
+                    energy_ij = (
+                        m.lambda_['ij', j] 
+                        * matrices['q_c'][sink_indices, t]
+                        * matrices['flh_sinks'][sink_indices, t]
                     )
-                    + sum(
-                        m.lambda_["ji", j]
-                        * matrices["q_c"][
-                            np.where(
-                                matrices["a_c"][
-                                    np.where(matrices["a_i"][:, j] == 1)[0], :
-                                ][0]
-                                == 1
-                            )[0],
-                            t,
-                        ]
-                        * matrices["flh_consumer"][
-                            np.where(
-                                matrices["a_c"][
-                                    np.where(matrices["a_i"][:, j] == 1)[0], :
-                                ][0]
-                                == 1
-                            )[0],
-                            t,
-                        ]
-                        for j in mdl.set_con_ji
+                    total += energy_ij
+                
+                # 'ji' direction, 
+                for j in mdl.set_con_ji:
+                    # same in other direction, i.e., 1 instead of -1
+                    pos_indices = np.where(matrices['a_i'][:, j] == 1)[0]
+                    sink_indices = np.where(matrices['a_c'][pos_indices, :][0] == 1)[0]
+                    
+                    energy_ji = (
+                        m.lambda_['ji', j]
+                        * matrices['q_c'][sink_indices, t]
+                        * matrices['flh_sinks'][sink_indices, t]
                     )
-                    for t in mdl.set_t
-                )
-                >= sets["q_c_tot"]
-            )
+                    total += energy_ji
+            
+            return total >= sets['q_c_tot']
 
         mdl.total_energy_qc = pyo.Constraint(rule=total_energy_qc)
 
         def consecutive_optimizations(m, j):
+            """Force consistency between previous steps and the current one.
+            This forces to connect previously connected sinks."""
             return (
                 sets["lambda_b_previous"][j] <= m.lambda_["ij", j] + m.lambda_["ji", j]
             )

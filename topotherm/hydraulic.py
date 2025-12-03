@@ -92,7 +92,6 @@ def max_flow_velocity(
     float
         Maximal flow velocity (m/s).
     """
-
     def vel_calculation(var):
         """Function to calculate the maximal flow velocity in the pipe"""
         vel = var
