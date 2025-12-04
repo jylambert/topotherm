@@ -296,8 +296,6 @@ def from_gdfs(
 
     Returns
     -------
-    mat : dict
-        Incidence matrices and related data.
     gdf_nodes : gpd.GeoDataFrame
         Node information.
     gdf_edges : gpd.GeoDataFrame
@@ -435,13 +433,6 @@ def from_gdfs(
     )
 
     logging.info("Creating node-edge relationships...")
-    n_nodes = len(gdf_nodes)
-    n_roads = len(gdf_edges)
-
-    mat = {}
-    mat["a_i"] = np.zeros([n_nodes, n_roads], dtype="int8")
-    mat["l_i"] = gdf_edges["Length"].values
-
     # Create lookup dictionary for faster access
     node_id_to_idx = {node_id: idx for idx, node_id in enumerate(gdf_nodes["Node_ID"])}
 
@@ -474,13 +465,40 @@ def from_gdfs(
                     mat["a_i"][lu, j] = 1
                     mat["a_i"][r, j] = -1
 
+    return
+
+def create_matrices_from_gdf(
+        gdf_nodes: gpd.GeoDataFrame,
+        gdf_edges: gpd.GeoDataFrame,
+):
+    """Create the necessary matrices for the optimization in topotherm from GeoDataFrames.
+
+    Parameters
+    ----------
+    gdf_nodes : gpd.GeoDataFrame
+        Node information.
+    gdf_edges : gpd.GeoDataFrame
+        Edge information.
+    Returns
+    -------
+    mat : dict
+        Incidence matrices and related data.
+    """
+
+    n_nodes = len(gdf_nodes)
+    n_roads = len(gdf_edges)
+
+    mat = {}
+    mat["a_i"] = np.zeros([n_nodes, n_roads], dtype="int8")
+    mat["l_i"] = gdf_edges["Length"].values
+
     logging.info("Creating producer and consumer matrices...")
-    # Create A_p
+    # Create matrices for the heat sources (A_p)
     gdf_nodes_prod = gdf_nodes[gdf_nodes["Type"] == "source"].index
     mat["a_p"] = np.zeros([len(gdf_nodes), len(gdf_nodes_prod)], dtype="int")
     mat["a_p"][gdf_nodes_prod, range(len(gdf_nodes_prod))] = -1
 
-    # Create A_c
+    # Create matrices for the heat sinks (A_c)
     gdf_nodes_cons = gdf_nodes[gdf_nodes["Type"] == "sink"].index
     mat["a_c"] = np.zeros([len(gdf_nodes), len(gdf_nodes_cons)], dtype="int")
     mat["a_c"][gdf_nodes_cons, range(len(gdf_nodes_cons))] = 1
