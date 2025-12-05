@@ -426,16 +426,28 @@ def from_gdfs(
     gdf_edges = gpd.GeoDataFrame(
         {
             "Length": edges_total.length,
-            "Road_ID": [f"Road_{i:05d}" for i in range(len(edges_total))],
+            "Road_ID": [f"Road_{i:05d}" for i in range(len(edges_total))]
         },
         geometry=edges_total.geometry,
         crs=crs,
     )
 
-    logging.info("Creating node-edge relationships...")
-    # Create lookup dictionary for faster access
-    node_id_to_idx = {node_id: idx for idx, node_id in enumerate(gdf_nodes["Node_ID"])}
+    ts_columns = sorted(
+        [col for col in sinks_center.columns if col.startswith("ts_")],
+        key=lambda x: int(x.split("_")[1]),
+    )
+    flh_columns = sorted(
+        [col for col in sinks_center.columns if col.startswith("flh_")],
+        key=lambda x: int(x.split("_")[1]),
+    )
 
+    gdf_nodes["q_c"] = ""
+    gdf_nodes["flh_sinks"] = ""
+
+    gdf_nodes.loc[gdf_nodes["Type"] == "sink", "q_c"] = np.round(sinks_center[ts_columns].values.T, 2).T
+    gdf_nodes.loc[gdf_nodes["Type"] == "sink", "flh_sinks"] = np.round(sinks_center[flh_columns].values.T, 2).T
+
+    logging.info("Creating node-edge relationships...")
     # Pre-allocate u and v columns
     gdf_edges["u"] = ""
     gdf_edges["v"] = ""
@@ -457,15 +469,8 @@ def from_gdfs(
 
                 gdf_edges.loc[j, ["u", "v"]] = (u, v)
 
-                lu = node_id_to_idx[u]
-                r = node_id_to_idx[v]
+    return gdf_nodes, gdf_edges
 
-                # TODO split up here to enable dataframe import
-                if lu != r:
-                    mat["a_i"][lu, j] = 1
-                    mat["a_i"][r, j] = -1
-
-    return
 
 def create_matrices_from_gdf(
         gdf_nodes: gpd.GeoDataFrame,
@@ -475,10 +480,11 @@ def create_matrices_from_gdf(
 
     Parameters
     ----------
-    gdf_nodes : gpd.GeoDataFrame
-        Node information.
-    gdf_edges : gpd.GeoDataFrame
-        Edge information.
+    gdf_nodes : pd.DataFrame
+        Nodes df containing information on sinks, sources and junctions
+    gdf_edges : pd.DataFrame
+        Edges df containing information on how all nodes are
+        connected to each other.
     Returns
     -------
     mat : dict
@@ -492,11 +498,26 @@ def create_matrices_from_gdf(
     mat["a_i"] = np.zeros([n_nodes, n_roads], dtype="int8")
     mat["l_i"] = gdf_edges["Length"].values
 
+    # Create lookup dictionary for faster access
+    node_id_to_idx = {node_id: idx for idx, node_id in enumerate(gdf_nodes["Node_ID"])}
+
+    for j, _ in enumerate(gdf_edges["Road_ID"]):
+
+        u = gdf_edges.iloc[j]["u"]
+        v = gdf_edges.iloc[j]["v"]
+
+        lu = node_id_to_idx[u]
+        r = node_id_to_idx[v]
+
+        if lu != r:
+            mat["a_i"][lu, j] = 1
+            mat["a_i"][r, j] = -1
+
     logging.info("Creating producer and consumer matrices...")
     # Create matrices for the heat sources (A_p)
-    gdf_nodes_prod = gdf_nodes[gdf_nodes["Type"] == "source"].index
-    mat["a_p"] = np.zeros([len(gdf_nodes), len(gdf_nodes_prod)], dtype="int")
-    mat["a_p"][gdf_nodes_prod, range(len(gdf_nodes_prod))] = -1
+    gdf_nodes_src = gdf_nodes[gdf_nodes["Type"] == "source"].index
+    mat["a_p"] = np.zeros([len(gdf_nodes), len(gdf_nodes_src)], dtype="int")
+    mat["a_p"][gdf_nodes_src, range(len(gdf_nodes_src))] = -1
 
     # Create matrices for the heat sinks (A_c)
     gdf_nodes_cons = gdf_nodes[gdf_nodes["Type"] == "sink"].index
@@ -508,20 +529,11 @@ def create_matrices_from_gdf(
         [gdf_nodes.geometry.x.values, gdf_nodes.geometry.y.values]
     )
 
-    # Extract and sort time-step columns dynamically
-    ts_columns = sorted(
-        [col for col in sinks_center.columns if col.startswith("ts_")],
-        key=lambda x: int(x.split("_")[1]),
-    )
-    flh_columns = sorted(
-        [col for col in sinks_center.columns if col.startswith("flh_")],
-        key=lambda x: int(x.split("_")[1]),
-    )
-
     # Can we somehow automate this? Easiest way -> Probably just put them into one column
     # Workaround: extract and sort all integers that start with flh_ or ts_
-    mat["q_c"] = np.round(sinks_center[ts_columns].values.T, 2).T
-    mat["flh_sinks"] = np.round(sinks_center[flh_columns].values.T, 2).T
+    gdf_nodes_sinks = gdf_nodes[gdf_nodes["Type"] == "sink"].copy()
+    mat["q_c"] = gdf_nodes_sinks["q_c"].values.T
+    mat["flh_sinks"] = gdf_nodes_sinks["flh_sinks"].values.T
     mat["flh_sources"] = (
         np.round(
             np.array(
@@ -529,7 +541,7 @@ def create_matrices_from_gdf(
             ),
             2,
         ).transpose()
-        * np.ones(2)
+        * np.ones(len(gdf_nodes_src))
     ).transpose()
 
     duplicates = find_duplicate_cols(mat["a_i"])
@@ -549,6 +561,6 @@ def create_matrices_from_gdf(
         mat["a_i"] = np.delete(mat["a_i"], delete_idx, axis=1)
         gdf_edges = gdf_edges.drop(index=delete_idx).reset_index(
             drop=True
-        )  # TODO when split, needs to be updated separately
+        )
 
     return mat, gdf_nodes, gdf_edges

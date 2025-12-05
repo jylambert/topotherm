@@ -18,13 +18,18 @@ gdf_supply = gpd.read_file(current_path / "district/source.gpkg")
 print("Columns of sinks geodataframe:")
 print(gdf_sinks.columns)
 
-incidence_matrices, gdf_nodes, gdf_edges = tt.create_matrices.from_gdfs(
+gdf_nodes, gdf_edges = tt.create_matrices.from_gdfs(
     sinks=gdf_sinks,
     roads=gdf_roads,
     sources=gdf_supply,
 )
 
-# this results in a coherent dataset containing nodes and edges, that can be
+mat, gdf_nodes, gdf_edges = tt.create_matrices.create_matrices_from_gdf(gdf_nodes, gdf_edges)
+
+
+a = 1
+
+"""# this results in a coherent dataset containing nodes and edges, that can be
 # import to topotherm, converted to networkx graphs, etc.
 model_sets = tt.models.sets.create(incidence_matrices)
 model = tt.models.single_timestep.create(
@@ -37,4 +42,4 @@ opt.options["mipgap"] = 0.01
 result = opt.solve(model, tee=True)
 
 
-dummy = 1
+dummy = 1"""
