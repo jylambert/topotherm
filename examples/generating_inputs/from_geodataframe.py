@@ -43,5 +43,3 @@ model = tt.models.single_timestep.create(
 opt = pyo.SolverFactory("gurobi")
 opt.options["mipgap"] = 0.01
 result = opt.solve(model, tee=True)
-
-dummy=1
