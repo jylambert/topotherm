@@ -242,32 +242,58 @@ def from_gisfiles(
 
 
 def from_dfs(
-    nodes: pd.DataFrame, edges: pd.DataFrame
-) -> Tuple[gpd.GeoDataFrame, gpd.GeoDataFrame]:
+    inputpaths: dict[str, str | Path],
+    outputpath: str | Path,
+    crs: str | int = "EPSG:25832"
+):
     """
-    Converts a pd.DataFrame containting nodes and one containing edges
-    to two geodataframes that can be converted to input matrices. The matrices
-    are a requirement to run the optimization models.
+    Converts a pd.DataFrame containing nodes and one containing edges
+    to input matrices. The matrices are a requirement to run the optimization models.
 
-    If edges are not connected to the sinks and sources, they will be connected
-    by shortest path distance.
+    The node pd.Dataframe must contain the following columns: type, x-coordinates, y-coordinates,
+    load in each time step, full load hours in each time step
 
     Parameters
     ----------
-    nodes : pd.DataFrame
-        Nodes df containing information on sinks, sources and junctions
-    edges : pd.DataFrame
-        Edges df containing information on how all nodes are
-        connected to eachother.
+    inputpaths: dict[str, os.PathLike]
+        dict of paths to the gp.Dataframe parquet files for the nodes and edges.
+        Each file needs to be formatted correctly. Example:
+        {"nodes": "path/to/nodes.parquet",
+        "edges": "path/to/edges.parquet"}
+    outputpath: str | pathlib.Path
+        Path to the result folder
+    crs: str | int
+        Coordinate reference system to which all files are projected. Default is
+        "EPSG:25832" (ETRS89 / UTM zone 32N)
 
     Returns
     -------
-    tuple of gpd.GeoDataFrame
-        converted nodes and edges as gdf.
+    None
+        saves parquet files to the outputpath needed for the optimization of the
+        district heating network.
     """
 
-    # TODO: write script to convert from df to gdf
-    return (gdf_nodes, gdf_edges)
+    create_dir(outputpath)
+
+    logging.info("Loading shapefiles...")
+    if not all(key in inputpaths for key in ["nodes", "edges"]):
+        raise ValueError(
+            f"inputpaths keys {list(inputpaths.keys())} must contain 'nodes' and 'edges'."
+        )
+    nodes = pd.read_parquet(inputpaths["nodes"])
+    edges = pd.read_parquet(inputpaths["edges"])
+
+    logging.info("Creating matrices...")
+    mat, gdf_nodes, gdf_roads = create_matrices_from_df(nodes, edges, crs)
+
+    logging.info("Saving results...")
+    nodes.to_parquet(outputpath + "nodes.parquet")
+    edges.to_parquet(outputpath + "edges.shp")
+
+    for key, val in mat.items():
+        pd.DataFrame(val).to_parquet(outputpath / f"{key}.parquet")
+
+    return
 
 
 def connect_sinks_from_gdfs(
@@ -492,6 +518,11 @@ def create_matrices_from_gdf(
     -------
     mat : dict
         Incidence matrices and related data.
+    gdf_nodes : pd.DataFrame
+        Nodes df containing information on sinks, sources and junctions without duplicates.
+    gdf_edges : pd.DataFrame
+        Edges df containing information on how all nodes are
+        connected to each other without duplicates.
     """
 
     n_nodes = len(gdf_nodes)
@@ -519,12 +550,12 @@ def create_matrices_from_gdf(
     logging.info("Creating producer and consumer matrices...")
     # Create matrices for the heat sources (A_p)
     gdf_nodes_src = gdf_nodes[gdf_nodes["Type"] == "source"].index
-    mat["a_p"] = np.zeros([len(gdf_nodes), len(gdf_nodes_src)], dtype="int")
+    mat["a_p"] = np.zeros([len(gdf_nodes), len(gdf_nodes_src)], dtype="int8")
     mat["a_p"][gdf_nodes_src, range(len(gdf_nodes_src))] = -1
 
     # Create matrices for the heat sinks (A_c)
     gdf_nodes_cons = gdf_nodes[gdf_nodes["Type"] == "sink"].index
-    mat["a_c"] = np.zeros([len(gdf_nodes), len(gdf_nodes_cons)], dtype="int")
+    mat["a_c"] = np.zeros([len(gdf_nodes), len(gdf_nodes_cons)], dtype="int8")
     mat["a_c"][gdf_nodes_cons, range(len(gdf_nodes_cons))] = 1
 
     logging.info("Creating final arrays...")
@@ -570,41 +601,56 @@ def create_matrices_from_gdf(
 
 
 def create_matrices_from_df(
-        gdf_nodes: pd.DataFrame,
-        gdf_edges: pd.DataFrame,
+        df_nodes: pd.DataFrame,
+        df_edges: pd.DataFrame,
+        crs: str | int = "EPSG:25832"
 ):
-    """Create the necessary matrices for the optimization in topotherm from GeoDataFrames.
+    """Create the necessary matrices for the optimization in topotherm from DataFrames.
 
     Parameters
     ----------
-    gdf_nodes : pd.DataFrame
+    df_nodes : pd.DataFrame
         Nodes df containing information on sinks, sources and junctions
-    gdf_edges : pd.DataFrame
+    df_edges : pd.DataFrame
         Edges df containing information on how all nodes are
         connected to each other.
+    crs : str | int
+        Coordinate reference system for the nodes.
     Returns
     -------
     mat : dict
         Incidence matrices and related data.
+    df_nodes : pd.DataFrame
+        Nodes df containing information on sinks, sources and junctions without duplicates.
+    df_edges : pd.DataFrame
+        Edges df containing information on how all nodes are
+        connected to each other without duplicates.
     """
 
-    n_nodes = len(gdf_nodes)
-    n_roads = len(gdf_edges)
+    n_nodes = len(df_nodes)
+    n_roads = len(df_edges)
 
     mat = {}
     mat["a_i"] = np.zeros([n_nodes, n_roads], dtype="int8")
-    mat["l_i"] = gdf_edges["Length"].values
+    mat["l_i"] = np.zeros(n_roads, dtype="int8")
 
     # Create lookup dictionary for faster access
-    node_id_to_idx = {node_id: idx for idx, node_id in enumerate(gdf_nodes["Node_ID"])}
+    node_id_to_idx = {node_id: idx for idx, node_id in enumerate(df_nodes["Node_ID"])}
 
-    for j, _ in enumerate(gdf_edges["Road_ID"]):
+    for j, _ in enumerate(df_edges["Road_ID"]):
 
-        u = gdf_edges.iloc[j]["u"]
-        v = gdf_edges.iloc[j]["v"]
+        u = df_edges.iloc[j]["u"]
+        v = df_edges.iloc[j]["v"]
 
         lu = node_id_to_idx[u]
         r = node_id_to_idx[v]
+
+        point_u = gpd.points_from_xy(df_edges.iloc[lu]["x"], df_edges.iloc[lu]["y"],
+                                     z=None, crs=crs)
+        point_v = gpd.points_from_xy(df_edges.iloc[r]["x"], df_edges.iloc[r]["y"],
+                                     z=None, crs=crs)
+
+        mat["l_i"][j] = point_u.distance(point_v)[0]
 
         if lu != r:
             mat["a_i"][lu, j] = 1
@@ -612,25 +658,23 @@ def create_matrices_from_df(
 
     logging.info("Creating producer and consumer matrices...")
     # Create matrices for the heat sources (A_p)
-    gdf_nodes_src = gdf_nodes[gdf_nodes["Type"] == "source"].index
-    mat["a_p"] = np.zeros([len(gdf_nodes), len(gdf_nodes_src)], dtype="int")
-    mat["a_p"][gdf_nodes_src, range(len(gdf_nodes_src))] = -1
+    df_nodes_src = df_nodes[df_nodes["Type"] == "source"].index
+    mat["a_p"] = np.zeros([len(df_nodes), len(df_nodes_src)], dtype="int8")
+    mat["a_p"][df_nodes_src, range(len(df_nodes_src))] = -1
 
     # Create matrices for the heat sinks (A_c)
-    gdf_nodes_cons = gdf_nodes[gdf_nodes["Type"] == "sink"].index
-    mat["a_c"] = np.zeros([len(gdf_nodes), len(gdf_nodes_cons)], dtype="int")
+    gdf_nodes_cons = df_nodes[df_nodes["Type"] == "sink"].index
+    mat["a_c"] = np.zeros([len(df_nodes), len(gdf_nodes_cons)], dtype="int8")
     mat["a_c"][gdf_nodes_cons, range(len(gdf_nodes_cons))] = 1
 
     logging.info("Creating final arrays...")
     mat["positions"] = np.column_stack(
-        [gdf_nodes.geometry.x.values, gdf_nodes.geometry.y.values]
+        [df_nodes["x"].values, df_nodes["y"].values]
     )
 
-    # Can we somehow automate this? Easiest way -> Probably just put them into one column
-    # Workaround: extract and sort all integers that start with flh_ or ts_
-    gdf_nodes_sinks = gdf_nodes[gdf_nodes["Type"] == "sink"].copy()
-    mat["q_c"] = gdf_nodes_sinks["q_c"].values.T
-    mat["flh_sinks"] = gdf_nodes_sinks["flh_sinks"].values.T
+    df_nodes_sinks = df_nodes[df_nodes["Type"] == "sink"].copy()
+    mat["q_c"] = df_nodes_sinks["q_c"].values.T
+    mat["flh_sinks"] = df_nodes_sinks["flh_sinks"].values.T
     mat["flh_sources"] = (
         np.round(
             np.array(
@@ -638,9 +682,11 @@ def create_matrices_from_df(
             ),
             2,
         ).transpose()
-        * np.ones(len(gdf_nodes_src))
+        * np.ones(len(df_nodes_src))
     ).transpose()
 
+    # @ToDo:Should we check here for duplicate pairs? Hopefully, the node and edge list shouldn't contain duplicates
+    #   in contrast to the geodataframes?
     duplicates = find_duplicate_cols(mat["a_i"])
 
     if duplicates:
@@ -656,8 +702,8 @@ def create_matrices_from_df(
         # Delete in one shot
         mat["l_i"] = np.delete(mat["l_i"], delete_idx, axis=0)
         mat["a_i"] = np.delete(mat["a_i"], delete_idx, axis=1)
-        gdf_edges = gdf_edges.drop(index=delete_idx).reset_index(
+        df_edges = df_edges.drop(index=delete_idx).reset_index(
             drop=True
         )
 
-    return mat, gdf_nodes, gdf_edges
+    return mat, df_nodes, df_edges
