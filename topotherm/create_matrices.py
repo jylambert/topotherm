@@ -227,7 +227,10 @@ def from_gisfiles(
     _validate_sinks(sinks)
 
     logging.info("Processing geodata...")
-    mat, gdf_nodes, gdf_roads = from_gdfs(sinks, roads, sources, buffer)
+    gdf_nodes, gdf_roads = connect_sinks_from_gdfs(sinks, roads, sources, buffer)
+
+    logging.info("Creating matrices...")
+    mat, gdf_nodes, gdf_roads = create_matrices_from_gdf(gdf_nodes, gdf_roads)
 
     logging.info("Saving results...")
     gdf_roads.to_file(outputpath + "edges.shp")
@@ -267,7 +270,7 @@ def from_dfs(
     return (gdf_nodes, gdf_edges)
 
 
-def from_gdfs(
+def connect_sinks_from_gdfs(
     sinks: gpd.GeoDataFrame,
     roads: gpd.GeoDataFrame,
     sources: gpd.GeoDataFrame,
@@ -475,6 +478,100 @@ def from_gdfs(
 def create_matrices_from_gdf(
         gdf_nodes: gpd.GeoDataFrame,
         gdf_edges: gpd.GeoDataFrame,
+):
+    """Create the necessary matrices for the optimization in topotherm from GeoDataFrames.
+
+    Parameters
+    ----------
+    gdf_nodes : pd.DataFrame
+        Nodes df containing information on sinks, sources and junctions
+    gdf_edges : pd.DataFrame
+        Edges df containing information on how all nodes are
+        connected to each other.
+    Returns
+    -------
+    mat : dict
+        Incidence matrices and related data.
+    """
+
+    n_nodes = len(gdf_nodes)
+    n_roads = len(gdf_edges)
+
+    mat = {}
+    mat["a_i"] = np.zeros([n_nodes, n_roads], dtype="int8")
+    mat["l_i"] = gdf_edges["Length"].values
+
+    # Create lookup dictionary for faster access
+    node_id_to_idx = {node_id: idx for idx, node_id in enumerate(gdf_nodes["Node_ID"])}
+
+    for j, _ in enumerate(gdf_edges["Road_ID"]):
+
+        u = gdf_edges.iloc[j]["u"]
+        v = gdf_edges.iloc[j]["v"]
+
+        lu = node_id_to_idx[u]
+        r = node_id_to_idx[v]
+
+        if lu != r:
+            mat["a_i"][lu, j] = 1
+            mat["a_i"][r, j] = -1
+
+    logging.info("Creating producer and consumer matrices...")
+    # Create matrices for the heat sources (A_p)
+    gdf_nodes_src = gdf_nodes[gdf_nodes["Type"] == "source"].index
+    mat["a_p"] = np.zeros([len(gdf_nodes), len(gdf_nodes_src)], dtype="int")
+    mat["a_p"][gdf_nodes_src, range(len(gdf_nodes_src))] = -1
+
+    # Create matrices for the heat sinks (A_c)
+    gdf_nodes_cons = gdf_nodes[gdf_nodes["Type"] == "sink"].index
+    mat["a_c"] = np.zeros([len(gdf_nodes), len(gdf_nodes_cons)], dtype="int")
+    mat["a_c"][gdf_nodes_cons, range(len(gdf_nodes_cons))] = 1
+
+    logging.info("Creating final arrays...")
+    mat["positions"] = np.column_stack(
+        [gdf_nodes.geometry.x.values, gdf_nodes.geometry.y.values]
+    )
+
+    # Can we somehow automate this? Easiest way -> Probably just put them into one column
+    # Workaround: extract and sort all integers that start with flh_ or ts_
+    gdf_nodes_sinks = gdf_nodes[gdf_nodes["Type"] == "sink"].copy()
+    mat["q_c"] = gdf_nodes_sinks["q_c"].values.T
+    mat["flh_sinks"] = gdf_nodes_sinks["flh_sinks"].values.T
+    mat["flh_sources"] = (
+        np.round(
+            np.array(
+                [(mat["q_c"] * mat["flh_sinks"]).sum(axis=0) / mat["q_c"].sum(axis=0)]
+            ),
+            2,
+        ).transpose()
+        * np.ones(len(gdf_nodes_src))
+    ).transpose()
+
+    duplicates = find_duplicate_cols(mat["a_i"])
+
+    if duplicates:
+        dup_arr = np.array(duplicates)
+        # Compare the weights l_i at each duplicate pair
+        left_vals = mat["l_i"][dup_arr[:, 0]]
+        right_vals = mat["l_i"][dup_arr[:, 1]]
+
+        # Keep the larger one -> delete the smaller
+        delete_idx = np.where(left_vals > right_vals, dup_arr[:, 0], dup_arr[:, 1])
+        delete_idx = np.unique(delete_idx)
+
+        # Delete in one shot
+        mat["l_i"] = np.delete(mat["l_i"], delete_idx, axis=0)
+        mat["a_i"] = np.delete(mat["a_i"], delete_idx, axis=1)
+        gdf_edges = gdf_edges.drop(index=delete_idx).reset_index(
+            drop=True
+        )
+
+    return mat, gdf_nodes, gdf_edges
+
+
+def create_matrices_from_df(
+        gdf_nodes: pd.DataFrame,
+        gdf_edges: pd.DataFrame,
 ):
     """Create the necessary matrices for the optimization in topotherm from GeoDataFrames.
 
