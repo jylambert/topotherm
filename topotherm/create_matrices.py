@@ -5,6 +5,7 @@ import logging
 from pathlib import Path
 from typing import Tuple
 
+import os
 import geopandas as gpd
 import numpy as np
 import pandas as pd
@@ -233,12 +234,11 @@ def from_gisfiles(
     mat, gdf_nodes, gdf_roads = create_matrices_from_gdf(gdf_nodes, gdf_roads)
 
     logging.info("Saving results...")
-    gdf_roads.to_file(outputpath + "edges.shp")
-    gdf_nodes.to_file(outputpath + "nodes.shp")
+    gdf_roads.to_file(outputpath / "edges.gpkg")
+    gdf_nodes.to_file(outputpath / "nodes.gpkg")
 
     for key, val in mat.items():
         pd.DataFrame(val).to_parquet(outputpath / f"{key}.parquet")
-    return
 
 
 def from_dfs(
@@ -287,8 +287,8 @@ def from_dfs(
     mat, gdf_nodes, gdf_roads = create_matrices_from_df(nodes, edges, crs)
 
     logging.info("Saving results...")
-    nodes.to_parquet(outputpath + "nodes.parquet")
-    edges.to_parquet(outputpath + "edges.shp")
+    nodes.to_parquet(outputpath / "nodes.parquet")
+    edges.to_parquet(outputpath / "edges.parquet")
 
     for key, val in mat.items():
         pd.DataFrame(val).to_parquet(outputpath / f"{key}.parquet")
