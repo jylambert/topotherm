@@ -41,6 +41,4 @@ jobs:
           ruff check .
       - name: Test with pytest
         run: |
-          pytest tests/test_setup.py
-          pytest tests/hydraulics.py
-          pytest tests/sts.py --solver highs
+          pytest 
