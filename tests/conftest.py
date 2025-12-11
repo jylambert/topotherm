@@ -6,5 +6,5 @@ def pytest_addoption(parser):
         "--solver",
         action="store",
         default="highs",
-        help="Define the solver to use for the optimization. Default is cbc.",
+        help="Define the solver to use for the optimization. Default is highs.",
     )
