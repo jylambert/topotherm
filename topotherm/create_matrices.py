@@ -3,9 +3,7 @@ from files or dataframes."""
 
 import logging
 from pathlib import Path
-from typing import Tuple
 
-import os
 import geopandas as gpd
 import numpy as np
 import pandas as pd
@@ -244,7 +242,7 @@ def from_gisfiles(
 def from_dfs(
     inputpaths: dict[str, str | Path],
     outputpath: str | Path,
-    crs: str | int = "EPSG:25832"
+    crs: str | int = "EPSG:25832",
 ):
     """
     Converts a pd.DataFrame containing nodes and one containing edges
@@ -455,7 +453,7 @@ def connect_sinks_from_gdfs(
     gdf_edges = gpd.GeoDataFrame(
         {
             "Length": edges_total.length,
-            "Road_ID": [f"Road_{i:05d}" for i in range(len(edges_total))]
+            "Road_ID": [f"Road_{i:05d}" for i in range(len(edges_total))],
         },
         geometry=edges_total.geometry,
         crs=crs,
@@ -473,8 +471,12 @@ def connect_sinks_from_gdfs(
     gdf_nodes["q_c"] = ""
     gdf_nodes["flh_sinks"] = ""
 
-    gdf_nodes.loc[gdf_nodes["Type"] == "sink", "q_c"] = np.round(sinks_center[ts_columns].values.T, 2).T
-    gdf_nodes.loc[gdf_nodes["Type"] == "sink", "flh_sinks"] = np.round(sinks_center[flh_columns].values.T, 2).T
+    gdf_nodes.loc[gdf_nodes["Type"] == "sink", "q_c"] = np.round(
+        sinks_center[ts_columns].values.T, 2
+    ).T
+    gdf_nodes.loc[gdf_nodes["Type"] == "sink", "flh_sinks"] = np.round(
+        sinks_center[flh_columns].values.T, 2
+    ).T
 
     logging.info("Creating node-edge relationships...")
     # Pre-allocate u and v columns
@@ -502,8 +504,8 @@ def connect_sinks_from_gdfs(
 
 
 def create_matrices_from_gdf(
-        gdf_nodes: gpd.GeoDataFrame,
-        gdf_edges: gpd.GeoDataFrame,
+    gdf_nodes: gpd.GeoDataFrame,
+    gdf_edges: gpd.GeoDataFrame,
 ):
     """Create the necessary matrices for the optimization in topotherm from GeoDataFrames.
 
@@ -593,17 +595,13 @@ def create_matrices_from_gdf(
         # Delete in one shot
         mat["l_i"] = np.delete(mat["l_i"], delete_idx, axis=0)
         mat["a_i"] = np.delete(mat["a_i"], delete_idx, axis=1)
-        gdf_edges = gdf_edges.drop(index=delete_idx).reset_index(
-            drop=True
-        )
+        gdf_edges = gdf_edges.drop(index=delete_idx).reset_index(drop=True)
 
     return mat, gdf_nodes, gdf_edges
 
 
 def create_matrices_from_df(
-        df_nodes: pd.DataFrame,
-        df_edges: pd.DataFrame,
-        crs: str | int = "EPSG:25832"
+    df_nodes: pd.DataFrame, df_edges: pd.DataFrame, crs: str | int = "EPSG:25832"
 ):
     """Create the necessary matrices for the optimization in topotherm from DataFrames.
 
@@ -645,10 +643,12 @@ def create_matrices_from_df(
         lu = node_id_to_idx[u]
         r = node_id_to_idx[v]
 
-        point_u = gpd.points_from_xy(df_edges.iloc[lu]["x"], df_edges.iloc[lu]["y"],
-                                     z=None, crs=crs)
-        point_v = gpd.points_from_xy(df_edges.iloc[r]["x"], df_edges.iloc[r]["y"],
-                                     z=None, crs=crs)
+        point_u = gpd.points_from_xy(
+            df_edges.iloc[lu]["x"], df_edges.iloc[lu]["y"], z=None, crs=crs
+        )
+        point_v = gpd.points_from_xy(
+            df_edges.iloc[r]["x"], df_edges.iloc[r]["y"], z=None, crs=crs
+        )
 
         mat["l_i"][j] = point_u.distance(point_v)[0]
 
@@ -668,9 +668,7 @@ def create_matrices_from_df(
     mat["a_c"][gdf_nodes_cons, range(len(gdf_nodes_cons))] = 1
 
     logging.info("Creating final arrays...")
-    mat["positions"] = np.column_stack(
-        [df_nodes["x"].values, df_nodes["y"].values]
-    )
+    mat["positions"] = np.column_stack([df_nodes["x"].values, df_nodes["y"].values])
 
     df_nodes_sinks = df_nodes[df_nodes["Type"] == "sink"].copy()
     mat["q_c"] = df_nodes_sinks["q_c"].values.T
@@ -702,8 +700,6 @@ def create_matrices_from_df(
         # Delete in one shot
         mat["l_i"] = np.delete(mat["l_i"], delete_idx, axis=0)
         mat["a_i"] = np.delete(mat["a_i"], delete_idx, axis=1)
-        df_edges = df_edges.drop(index=delete_idx).reset_index(
-            drop=True
-        )
+        df_edges = df_edges.drop(index=delete_idx).reset_index(drop=True)
 
     return mat, df_nodes, df_edges

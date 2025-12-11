@@ -287,15 +287,14 @@ def create(
     )
 
     def built_usage_mapping(m, j, t):
-        return m.lambda_['ij', j, t] + m.lambda_['ji', j, t] == m.lambda_b[j]
-
+        return m.lambda_["ij", j, t] + m.lambda_["ji", j, t] == m.lambda_b[j]
 
     mdl.cons_built_usage_mapping_help1 = pyo.Constraint(
         mdl.set_n_i,
-         mdl.set_t,
-         rule=built_usage_mapping,
-         doc='Map lambda direction according to lambda_built'
-         )
+        mdl.set_t,
+        rule=built_usage_mapping,
+        doc="Map lambda direction according to lambda_built",
+    )
 
     def one_pipe(m, j, t):
         return m.lambda_["ij", j, t] + m.lambda_["ji", j, t] <= 1

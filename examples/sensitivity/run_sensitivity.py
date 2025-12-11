@@ -16,7 +16,8 @@ import pandas as pd
 import pyomo.environ as pyo
 
 import topotherm as tt
-from topotherm.hydraulic import regression_heat_losses, regression_thermal_capacity
+from topotherm.hydraulic import (regression_heat_losses,
+                                 regression_thermal_capacity)
 
 DATAPATH = Path(__file__).parent / "data"
 OUTPUTPATH = Path(__file__).parent / "results"
