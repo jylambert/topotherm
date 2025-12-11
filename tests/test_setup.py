@@ -5,6 +5,7 @@ from pytest import approx
 
 def test_import():
     import topotherm
+    assert topotherm
 
 
 def test_functionality():

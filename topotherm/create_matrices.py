@@ -624,7 +624,6 @@ def create_matrices_from_df(
         Edges df containing information on how all nodes are
         connected to each other without duplicates.
     """
-
     n_nodes = len(df_nodes)
     n_roads = len(df_edges)
 
@@ -683,7 +682,7 @@ def create_matrices_from_df(
         * np.ones(len(df_nodes_src))
     ).transpose()
 
-    # @ToDo:Should we check here for duplicate pairs? Hopefully, the node and edge list shouldn't contain duplicates
+    # @TODO:Should we check here for duplicate pairs? Hopefully, the node and edge list shouldn't contain duplicates
     #   in contrast to the geodataframes?
     duplicates = find_duplicate_cols(mat["a_i"])
 
