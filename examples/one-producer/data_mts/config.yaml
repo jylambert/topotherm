@@ -9,14 +9,95 @@ ground:
 temperatures:
   ambient: -20
   supply: 70
-  return: 55
+  return_: 55
 
 piping:
-  diameter: [0.0291, 0.0372, 0.0431, 0.0545, 0.0703, 0.0825, 0.1071, 0.1325, 0.1603, 0.2101, 0.263, 0.3127, 0.3444, 0.3938, 0.4444, 0.4954, 0.5958]
-  middle_diameter: [0.0337, 0.0424, 0.0483, 0.0603, 0.0761, 0.0889, 0.1143, 0.1397, 0.1683, 0.2191, 0.273, 0.3239, 0.3556, 0.4064, 0.457, 0.508, 0.61]
-  outer_diameter: [0.09, 0.11, 0.11, 0.125, 0.14, 0.16, 0.2, 0.225, 0.25, 0.315, 0.4, 0.45, 0.5, 0.56, 0.63, 0.71, 0.8]
-  cost: [718, 763, 786, 880, 907, 1061, 1090, 1256, 1332, 1836, 2036, 2183, 2651, 2902, 3345, 3580, 4507]
-  number_diameters: 17
+  diameters:
+    - dn: 25
+      inner: 0.0291
+      outer: 0.0337
+      jacket: 0.09
+      cost: 718
+    - dn: 32
+      inner: 0.0372
+      outer: 0.0424
+      jacket: 0.11
+      cost: 763
+    - dn: 40
+      inner: 0.0431
+      outer: 0.0483
+      jacket: 0.11
+      cost: 786
+    - dn: 50
+      inner: 0.0545
+      outer: 0.0603
+      jacket: 0.125
+      cost: 880
+    - dn: 65
+      inner: 0.0703
+      outer: 0.0761
+      jacket: 0.14
+      cost: 907
+    - dn: 80
+      inner: 0.0825
+      outer: 0.0889
+      jacket: 0.16
+      cost: 1061
+    - dn: 100
+      inner: 0.1071
+      outer: 0.1143
+      jacket: 0.2
+      cost: 1090
+    - dn: 125
+      inner: 0.1325
+      outer: 0.1397
+      jacket: 0.225
+      cost: 1256
+    - dn: 150
+      inner: 0.1603
+      outer: 0.1683
+      jacket: 0.25
+      cost: 1332
+    - dn: 200
+      inner: 0.2101
+      outer: 0.2191
+      jacket: 0.315
+      cost: 1836
+    - dn: 250
+      inner: 0.263
+      outer: 0.273
+      jacket: 0.4
+      cost: 2036
+    - dn: 300
+      inner: 0.3127
+      outer: 0.3239
+      jacket: 0.45
+      cost: 2183
+    - dn: 350
+      inner: 0.3444
+      outer: 0.3556
+      jacket: 0.5
+      cost: 2651
+    - dn: 400
+      inner: 0.3938
+      outer: 0.4064
+      jacket: 0.56
+      cost: 2902
+    - dn: 450
+      inner: 0.4444
+      outer: 0.457
+      jacket: 0.63
+      cost: 3345
+    - dn: 500
+      inner: 0.4954
+      outer: 0.508
+      jacket: 0.71
+      cost: 3580
+    - dn: 600
+      inner: 0.5958
+      outer: 0.61
+      jacket: 0.8
+      cost: 4507
   max_pr_loss: 250
   roughness: 0.01e-3
   thermal_conductivity: 0.024
@@ -31,6 +112,6 @@ economics:
   source_c_irr: [0.08]  # Interest rate for each source
   source_lifetime: [40.]  # years for source investments
   source_price: [[80e-3, 40e-3]]  # Price for heat production at supply in €/kW
-  heat_price: 120e-3  # Selling Price for heat in €/kW
+  heat_price: 110e-3  # Selling Price for heat in €/kW
   pipes_c_irr: 0.08  # Interest rate
   pipes_lifetime: 40.  # years for piping investments

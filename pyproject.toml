@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 
 name = "topotherm"
-version = "0.4.1"
+version = "0.6.0"
 description = "A package to design district heating networks"
 readme = "README.md"
 
@@ -29,7 +29,7 @@ keywords = [
 
 license = {file = "LICENSE"}
 
-requires-python = ">=3.10"
+requires-python = ">=3.10,<=3.13"
 dependencies = [
     "numpy",
     "pandas",
@@ -43,6 +43,26 @@ dependencies = [
     "pydantic",
     "geopandas",
     "shapely"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "ruff",
+    "mypy",
+    "pre-commit",
+    "black",
+    "isort",
+    "highspy"  # for very small tests only, most uncomplicated install
+]
+docs = [
+    "sphinx>=7",
+    "sphinx-rtd-theme",
+    "sphinx-copybutton",
+    "sphinx-autoapi",
+    "sphinx-autodoc-typehints",
+    "matplotlib",           # if you want .. plot:: support
+    "sphinxcontrib-mermaid" # for mermaid diagrams
 ]
 
 [tool.setuptools]
@@ -87,6 +107,7 @@ indent-width = 4
 target-version = "py313"
 
 [tool.ruff.lint]
+# TODO fix pre-commit workflows, including ruff, black and isort
 # Enable Pyflakes (`F`) and a subset of the pycodestyle (`E`) codes by default.
 # Unlike Flake8, Ruff doesn't enable pycodestyle warnings (`W`) or
 # McCabe complexity (`C901`) by default.
@@ -128,7 +149,7 @@ docstring-code-format = false
 docstring-code-line-length = "dynamic"
 
 [tool.ruff.lint.pydocstyle]
-convention = "numpy"  # Since you're using numpy format
+convention = "numpy"
 
 [tool.mypy]
 python_version = "3.13"
@@ -140,22 +161,3 @@ disallow_untyped_defs = true
 [tool.ruff.lint.flake8-tidy-imports]
 # Disallow all relative imports.
 ban-relative-imports = "all"
-
-[project.optional-dependencies]
-dev = [
-    "pytest",
-    "ruff",
-    "mypy",
-]
-docs = [
-  "sphinx>=7",
-  "sphinx-rtd-theme",
-  "sphinx-copybutton",
-  "sphinx-autoapi",
-  "myst-parser",
-  "linkify-it-py",
-  "sphinx-autodoc-typehints",
-  "matplotlib",           # if you want .. plot:: support
-  "sphinxcontrib-mermaid" # for mermaid diagrams
-  
-]
