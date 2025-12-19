@@ -425,8 +425,8 @@ def connect_sinks_from_gdfs(
 
     gdf_nodes = gpd.GeoDataFrame(
         {
-            "Type": node_types,
-            "Node_ID": [f"Node_{i:05d}" for i in range(len(geometries))],
+            "node_type": node_types,
+            "id": [int(i) for i in range(len(geometries))],
         },
         geometry=geometries,
         crs=crs,
@@ -452,8 +452,8 @@ def connect_sinks_from_gdfs(
 
     gdf_edges = gpd.GeoDataFrame(
         {
-            "Length": edges_total.length,
-            "Road_ID": [f"Road_{i:05d}" for i in range(len(edges_total))],
+            "length": edges_total.length,
+            "id": [i for i in range(len(edges_total))],
         },
         geometry=edges_total.geometry,
         crs=crs,
@@ -471,10 +471,10 @@ def connect_sinks_from_gdfs(
     gdf_nodes["q_c"] = ""
     gdf_nodes["flh_sinks"] = ""
 
-    gdf_nodes.loc[gdf_nodes["Type"] == "sink", "q_c"] = np.round(
+    gdf_nodes.loc[gdf_nodes["node_type"] == "sink", "q_c"] = np.round(
         sinks_center[ts_columns].values.T, 2
     ).T
-    gdf_nodes.loc[gdf_nodes["Type"] == "sink", "flh_sinks"] = np.round(
+    gdf_nodes.loc[gdf_nodes["node_type"] == "sink", "flh_sinks"] = np.round(
         sinks_center[flh_columns].values.T, 2
     ).T
 
@@ -483,7 +483,7 @@ def connect_sinks_from_gdfs(
     gdf_edges["u"] = ""
     gdf_edges["v"] = ""
 
-    for j, _ in enumerate(gdf_edges["Road_ID"]):
+    for j, _ in enumerate(gdf_edges["id"]):
         road_geom = gdf_edges.iloc[j].geometry
         boundary_points = list(road_geom.boundary.geoms)
 
@@ -495,8 +495,8 @@ def connect_sinks_from_gdfs(
             v_candidates = gdf_nodes[gdf_nodes.geometry.distance(end_point) < 1e-5]
 
             if len(u_candidates) == 1 and len(v_candidates) == 1:
-                u = u_candidates.iloc[0]["Node_ID"]
-                v = v_candidates.iloc[0]["Node_ID"]
+                u = u_candidates.iloc[0]["id"]
+                v = v_candidates.iloc[0]["id"]
 
                 gdf_edges.loc[j, ["u", "v"]] = (u, v)
 
@@ -532,12 +532,12 @@ def create_matrices_from_gdf(
 
     mat = {}
     mat["a_i"] = np.zeros([n_nodes, n_roads], dtype="int8")
-    mat["l_i"] = gdf_edges["Length"].values
+    mat["l_i"] = gdf_edges["length"].values
 
     # Create lookup dictionary for faster access
-    node_id_to_idx = {node_id: idx for idx, node_id in enumerate(gdf_nodes["Node_ID"])}
+    node_id_to_idx = {node_id: idx for idx, node_id in enumerate(gdf_nodes["id"])}
 
-    for j, _ in enumerate(gdf_edges["Road_ID"]):
+    for j, _ in enumerate(gdf_edges["id"]):
 
         u = gdf_edges.iloc[j]["u"]
         v = gdf_edges.iloc[j]["v"]
@@ -551,12 +551,12 @@ def create_matrices_from_gdf(
 
     logging.info("Creating producer and consumer matrices...")
     # Create matrices for the heat sources (A_p)
-    gdf_nodes_src = gdf_nodes[gdf_nodes["Type"] == "source"].index
+    gdf_nodes_src = gdf_nodes[gdf_nodes["node_type"] == "source"].index
     mat["a_p"] = np.zeros([len(gdf_nodes), len(gdf_nodes_src)], dtype="int8")
     mat["a_p"][gdf_nodes_src, range(len(gdf_nodes_src))] = -1
 
     # Create matrices for the heat sinks (A_c)
-    gdf_nodes_cons = gdf_nodes[gdf_nodes["Type"] == "sink"].index
+    gdf_nodes_cons = gdf_nodes[gdf_nodes["node_type"] == "sink"].index
     mat["a_c"] = np.zeros([len(gdf_nodes), len(gdf_nodes_cons)], dtype="int8")
     mat["a_c"][gdf_nodes_cons, range(len(gdf_nodes_cons))] = 1
 
@@ -567,7 +567,7 @@ def create_matrices_from_gdf(
 
     # Can we somehow automate this? Easiest way -> Probably just put them into one column
     # Workaround: extract and sort all integers that start with flh_ or ts_
-    gdf_nodes_sinks = gdf_nodes[gdf_nodes["Type"] == "sink"].copy()
+    gdf_nodes_sinks = gdf_nodes[gdf_nodes["node_type"] == "sink"].copy()
     mat["q_c"] = gdf_nodes_sinks["q_c"].values.T
     mat["flh_sinks"] = gdf_nodes_sinks["flh_sinks"].values.T
     mat["flh_sources"] = (
@@ -596,7 +596,9 @@ def create_matrices_from_gdf(
         mat["l_i"] = np.delete(mat["l_i"], delete_idx, axis=0)
         mat["a_i"] = np.delete(mat["a_i"], delete_idx, axis=1)
         gdf_edges = gdf_edges.drop(index=delete_idx).reset_index(drop=True)
-
+    
+    mat["edge_id"] = gdf_edges.id.values.squeeze()
+    mat["node_id"] = gdf_nodes.id.values.squeeze()
     return mat, gdf_nodes, gdf_edges
 
 
@@ -632,9 +634,9 @@ def create_matrices_from_df(
     mat["l_i"] = np.zeros(n_roads, dtype="int8")
 
     # Create lookup dictionary for faster access
-    node_id_to_idx = {node_id: idx for idx, node_id in enumerate(df_nodes["Node_ID"])}
+    node_id_to_idx = {node_id: idx for idx, node_id in enumerate(df_nodes["id"])}
 
-    for j, _ in enumerate(df_edges["Road_ID"]):
+    for j, _ in enumerate(df_edges["id"]):
 
         u = df_edges.iloc[j]["u"]
         v = df_edges.iloc[j]["v"]
@@ -682,23 +684,7 @@ def create_matrices_from_df(
         * np.ones(len(df_nodes_src))
     ).transpose()
 
-    # @TODO:Should we check here for duplicate pairs? Hopefully, the node and edge list shouldn't contain duplicates
-    #   in contrast to the geodataframes?
     duplicates = find_duplicate_cols(mat["a_i"])
-
     if duplicates:
-        dup_arr = np.array(duplicates)
-        # Compare the weights l_i at each duplicate pair
-        left_vals = mat["l_i"][dup_arr[:, 0]]
-        right_vals = mat["l_i"][dup_arr[:, 1]]
-
-        # Keep the larger one -> delete the smaller
-        delete_idx = np.where(left_vals > right_vals, dup_arr[:, 0], dup_arr[:, 1])
-        delete_idx = np.unique(delete_idx)
-
-        # Delete in one shot
-        mat["l_i"] = np.delete(mat["l_i"], delete_idx, axis=0)
-        mat["a_i"] = np.delete(mat["a_i"], delete_idx, axis=1)
-        df_edges = df_edges.drop(index=delete_idx).reset_index(drop=True)
-
+        raise ValueError(f"Edges {duplicates} contain duplicated node connections.")
     return mat, df_nodes, df_edges
