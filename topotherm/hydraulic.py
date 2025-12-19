@@ -499,3 +499,84 @@ def calculate_hydraulics_from_power(
     vel, d = results.T
 
     return m_dot, d, vel
+
+
+def calc_volumetric_flow(
+        power_flow: float,
+        settings: Settings
+) -> float:
+    """Calculates the pump volumetric capacity depending on the total heating flow at
+    the pump location in m3/s (Nussbaumer Ch. 7.4).
+
+    Parameters
+    ----------
+    power_flow : float 
+        heat demand + heat losses downstream from pump in kW
+
+    settings : Settings
+        Settings object containing material properties of water and network temperature.
+
+    Returns
+    -------
+    float
+        Total volumetric flow in m3/s
+    """
+    rho = settings.water.density
+    cp = settings.water.cp
+    delta_t = settings.temperatures.supply - settings.temperatures.return_
+    return power_flow * 1e-3 / (rho * cp * delta_t)
+
+
+def calc_pump_head(
+    critical_node: float,
+    house_connection: float,
+    other: float,
+    settings: Settings
+) -> float:
+    """Calculate the pump head pressure requirements at design conditions.
+
+    Parameters
+    ----------
+    critical_node : float
+        total pressure loss at critical network node in Pa
+    house_connection : float
+        total pressure loss at the critical house substation in Pa
+    other : float
+        other total pressure losses in the network (control valve, storage, connecting
+        pipes, etc.) in Pa
+    settings : Settings
+        Settings object
+
+    Returns
+    -------
+    float
+        Total head loss in m
+    """
+    return (critical_node + house_connection + other) / (settings.water.density * 9.81)
+
+
+def calc_pump_performance(
+    head_loss: float,
+    volumetric_flow: float,
+    settings: Settings,
+    eta: float = 0.75,
+) -> float:
+    """Calculates the total pump performance depending on input parameters.
+
+    Parameters
+    ----------
+    head_loss : float
+        Total head loss of the pump at design conditions in m
+    volumetric_flow: float
+        Total vol. flow in m3/s
+    settings : Settings
+        tt.settings.Settings object
+    eta: float (default 0.75)
+        Pump efficiency.
+    
+    Returns
+    -------
+    float
+        Pump performance in kW
+    """
+    return head_loss * volumetric_flow * settings.water.density * 9.81 / eta * 1e3
