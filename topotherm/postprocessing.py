@@ -335,7 +335,7 @@ def to_networkx_graph(matrices: dict) -> nx.DiGraph:
     )  # First occurrence of -1 in each column
 
     # Get existing to allow solved and unsolved incidence matrices
-    _data = ["l_i", "d_i_0", "p"]
+    _data = ["l_i", "d", "p"]
     available_data = [k for k in _data if k in matrices.keys()]
     available_matrices = [matrices[k].flatten() for k in available_data]
     edges = np.column_stack([sources, targets] + available_matrices)
@@ -353,7 +353,7 @@ def to_networkx_graph(matrices: dict) -> nx.DiGraph:
 
             if key == "l_i":
                 data["l"] = val
-            elif key == "d_i_0":
+            elif key == "d":
                 data["d"] = val
             elif key == "p":
                 data["p"] = val
@@ -366,7 +366,7 @@ def to_networkx_graph(matrices: dict) -> nx.DiGraph:
     return G
 
 
-def to_dataframe(
+def to_dataframe(  # TODO: track with "id"
     matrices_optimal: dict, matrices_init: dict
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """
@@ -420,7 +420,7 @@ def to_dataframe(
     # assume that we want to write out the total sum of installed power for each source
     # inherent limitation of the dataframe structure, only one dimensional data possible
     nodes.loc[sources_nodes, "total_installed_power"] = matrices_optimal[
-        "p_s_inst_opt"
+        "p_s_inst"
     ][original_source_prods].sum()
 
     consumer_nodes = nodes[nodes.type_ == "sink"].index
@@ -460,7 +460,7 @@ def to_dataframe(
     edges["x_end"] = matrices_optimal["positions"][edges["end_node"], 0]
     edges["y_end"] = matrices_optimal["positions"][edges["end_node"], 1]
     edges["length"] = matrices_optimal["l_i"]
-    edges["diameter"] = matrices_optimal["d_i_0"]
+    edges["diameter"] = matrices_optimal["d"]
     edges["power"] = matrices_optimal["p"]
     edges.loc[:, "to_consumer"] = edges["end_node"].map(nodes["type_"]).eq("sink")
     edges.loc[:, "from_consumer"] = edges["start_node"].map(nodes["type_"]).eq("sink")

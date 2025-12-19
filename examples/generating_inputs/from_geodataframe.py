@@ -33,3 +33,6 @@ model = tt.models.single_timestep.create(
 
 opt = pyo.SolverFactory("highs")
 result = opt.solve(model, tee=True)
+
+res = tt.models.single_timestep.postprocess(model, tt.settings.Settings())
+print(res.keys())

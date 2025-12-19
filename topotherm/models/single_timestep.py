@@ -9,7 +9,7 @@ import pyomo.environ as pyo
 
 from topotherm.models.calc import annuity
 from topotherm.settings import Economics, Settings
-
+import topotherm.hydraulic as hyd
 
 def create(
     matrices: dict,
@@ -62,6 +62,7 @@ def create(
             )
     # Initialize model
     mdl = pyo.ConcreteModel()
+    mdl.matrices = matrices
 
     # Big-M-Constraint for pipes
     p_max_pipe_const = float(regression_inst["power_flow_max_kW"].max())
@@ -445,3 +446,102 @@ def create(
         doc="Objective function",
     )
     return mdl
+
+
+def postprocess(model: pyo.ConcreteModel,
+                settings: Settings) -> dict:
+    """
+    Postprocessing for the single time step model. This includes the
+    calculation of the diameter and velocity of the pipes. The original matrices
+    are augmented with outputs of the model and two additional vectors with selected
+    nodes "optimal_nodes" and edges "optimal_edges" are included.
+
+    Parameters
+    ----------
+    model : pyo.ConcreteModel
+        Solved Pyomo model.
+    settings : Settings
+        Settings for the optimization.
+
+    Returns
+    -------
+    dict
+        Optimal variables and postprocessed data.
+    """
+    m = model.matrices  # initial matrices
+    res = m.copy()  # results
+
+    # Get the values from the model
+    p_ij = np.array(pyo.value(model.P["ij", "in", :, :]))
+    p_ji = np.array(pyo.value(model.P["ji", "in", :, :]))
+    p_source_inst = np.array(pyo.value(model.P_source_inst[:]))
+    p_source = np.array(pyo.value(model.P_source[:, :]))
+
+    # flow direction, binary
+    lambda_ij = np.around(np.array(pyo.value(model.lambda_["ij", :])), 0)
+    lambda_ji = np.around(np.array(pyo.value(model.lambda_["ji", :])), 0)
+    res["lambda_b"] = lambda_ij + lambda_ji
+
+    q_c_opt = np.zeros([m["a_c"].shape[1], len(model.set_t)])
+    flh_c_opt = np.zeros([m["a_c"].shape[1], len(model.set_t)])
+
+    for d, e in model.cons:
+        if d == "ij":
+            # edge in incidence matrix where pipe exits into node n (==-1)
+            a_i_idx = np.where(m["a_i"][:, e] == -1)
+            # location where a_i_idx is connected to a_c
+            a_c_idx = np.where(m["a_c"][a_i_idx[0], :][0] == 1)
+            if len(a_i_idx) != 1 or len(a_c_idx) != 1:
+                raise ValueError("Error in the incidence matrix!")
+            # assign the heat demand to the connected consumer if lambda is 1
+            q_c_opt[a_c_idx[0], :] = lambda_ij[e] * m["q_c"][a_c_idx[0], :]
+            flh_c_opt[a_c_idx[0], :] = (
+                lambda_ij[e] * m["flh_sinks"][a_c_idx[0], :]
+            )
+        elif d == "ji":
+            a_i_idx = np.where(m["a_i"][:, e] == 1)
+            a_c_idx = np.where(m["a_c"][a_i_idx[0], :][0] == 1)
+            if len(a_i_idx) != 1 or len(a_c_idx) != 1:
+                raise ValueError("Error in the incidence matrix!")
+            q_c_opt[a_c_idx[0], :] = lambda_ji[e] * m["q_c"][a_c_idx[0], :]
+            flh_c_opt[a_c_idx[0], :] = (
+                lambda_ji[e] * m["flh_sinks"][a_c_idx[0], :]
+            )
+    res["flh_c"] = flh_c_opt
+    # Postprocessing producers depending on the number of supply options
+    # track non-zero sources
+    mask = (p_source_inst != 0) if m["a_p"].shape[1] > 1 else slice(None)
+    res["p_s_inst"] = p_source_inst[mask]
+    res["p_s"] = p_source[mask]
+    res["flh_s"] = m["flh_sources"][mask] if m["a_p"].shape[1] > 1 else m["flh_sources"]
+
+    # Adjust Incidence Matrix for further postprocessing
+    for q, _ in enumerate(lambda_ij):
+        # if not active, all is 0
+        if lambda_ij[q] == 0 and lambda_ji[q] == 0:
+            m["a_i"][:, q] = 0
+            m["l_i"][q] = 0
+        # if opposite direction operational, switch a_i with -1 and switch
+        # values lambda_ij for ji. This is necessary for the postprocessing.
+        elif lambda_ji[q] == 1:
+            m["a_i"][:, q] = m["a_i"][:, q] * (-1)
+
+    res["p"] = p_ij + p_ji  # Power of the pipes
+
+    # drop entries with 0 in the incidence matrix to reduce size
+    res["optimal_edges"] = m["a_i"].any(axis=0)
+    res["optimal_nodes"] = m["a_i"].any(axis=1)
+
+    res["d"] = np.empty(m["a_i"].shape[1])
+    res["m"] = np.empty(m["a_i"].shape[1])
+    res["v"] = np.empty(m["a_i"].shape[1])
+
+    m, d, v = hyd.calculate_hydraulics_from_power(
+        power=res["p"][res["optimal_edges"]], settings=settings
+    )
+
+    res["d"][res["optimal_edges"]] = d
+    res["m"][res["optimal_edges"]] = m
+    res["v"][res["optimal_edges"]] = v
+
+    return res
