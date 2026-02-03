@@ -49,6 +49,7 @@ dependencies = [
 dev = [
     "pytest",
     "ruff",
+    "jupyter",
     "mypy",
     "pre-commit",
     "black",
@@ -102,8 +103,8 @@ exclude = [
 line-length = 88
 indent-width = 4
 
-# Assume Python 3.13
-target-version = "py313"
+# Assume Python 3.14
+target-version = "py314"
 
 [tool.ruff.lint]
 # TODO fix pre-commit workflows, including ruff, black and isort

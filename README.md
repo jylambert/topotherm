@@ -92,15 +92,35 @@ To install the dependencies with anaconda or mamba:
 
 ```bash
 cd topotherm
-mamba env create -f environment.yml -n topotherm
+mamba env create -n topotherm python
 mamba activate topotherm
+pip install .
 ```
+
+### Docker
+
+A Dockerfile with docker-compose setup is included. To mount the container and run it with compose, you need to have docker installed.
+
+Build the image with:
+
+```docker-compose build```
+
+Start the container in detached mode, and get an interactive shell that runs topotherm:
+
+```
+docker-compose up -d
+docker-compose exec dev bash
+```
+
+Once the image has been built, you just need to run the `up` and `docker-exec` commands. With `exit` you exit the interactive container shell.
+
+Be aware of the Python version, some dependencies lag behind and will fail if the newest is used because it will look for a pre-compiled version which is not available yet in pypi.
 
 ### Solver
 
 #### Gurobi
 
-The results in the paper were obtained with the commercial solver gurobi.
+The results in the benchmarking paper were obtained with the commercial solver gurobi.
 A free academic license is available and can be installed by following
 the documentation [here](https://support.gurobi.com/hc/en-us/articles/360044290292-How-do-I-install-Gurobi-for-Python-).
 

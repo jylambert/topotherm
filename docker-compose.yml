@@ -1,0 +1,15 @@
+services:
+  dev:
+    build: .  # build a container in the current dir
+    image: topotherm-dev
+    volumes:
+      # map the workspace from current folder to container 
+      # so changes in . are synced  to workspace
+      - .:/workspace
+    working_dir: /workspace
+    stdin_open: true  # keeps STDIN open if container is not attached (keyboard input)
+    tty: true  # pseude-terminal is enabled
+    # tty and stdin_open are needed so bash command does not exit
+    # Optional: if you need to access notebooks on port 8888
+    ports:
+      - "8888:8888"
