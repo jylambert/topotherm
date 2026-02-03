@@ -5,8 +5,8 @@ build-backend = "setuptools.build_meta"
 [project]
 
 name = "topotherm"
-version = "0.6.0"
-description = "A package to design district heating networks"
+version = "0.6.1"
+description = "Optimal district heating and cooling network design"
 readme = "README.md"
 
 authors = [
@@ -29,7 +29,7 @@ keywords = [
 
 license = {file = "LICENSE"}
 
-requires-python = ">=3.10,<=3.13"
+requires-python = ">=3.10"
 dependencies = [
     "numpy",
     "pandas",
@@ -61,8 +61,7 @@ docs = [
     "sphinx-copybutton",
     "sphinx-autoapi",
     "sphinx-autodoc-typehints",
-    "matplotlib",           # if you want .. plot:: support
-    "sphinxcontrib-mermaid" # for mermaid diagrams
+  #"sphinxcontrib-mermaid" # for mermaid diagrams
 ]
 
 [tool.setuptools]
