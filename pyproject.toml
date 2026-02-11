@@ -65,8 +65,8 @@ docs = [
     "sphinxcontrib-mermaid" # for mermaid diagrams
 ]
 
-[tool.setuptools]
-packages = ["topotherm"]
+[tool.setuptools.packages.find]
+include = ["topotherm", "topotherm.*"]
 
 [tool.ruff]
 # Exclude a variety of commonly ignored directories.
