@@ -1,0 +1,22 @@
+references:
+  - title: >-
+      Benchmark of mixed-integer linear programming formulations for district heating network design
+    type: journalArticle
+     issn: 03605442
+    journal: Energy
+    languages: 
+      - en
+    pages: 132885
+    volume: 308
+    url: https://linkinghub.elsevier.com/retrieve/pii/S0360544224026598
+    authors: 
+      - family-names: Lambert
+        given-names: Jerry
+      - family-names: Ceruti
+        given-names: Amedeo
+      - family-names: Spliethoff
+        given-names: Hartmut
+    date-published: 2024-11
+    identifiers: 
+      - type: doi
+        value: 10.1016/j.energy.2024.132885

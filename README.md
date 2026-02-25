@@ -65,8 +65,7 @@ If you use topotherm, please cite:
 
 topotherm requires Python 3.10 or higher. We recommend using Anaconda or Mamba to
 manage the Python environment and dependencies. The required packages are listed
-in the ``environment.yml`` file in the repository and the ``requirements.txt`` file
-for pip installations.
+in the ``pyproject.toml`` file for pip installations.
 
 ### Get the Code
 
@@ -112,9 +111,11 @@ docker-compose up -d
 docker-compose exec dev bash
 ```
 
-Once the image has been built, you just need to run the `up` and `docker-exec` commands. With `exit` you exit the interactive container shell.
+Once the image has been built, you just need to run the `up` and `docker-exec` commands. With `exit`
+you exit the interactive container shell.
 
-Be aware of the Python version, some dependencies lag behind and will fail if the newest is used because it will look for a pre-compiled version which is not available yet in pypi.
+Be aware of the Python version, some dependencies lag behind and will fail if the newest is used
+because it will look for a pre-compiled version which is not available yet in pypi.
 
 ### Solver
 
@@ -178,6 +179,13 @@ Testing is done with pytest. Please pass all tests before opening a new pull req
 pip install .[dev]
 pytest
 ```
+
+## Publications
+
+Several publications have used topotherm as a tool for district heating network design.
+Please send us your publications if you use topotherm in your work so we can highlight them here!
+
+
 
 ## License
 
