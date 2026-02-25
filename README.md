@@ -180,11 +180,20 @@ pip install .[dev]
 pytest
 ```
 
-## Publications
+## References
 
 Several publications have used topotherm as a tool for district heating network design.
 Please send us your publications if you use topotherm in your work so we can highlight them here!
 
+- Ceruti, A., Lambert, J., & Spliethoff, H. (2025). Integrating renewable energy and thermal
+  storage in district heating networks: A design optimization approach.
+  *Energy Conversion and Management*, 345, 120323.
+  https://doi.org/10.1016/j.enconman.2025.120323
+
+- Lambert, J., Kraus, H., Doepfert, M., He, M., Gschossmann, D., Ceruti, A., Nemeth, I.,
+  Brückl, O., Hamacher, T., & Spliethoff, H. (2025). Assessing the techno-economic impact
+  of district heating on electrical distribution grid reinforcements. *Advances in Applied
+  Energy*, 20, 100251. https://doi.org/10.1016/j.adapen.2025.100251
 
 
 ## License
