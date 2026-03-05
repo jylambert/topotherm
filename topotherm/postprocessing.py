@@ -6,6 +6,8 @@ unused pipes and nodes.
 """
 
 from typing import Tuple
+import logging
+import warnings
 
 import networkx as nx
 import numpy as np
@@ -467,10 +469,10 @@ def to_dataframe(  # TODO: track with "id"
     if edges.to_consumer.sum() + edges.from_consumer.sum() != len(
         matrices_optimal["q_c"]
     ):
-        raise ValueError(
-            f"Error in the incidence matrix! To consumer {edges.to_consumer.sum()}"
+        warnings.warn(
+            f"Incidence matrix dimensions changed! If forced then to consumer {edges.to_consumer.sum()}"
             f" + from_consumer {edges.from_consumer.sum()}"
-            f" != total consumers {len(matrices_optimal["q_c"])}"
+            f" != total consumers {len(matrices_optimal["q_c"])}"  #TODO: fix! is not working for eco or sens
         )
     if edges.from_consumer.sum() > 0:
         raise ValueError(

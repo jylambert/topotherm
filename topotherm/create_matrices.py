@@ -468,8 +468,8 @@ def connect_sinks_from_gdfs(
         key=lambda x: int(x.split("_")[1]),
     )
 
-    gdf_nodes["q_c"] = ""
-    gdf_nodes["flh_sinks"] = ""
+    gdf_nodes["q_c"] = np.nan
+    gdf_nodes["flh_sinks"] = np.nan
 
     gdf_nodes.loc[gdf_nodes["node_type"] == "sink", "q_c"] = np.round(
         sinks_center[ts_columns].values.T, 2
@@ -480,8 +480,8 @@ def connect_sinks_from_gdfs(
 
     logging.info("Creating node-edge relationships...")
     # Pre-allocate u and v columns
-    gdf_edges["u"] = ""
-    gdf_edges["v"] = ""
+    gdf_edges["u"] = np.nan
+    gdf_edges["v"] = np.nan
 
     for j, _ in enumerate(gdf_edges["id"]):
         road_geom = gdf_edges.iloc[j].geometry

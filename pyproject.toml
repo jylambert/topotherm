@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 
 name = "topotherm"
-version = "0.6.1"
+version = "0.7.1"
 description = "Optimal district heating and cooling network design"
 readme = "README.md"
 
@@ -54,7 +54,7 @@ dev = [
     "pre-commit",
     "black",
     "isort",
-    "highspy"  # for very small tests only, most uncomplicated install
+    "highspy"  # for small tests only, most uncomplicated install
 ]
 docs = [
     "sphinx>=7",
@@ -103,8 +103,7 @@ exclude = [
 line-length = 88
 indent-width = 4
 
-# Assume Python 3.14
-target-version = "py314"
+target-version = "py313"
 
 [tool.ruff.lint]
 # TODO fix pre-commit workflows, including ruff, black and isort
@@ -156,7 +155,6 @@ python_version = "3.13"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
-
 
 [tool.ruff.lint.flake8-tidy-imports]
 # Disallow all relative imports.
