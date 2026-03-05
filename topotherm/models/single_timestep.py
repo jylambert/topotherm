@@ -510,13 +510,13 @@ def postprocess(model: pyo.ConcreteModel,
             flh_c_opt[a_c_idx[0], :] = (
                 lambda_ji[e] * _m["flh_sinks"][a_c_idx[0], :]
             )
-    res["flh_c"] = flh_c_opt
+    res["flh_sinks"] = flh_c_opt
     # Postprocessing producers depending on the number of supply options
     # track non-zero sources
     mask = (p_source_inst != 0) if _m["a_p"].shape[1] > 1 else slice(None)
-    res["p_s_inst"] = p_source_inst[mask]
-    res["p_s"] = p_source[mask]
-    res["flh_s"] = _m["flh_sources"][mask] if _m["a_p"].shape[1] > 1 else _m["flh_sources"]
+    res["p_sources_inst"] = p_source_inst[mask]
+    res["p_sources"] = p_source[mask]
+    res["flh_sources"] = _m["flh_sources"][mask] if _m["a_p"].shape[1] > 1 else _m["flh_sources"]
 
     # Adjust Incidence Matrix for further postprocessing
     for q, _ in enumerate(lambda_ij):

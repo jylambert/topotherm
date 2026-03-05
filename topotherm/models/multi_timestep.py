@@ -7,8 +7,8 @@ import numpy as np
 import pyomo.environ as pyo
 
 from topotherm.models.calc import annuity
-from topotherm.settings import Economics
-
+from topotherm.settings import Economics, Settings
+from topotherm.hydraulic import calculate_hydraulics_from_power
 
 def create(
     matrices: dict,
@@ -54,6 +54,7 @@ def create(
 
     # Initialize model
     mdl = pyo.ConcreteModel()
+    mdl.matrices = matrices
 
     # Big-M-Constraint for pipes
     p_max_pipe_const = float(regression_inst["power_flow_max_kW"].max())
@@ -435,3 +436,128 @@ def create(
     )
 
     return mdl
+
+
+def postprocess(model: pyo.ConcreteModel, settings: Settings) -> dict:
+    """
+    Postprocessing for the multiple time step model. This includes the
+    calculation of the diameter and velocity of the pipes and the elimination
+    of unused pipes and nodes.
+
+    Parameters
+    ----------
+    model : pyo.ConcreteModel
+        Solved Pyomo model.
+    settings : Settings
+        Settings for the optimization.
+
+    Returns
+    -------
+    dict
+        Optimal variables and postprocessed data.
+    """
+    _m = model.matrices.copy()  # initial matrices
+    for mat in _m.values():
+        mat.flags.writeable = True
+    res = {}
+
+    # Get the values from the model
+    p_ij = np.reshape(
+        np.array(pyo.value(model.P["ij", "in", :, :])), (-1, _m["q_c"].shape[1])
+    )
+    p_ji = np.reshape(
+        np.array(pyo.value(model.P["ji", "in", :, :])), (-1, _m["q_c"].shape[1])
+    )
+    p_cap = np.array(pyo.value(model.P_cap[:]))
+    p_source_inst = np.array(pyo.value(model.P_source_inst[:]))
+    p_source = np.array(pyo.value(model.P_source[:, :]))
+
+    # flow direction, binary
+    lambda_ij = np.reshape(
+        np.around(np.array(pyo.value(model.lambda_["ij", :, :])), 0),
+        (-1, _m["q_c"].shape[1]),
+    )
+    lambda_ji = np.reshape(
+        np.around(np.array(pyo.value(model.lambda_["ji", :, :])), 0),
+        (-1, _m["q_c"].shape[1]),
+    )
+    # built pipes
+    res["lambda_b_orig"] = np.around(np.array(pyo.value(model.lambda_b[:])), 0)
+
+    q_c_opt = np.zeros([_m["a_c"].shape[1], len(model.set_t)])
+    flh_c_opt = np.zeros([_m["a_c"].shape[1], len(model.set_t)])
+
+    # Exclude non-connected consumers in Q_c, only affects the economic case
+    # Check for consumers connected in direction ij
+    for d, e in model.cons:
+        if d == "ij":
+            # edge in incidence matrix where pipe exits into node n (==-1)
+            a_i_idx = np.where(_m["a_i"][:, e] == -1)
+            # location where a_i_idx is connected to a_c
+            a_c_idx = np.where(_m["a_c"][a_i_idx[0], :][0] == 1)
+            if len(a_i_idx) != 1 or len(a_c_idx) != 1:
+                raise ValueError("Error in the incidence matrix!")
+            # assign the heat demand to the connected consumer if lambda is 1
+            q_c_opt[a_c_idx[0], :] = res["lambda_b_orig"][e] * _m["q_c"][a_c_idx[0], :]
+            flh_c_opt[a_c_idx[0], :] = (
+                res["lambda_b_orig"][e] * _m["flh_sinks"][a_c_idx[0], :]
+            )
+        elif d == "ji":
+            a_i_idx = np.where(_m["a_i"][:, e] == 1)
+            a_c_idx = np.where(_m["a_c"][a_i_idx[0], :][0] == 1)
+            if len(a_i_idx) != 1 or len(a_c_idx) != 1:
+                raise ValueError("Error in the incidence matrix!")
+            q_c_opt[a_c_idx[0], :] = res["lambda_b_orig"][e] * _m["q_c"][a_c_idx[0], :]
+            flh_c_opt[a_c_idx[0], :] = (
+                res["lambda_b_orig"][e] * _m["flh_sinks"][a_c_idx[0], :]
+            )
+
+    # Remove nonzero elements row-wise
+    res["q_c"] = q_c_opt[q_c_opt.any(axis=1)]
+    res["flh_sinks"] = flh_c_opt[flh_c_opt.any(axis=1)]
+
+    # Postprocessing producers
+    if _m["a_p"].shape[1] == 1:
+        res["p_sources_inst"] = p_source_inst
+        res["p_sources"] = p_source
+        res["flh_sources"] = _m["flh_sources"]
+    else:
+        res["p_sources_inst"] = p_source_inst[p_source_inst != 0]
+        res["p_sources"] = p_source[p_source_inst != 0, :]
+        res["flh_sources"] = _m["flh_sources"][p_source_inst != 0, :]
+
+    # Adaption of Incidence Matrix for further postprocessing
+    for q in model.set_n_i:
+        # if not active, all is 0
+        if res["lambda_b_orig"][q] == 0:
+            _m["a_i"][:, q] = 0
+            _m["l_i"][q] = 0
+        # if opposite direction operational, switch a_i with -1 and switch
+        # values lambda_ij for ji. This is necessary for the postprocessing.
+        elif (res["lambda_b_orig"][q] == 1) & (lambda_ji[q, 0] == 1):
+            _m["a_i"][:, q] = _m["a_i"][:, q] * (-1)
+            lambda_ij[q, np.where(lambda_ij[q, 1:] == 0)[0]] = 1
+            lambda_ji[q, np.where(lambda_ji[q, 1:] == 1)[0]] = 0
+
+    p_lin = p_cap  # Capacity of the pipes
+
+    # drop entries with 0 in the incidence matrix to reduce size
+    valid_columns = _m["a_i"].any(axis=0)
+    valid_rows = _m["a_i"].any(axis=1)
+
+    res["p"] = p_lin[valid_columns]
+    res["p_ij"] = p_ij[valid_columns, :]
+    res["p_ji"] = p_ji[valid_columns, :]
+    res["lambda_ij"] = lambda_ij[valid_columns, :]
+    res["lambda_ji"] = lambda_ji[valid_columns, :]
+    res["positions"] = _m["positions"][valid_rows, :]
+    a_c_opt = _m["a_c"][valid_rows, :]
+    res["a_c"] = a_c_opt[:, a_c_opt.any(axis=0)]
+    res["a_p"] = _m["a_p"][valid_rows, :]
+    res["a_i"] = _m["a_i"][valid_rows, :][:, valid_columns]
+    res["l_i"] = _m["l_i"][valid_columns]
+
+    res["m"], res["d"], res["v"] = calculate_hydraulics_from_power(
+        power=res["p"], settings=settings
+    )
+    return res

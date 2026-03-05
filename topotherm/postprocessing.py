@@ -18,6 +18,7 @@ from topotherm.hydraulic import calculate_hydraulics_from_power
 from topotherm.settings import Settings
 
 
+@warnings.deprecated("Use the tt.models.single_timestep.postprocess function.")
 def sts(model: pyo.ConcreteModel, matrices: dict, settings: Settings):
     """
     Postprocessing for the single time step model. This includes the
@@ -140,7 +141,7 @@ def sts(model: pyo.ConcreteModel, matrices: dict, settings: Settings):
 
     return res
 
-
+@warnings.deprecated("Use the tt.models.multi_timestep.postprocess function.")
 def mts(model: pyo.ConcreteModel, matrices: dict, settings: Settings) -> dict:
     """
     Postprocessing for the multiple time step model. This includes the
@@ -161,7 +162,6 @@ def mts(model: pyo.ConcreteModel, matrices: dict, settings: Settings) -> dict:
     dict
         Optimal variables and postprocessed data.
     """
-
     # Get the values from the model
     p_ij = np.reshape(
         np.array(pyo.value(model.P["ij", "in", :, :])), (-1, matrices["q_c"].shape[1])
@@ -422,7 +422,7 @@ def to_dataframe(  # TODO: track with "id"
     # assume that we want to write out the total sum of installed power for each source
     # inherent limitation of the dataframe structure, only one dimensional data possible
     nodes.loc[sources_nodes, "total_installed_power"] = matrices_optimal[
-        "p_s_inst"
+        "p_sources_inst"
     ][original_source_prods].sum()
 
     consumer_nodes = nodes[nodes.type_ == "sink"].index
