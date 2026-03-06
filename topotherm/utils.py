@@ -44,32 +44,51 @@ def solver_to_df(result, model):
     result : dict
         Solver result dictionary produced by Pyomo.
     model : pyomo.core.base.PyomoModel
-        Pyomo model instance.
+        Solved Pyomo model instance.
 
     Returns
     -------
     pandas.DataFrame or dict
-        DataFrame with solver statistics, or raw solver output if unexpected format.
+        DataFrame with solver statistics (with columns 'Value' and 'Unit'),
+        or raw solver output dict if parsing fails.
     """
 
     # Useful links:
     # https://stackoverflow.com/questions/45034035/meaning-of-time-in-pyomos-results-json
 
-    dfslvr = pd.DataFrame()
-    slvr_res = result["Solver"][0]
     try:
-        dfslvr.loc["Termination condition", 0] = slvr_res["Termination condition"]
-        dfslvr.loc["Termination condition", "unit"] = "-"
-        dfslvr.loc["User Time", 0] = slvr_res["User time"]
-        dfslvr.loc["User Time", "unit"] = "s"
-        dfslvr.loc["Wall Time", 0] = slvr_res["Wall time"]
-        dfslvr.loc["Wall Time", "unit"] = "s"
-        dfslvr.loc["Objective", 0] = pyo.value(model.obj)
-        dfslvr.loc["Objective", "unit"] = "eur/y"
-    except KeyError:
+        slvr_res = result["Solver"][0]
+    except (KeyError, IndexError, TypeError):
         print("Solver output not as expected. Check the solver output.")
+        return result.get("Solver", {})
+
+    try:
+        # Build data dictionary for DataFrame
+        data = {}
+
+        # Termination condition
+        termination = slvr_res.get("Termination condition", "Unknown")
+        data["Termination condition"] = {"Value": termination, "Unit": "-"}
+
+        # Wall time
+        wall_time = slvr_res.get("Wall time")
+        if wall_time is not None:
+            data["Wall Time"] = {"Value": wall_time, "Unit": "s"}
+
+        # Objective value
+        try:
+            obj_value = pyo.value(model.obj)
+            data["Objective"] = {"Value": obj_value, "Unit": "eur/y"}
+        except (AttributeError, ValueError):
+            data["Objective"] = {"Value": None, "Unit": "eur/y"}
+
+        # Create DataFrame from the data dictionary
+        dfslvr = pd.DataFrame(data).T
+        return dfslvr
+
+    except Exception as e:
+        print(f"Solver output not as expected. Error: {e}")
         return slvr_res
-    return dfslvr
 
 
 def model_to_df(model):

@@ -39,7 +39,8 @@ def sts(model: pyo.ConcreteModel, matrices: dict, settings: Settings):
     dict
         Optimal variables and postprocessed data.
     """
-
+    for key, val in matrices.items():
+        val.flags.writeable = True
     # Get the values from the model
     p_ij = np.array(pyo.value(model.P["ij", "in", :, :]))
     p_ji = np.array(pyo.value(model.P["ji", "in", :, :]))
@@ -127,16 +128,16 @@ def sts(model: pyo.ConcreteModel, matrices: dict, settings: Settings):
         "a_c": a_c_opt,
         "q_c": q_c_opt,
         "l_i": l_i_opt,
-        "d_i_0": d_lin,
-        "m_i_0": m_lin,
+        "d": d_lin,
+        "m": m_lin,
         "positions": pos_opt,
         "p": p_lin_opt,
-        "flh_c_opt": flh_c_opt,
-        "flh_s_opt": flh_s_opt,
-        "p_s_inst_opt": p_source_inst_opt,
-        "p_s_opt": p_source_opt,
-        "lambda_b_orig": lambda_sum,
-        "v_lin": v_lin,
+        "flh_sinks": flh_c_opt,
+        "flh_sources": flh_s_opt,
+        "p_sources_inst": p_source_inst_opt,
+        "p_sources": p_source_opt,
+        "lambda_b": lambda_sum,
+        "v": v_lin,
     }
 
     return res
@@ -421,9 +422,14 @@ def to_dataframe(  # TODO: track with "id"
     )[1]
     # assume that we want to write out the total sum of installed power for each source
     # inherent limitation of the dataframe structure, only one dimensional data possible
-    nodes.loc[sources_nodes, "total_installed_power"] = matrices_optimal[
-        "p_sources_inst"
-    ][original_source_prods].sum()
+    try:
+        nodes.loc[sources_nodes, "total_installed_power"] = matrices_optimal[
+            "p_sources_inst"
+        ][original_source_prods].sum()
+    except KeyError:
+        warnings.warn("p_sources_inst not found in postprocessing matrices. Skipping" \
+        "total_installed_power output to nodes.")
+        nodes.loc[sources_nodes, "total_installed_power"] = np.nan
 
     consumer_nodes = nodes[nodes.type_ == "sink"].index
     positions_consumers = nodes.loc[consumer_nodes, ["x", "y"]].values

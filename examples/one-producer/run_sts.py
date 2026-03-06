@@ -8,6 +8,7 @@ of the Chair of Energy Systems.
 """
 
 from pathlib import Path
+import os.path
 
 import pandas as pd
 import pyomo.environ as pyo
@@ -74,7 +75,7 @@ def main(filepath, outputpath, plots=True, solver="gurobi", mode="economic"):
     opt = pyo.SolverFactory(solver)
     opt.options["mipgap"] = settings.solver.mip_gap
     opt.options["timelimit"] = settings.solver.time_limit
-    opt.options["logfile"] = str(outputpath / "optimization.log")
+    opt.options["logfile"] = os.path.abspath(outputpath / "optimization.log")
 
     result = opt.solve(model, tee=True)
 
@@ -102,7 +103,7 @@ def main(filepath, outputpath, plots=True, solver="gurobi", mode="economic"):
 
     # Save figure optimized districts
     if plots:
-        f = tt.plotting.district(opt_mats, diameter=opt_mats["d_i_0"], isnot_init=True)
+        f = tt.plotting.district(opt_mats, diameter=opt_mats["d"], isnot_init=True)
         f.savefig(outputpath / "district_optimal.svg", bbox_inches="tight")
 
     # create networkx graph object
