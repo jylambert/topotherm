@@ -46,7 +46,7 @@ def test_sts_forced(request):
     result = opt.solve(model, tee=True)
     assert result.solver.status == pyo.SolverStatus.ok
 
-    tt.postprocessing.sts(model, mat, settings)
+    tt.models.single_timestep.postprocess(model, settings)
     assert pyo.value(model.obj) == approx(-990.8, rel=0.01)
 
 
@@ -76,4 +76,4 @@ def test_sts_eco(request):
     result = opt.solve(model, tee=True)
     assert result.solver.status == pyo.SolverStatus.ok
     assert pyo.value(model.obj) == approx(-1436, rel=0.01)
-    tt.postprocessing.sts(model, mat, settings)
+    tt.models.single_timestep.postprocess(model, settings)

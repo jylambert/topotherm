@@ -39,7 +39,7 @@ def sts(model: pyo.ConcreteModel, matrices: dict, settings: Settings):
     dict
         Optimal variables and postprocessed data.
     """
-    for key, val in matrices.items():
+    for _, val in matrices.items():
         val.flags.writeable = True
     # Get the values from the model
     p_ij = np.array(pyo.value(model.P["ij", "in", :, :]))
@@ -163,6 +163,8 @@ def mts(model: pyo.ConcreteModel, matrices: dict, settings: Settings) -> dict:
     dict
         Optimal variables and postprocessed data.
     """
+    for _, val in matrices.items():
+        val.flags.writeable = True
     # Get the values from the model
     p_ij = np.reshape(
         np.array(pyo.value(model.P["ij", "in", :, :])), (-1, matrices["q_c"].shape[1])
@@ -269,20 +271,20 @@ def mts(model: pyo.ConcreteModel, matrices: dict, settings: Settings) -> dict:
         "a_c": a_c_opt,
         "q_c": q_c_opt,
         "l_i": l_i_opt,
-        "lambda_b_orig": lambda_b,
-        "lambda_ij_opt": lambda_ij_opt,
-        "lambda_ji_opt": lambda_ji_opt,
-        "d_i_0": d_lin,
-        "m_i_0": m_lin,
+        "lambda_b": lambda_b,
+        "lambda_ij": lambda_ij_opt,
+        "lambda_ji": lambda_ji_opt,
+        "d": d_lin,
+        "m": m_lin,
         "positions": pos_opt,
         "p": p_lin_opt,
         "p_ij": p_ij_opt,
         "p_ji": p_ji_opt,
-        "flh_c_opt": flh_c_opt,
-        "flh_s_opt": flh_s_opt,
-        "p_s_inst_opt": p_source_inst_opt,
-        "p_s_opt": p_source_opt,
-        "v_lin": v_lin,
+        "flh_sinks": flh_c_opt,
+        "flh_sources": flh_s_opt,
+        "p_sources_inst": p_source_inst_opt,
+        "p_sources": p_source_opt,
+        "v": v_lin,
     }
 
     return res

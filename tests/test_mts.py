@@ -24,6 +24,8 @@ def test_mts_forced(request):
     assert solver_name in SOLVERS, f"Unsupported solver: {solver_name}"
     current_path = Path(__file__).parent
     mat = tt.fileio.load(current_path / "test_data")
+    for _, val in mat.items():
+        val.flags.writeable = True
     # dummy demands for mts
     mat["q_c"][:, :-1] = mat["q_c"][:, 0].reshape(-1, 1) * 0.7
     mat["flh_sinks"][:, :-1] = mat["flh_sinks"][:, 0].reshape(-1, 1) * 0.4
@@ -46,7 +48,7 @@ def test_mts_forced(request):
     result = opt.solve(model, tee=True)
     assert result.solver.status == pyo.SolverStatus.ok
     assert abs(pyo.value(model.obj)) == approx(683.0, rel=0.02)
-
+    tt.models.multi_timestep.postprocess(model, settings)
 
 def test_mts_eco(request):
     """Main function to run the optimization"""
@@ -54,6 +56,8 @@ def test_mts_eco(request):
     assert solver_name in SOLVERS, f"Unsupported solver: {solver_name}"
     current_path = Path(__file__).parent
     mat = tt.fileio.load(current_path / "test_data")
+    for _, val in mat.items():
+        val.flags.writeable = True
     mat["q_c"][:, :-1] = mat["q_c"][:, 0].reshape(-1, 1) * 0.7
     mat["flh_sinks"][:, :-1] = mat["flh_sinks"][:, 0].reshape(-1, 1) * 0.4
     mat["flh_sinks"][:, 0] = mat["flh_sinks"][:, 0] * 0.6
@@ -76,3 +80,4 @@ def test_mts_eco(request):
     result = opt.solve(model, tee=True)
     assert result.solver.status == pyo.SolverStatus.ok
     assert pyo.value(model.obj) == approx(-907.7, rel=0.02)
+    tt.models.multi_timestep.postprocess(model, settings)
